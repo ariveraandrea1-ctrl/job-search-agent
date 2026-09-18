@@ -1,0 +1,11 @@
+# docker-compose.production.yml — Proyecto 3 (agente multiusuario, producción)
+#
+# n8n en queue mode con Redis y workers, PostgreSQL administrado,
+# pool de browser workers, gateway con TLS, observabilidad.
+#
+# TODO: definir esta capa cuando arranque el Proyecto 3.
+# Kubernetes no se recomienda para los primeros 30 usuarios (ver docs).
+
+version: "3.9"
+
+services: {}
