@@ -33,7 +33,7 @@ services:
     networks: [job-search-agent]
 
   minio:
-    image: minio/minio:latest
+    image: quay.io/minio/minio:latest
     restart: unless-stopped
     env_file: ../.env
     environment:
