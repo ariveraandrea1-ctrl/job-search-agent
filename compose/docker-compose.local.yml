@@ -107,3 +107,11 @@ services:
       postgres:
         condition: service_healthy
     networks: [job-search-agent]
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --url http://n8n:5678
+    depends_on:
+      - n8n
+    networks: [job-search-agent]
