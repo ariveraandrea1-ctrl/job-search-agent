@@ -1,0 +1,46 @@
+# docker-compose.local.yml — Proyecto 1 (entorno local)
+#
+# Esqueleto inicial. Los servicios obligatorios del Proyecto 1 son:
+#   n8n, postgres, profile-api, minio, mailpit
+# Opcionales: ollama, cloudflared, pgadmin
+#
+# TODO (Semana 1 del plan): definir imagen/build, variables de entorno
+# (ver ../.env.example), healthchecks, volúmenes y red compartida para
+# cada uno de estos servicios.
+
+version: "3.9"
+
+networks:
+  job-search-agent:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  minio_data:
+  n8n_data:
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    # TODO: env_file, ports, volumes, healthcheck, depends_on: postgres
+    networks: [job-search-agent]
+
+  postgres:
+    image: pgvector/pgvector:pg17
+    # TODO: env_file, ports, volumes, healthcheck
+    networks: [job-search-agent]
+
+  profile-api:
+    build: ../services/profile-api
+    # TODO: env_file, ports, healthcheck, depends_on: postgres, minio
+    networks: [job-search-agent]
+
+  minio:
+    image: minio/minio:latest
+    # TODO: comando server, env_file, ports, volumes, healthcheck
+    networks: [job-search-agent]
+
+  mailpit:
+    image: axllent/mailpit:latest
+    # TODO: ports (SMTP/UI)
+    networks: [job-search-agent]
