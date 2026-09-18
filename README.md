@@ -45,7 +45,9 @@ job-search-agent/
 > Estado actual: andamiaje del repositorio. El `docker-compose.local.yml` es un esqueleto — los servicios (n8n, postgres, profile-api, minio, mailpit) se implementan en el siguiente incremento (Semana 1 del plan).
 
 1. Copiar `.env.example` a `.env` y completar los valores (nunca se commitea `.env`).
-2. `docker compose -f compose/docker-compose.local.yml up -d`
+2. `docker compose --env-file .env -f compose/docker-compose.local.yml up -d`
+   (el flag `--env-file .env` es necesario porque el `.env` vive en la raíz
+   del repo, no junto al archivo compose).
 3. n8n queda disponible en `http://localhost:5678`.
 
 ## Stack (Proyecto 1)
