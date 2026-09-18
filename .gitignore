@@ -1,0 +1,34 @@
+# Entornos y secretos
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Node
+node_modules/
+
+# Docker / datos persistentes locales
+**/postgres_data/
+**/minio_data/
+**/n8n_data/
+
+# Backups (mantener carpeta, no contenido)
+database/backups/*
+!database/backups/.gitkeep
+
+# Documentos reales de usuarios (nunca versionar CVs)
+**/uploads/
+**/documents/*
+!**/documents/.gitkeep
+
+# Editor / SO
+.DS_Store
+.vscode/
+.idea/
+*.log
