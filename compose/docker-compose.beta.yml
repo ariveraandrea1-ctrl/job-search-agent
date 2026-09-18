@@ -1,0 +1,12 @@
+# docker-compose.beta.yml — Proyecto 2 (beta en nube, 5 hasta 30 usuarios)
+#
+# Extiende docker-compose.local.yml. Servicios adicionales previstos:
+#   - proxy de entrada (Caddy/Traefik/Nginx) con TLS
+#   - browser-worker (Playwright aislado)
+#   - redis (opcional, según carga)
+#
+# TODO: definir esta capa cuando arranque el Proyecto 2.
+
+version: "3.9"
+
+services: {}
