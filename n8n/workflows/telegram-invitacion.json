@@ -209,6 +209,66 @@
       ],
       "id": "11ff53cc-173d-416d-8f5a-82d7494cde62",
       "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "content": "\"Separa /start (saludo) de mensajes con archivo adjunto (cv)\"",
+        "height": 144,
+        "width": 176
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        416,
+        -160
+      ],
+      "typeVersion": 1,
+      "id": "8289d101-e19d-488d-bdee-45d0506a5906",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "\"Revisa que el chat_id sea el mío antes de seguir\"",
+        "height": 80,
+        "width": 208
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        160,
+        -96
+      ],
+      "typeVersion": 1,
+      "id": "1f6efbe7-7324-47d7-808b-01e3aa7899d2",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "\"Descarga el archivo que Telegram envió (usa file_id)\"",
+        "height": 80,
+        "width": 224
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        656,
+        304
+      ],
+      "typeVersion": 1,
+      "id": "691ebe82-c86b-426a-acef-cb65fbb1c171",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "\"Manda el archivo a profile-api para sacarle el texto\"",
+        "height": 80,
+        "width": 224
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        896,
+        304
+      ],
+      "typeVersion": 1,
+      "id": "bb51a1b2-15a4-4d70-80c9-911ded28e106",
+      "name": "Sticky Note3"
     }
   ],
   "pinData": {},
@@ -281,7 +341,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "c3913042-f5b4-4540-b85d-4be67f931f2e",
+  "versionId": "dd2589ea-724e-4764-bdae-ba5d8c7cd285",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"
