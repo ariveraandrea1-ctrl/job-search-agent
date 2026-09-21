@@ -45,10 +45,21 @@ job-search-agent/
 > Estado actual: andamiaje del repositorio. El `docker-compose.local.yml` es un esqueleto — los servicios (n8n, postgres, profile-api, minio, mailpit) se implementan en el siguiente incremento (Semana 1 del plan).
 
 1. Copiar `.env.example` a `.env` y completar los valores (nunca se commitea `.env`).
-2. `docker compose --env-file .env -f compose/docker-compose.local.yml up -d`
+2. Cada vez que retomes el trabajo (por ejemplo, tras cerrar el Mac o Docker),
+   ejecutar:
+   ```
+   bash scripts/start-local.sh
+   ```
+   Este script levanta todos los contenedores y renueva automáticamente el
+   túnel de Cloudflare (que expira cada vez que se apaga el entorno) y
+   actualiza `.env` con la nueva URL, sin pasos manuales.
+3. n8n queda disponible en `http://localhost:5678`.
+
+   Si prefieres levantar los contenedores manualmente sin renovar el túnel
+   (por ejemplo, la primera vez), puedes correr:
+   `docker compose --env-file .env -f compose/docker-compose.local.yml up -d`
    (el flag `--env-file .env` es necesario porque el `.env` vive en la raíz
    del repo, no junto al archivo compose).
-3. n8n queda disponible en `http://localhost:5678`.
 
 ## Stack (Proyecto 1)
 
