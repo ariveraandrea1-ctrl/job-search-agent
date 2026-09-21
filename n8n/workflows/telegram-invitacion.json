@@ -101,10 +101,34 @@
               },
               "renameOutput": true,
               "outputKey": "start"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "c1485432-34c8-4107-ae6b-6d5e6f04b00f",
+                    "leftValue": "={{ $json.message.document?.file_name || 'ninguno' }}",
+                    "rightValue": "=ninguno",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "cv"
             }
           ]
         },
-        "looseTypeValidation": true,
+        "looseTypeValidation": "={{ true }}",
         "options": {}
       },
       "type": "n8n-nodes-base.switch",
@@ -115,6 +139,50 @@
       ],
       "id": "d89a4433-e329-4059-b272-50e6d40eb013",
       "name": "Switch"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.document.file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        720,
+        144
+      ],
+      "id": "48b723c1-ed2f-42bf-bcfe-702e05c773f3",
+      "name": "Get a file",
+      "webhookId": "3169440e-3fc9-422e-857c-b9454782d54a",
+      "credentials": {
+        "telegramApi": {
+          "id": "aF0RvNa5kJZkarDY",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "¡Recibí tu archivo! Pronto lo voy a analizar.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        944,
+        144
+      ],
+      "id": "6064ff84-8e86-4315-9997-8300f71b5a4d",
+      "name": "Send a text message1",
+      "webhookId": "a344c422-5eb2-42fd-8d3c-9025c6c3d9ee",
+      "credentials": {
+        "telegramApi": {
+          "id": "aF0RvNa5kJZkarDY",
+          "name": "Telegram account"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -149,6 +217,24 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Get a file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a file": {
+      "main": [
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     }
@@ -158,7 +244,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "f6ae8696-19ec-4ed1-b754-8cbca9c2e872",
+  "versionId": "7fc4a406-fe92-43a7-8c42-9724afee0ff8",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"
