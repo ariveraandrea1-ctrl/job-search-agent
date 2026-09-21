@@ -165,13 +165,13 @@
     {
       "parameters": {
         "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
-        "text": "¡Recibí tu archivo! Pronto lo voy a analizar.",
+        "text": "=¡Recibí tu archivo y extraje {{ $json.char_count }} caracteres de texto! Pronto lo voy a analizar.",
         "additionalFields": {}
       },
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        944,
+        1168,
         144
       ],
       "id": "6064ff84-8e86-4315-9997-8300f71b5a4d",
@@ -183,6 +183,32 @@
           "name": "Telegram account"
         }
       }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://profile-api:8000/extract-text",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        944,
+        144
+      ],
+      "id": "11ff53cc-173d-416d-8f5a-82d7494cde62",
+      "name": "HTTP Request"
     }
   ],
   "pinData": {},
@@ -231,6 +257,17 @@
       "main": [
         [
           {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
             "node": "Send a text message1",
             "type": "main",
             "index": 0
@@ -244,7 +281,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "7fc4a406-fe92-43a7-8c42-9724afee0ff8",
+  "versionId": "c3913042-f5b4-4540-b85d-4be67f931f2e",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"
