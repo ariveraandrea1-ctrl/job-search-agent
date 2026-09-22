@@ -171,7 +171,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        1168,
+        1392,
         144
       ],
       "id": "6064ff84-8e86-4315-9997-8300f71b5a4d",
@@ -269,6 +269,24 @@
       "typeVersion": 1,
       "id": "bb51a1b2-15a4-4d70-80c9-911ded28e106",
       "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://profile-api:8000/documents",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"telegram_user_id\": {{ $('Telegram Trigger').item.json.message.chat.id }},\n  \"filename\": {{ JSON.stringify($json.filename) }},\n  \"char_count\": {{ $json.char_count }},\n  \"text\": {{ JSON.stringify($json.text) }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1168,
+        144
+      ],
+      "id": "435a5f15-f44e-46a4-8d16-31f78a7e1566",
+      "name": "HTTP Request1"
     }
   ],
   "pinData": {},
@@ -328,6 +346,17 @@
       "main": [
         [
           {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
             "node": "Send a text message1",
             "type": "main",
             "index": 0
@@ -341,7 +370,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "dd2589ea-724e-4764-bdae-ba5d8c7cd285",
+  "versionId": "678f1bc4-d408-4e29-823d-605240c61515",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"
