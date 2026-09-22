@@ -287,6 +287,21 @@
       ],
       "id": "435a5f15-f44e-46a4-8d16-31f78a7e1566",
       "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "content": "Guarda el CV extraído en la base de datos (profile-api)",
+        "height": 128,
+        "width": 150
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1136,
+        304
+      ],
+      "typeVersion": 1,
+      "id": "fbf9afde-e1a8-4700-847c-ddebf3dfad18",
+      "name": "Sticky Note4"
     }
   ],
   "pinData": {},
@@ -370,7 +385,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "678f1bc4-d408-4e29-823d-605240c61515",
+  "versionId": "1164fb77-fe6d-439c-a5c0-16336c6bd838",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"
