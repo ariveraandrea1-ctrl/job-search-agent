@@ -4,12 +4,19 @@ Semana 1: endpoint de salud (/health).
 Semana 3: endpoint de extracción de texto (/extract-text) — recibe un
 archivo (PDF o DOCX) y devuelve el texto plano que contiene, para que
 n8n pueda seguir procesándolo (guardarlo, analizarlo, etc.).
+Semana 4: endpoint de guardado (/documents) — recibe el texto ya
+extraído y lo guarda en PostgreSQL, para que no se pierda.
 """
 import io
 
-from fastapi import FastAPI, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, HTTPException, UploadFile
+from pydantic import BaseModel
 from pypdf import PdfReader
-from docx import Document
+from docx import Document as DocxDocument
+from sqlalchemy.orm import Session
+
+from app.db import get_db
+from app.models import Document
 
 app = FastAPI(title="profile-api", version="0.1.0")
 
@@ -29,7 +36,7 @@ def _extraer_texto_pdf(contenido: bytes) -> str:
 
 def _extraer_texto_docx(contenido: bytes) -> str:
     """Lee un DOCX en memoria y devuelve el texto de todos sus párrafos."""
-    documento = Document(io.BytesIO(contenido))
+    documento = DocxDocument(io.BytesIO(contenido))
     parrafos = [parrafo.text for parrafo in documento.paragraphs]
     return "\n".join(parrafos).strip()
 
@@ -59,4 +66,37 @@ async def extract_text(file: UploadFile) -> dict:
         "filename": nombre,
         "char_count": len(texto),
         "text": texto,
+    }
+
+
+class DocumentIn(BaseModel):
+    """Lo que n8n manda para guardar un CV ya extraído."""
+
+    telegram_user_id: int
+    filename: str
+    char_count: int
+    text: str
+
+
+@app.post("/documents")
+def save_document(payload: DocumentIn, db: Session = Depends(get_db)) -> dict:
+    """Guarda en PostgreSQL el texto de un CV ya extraído.
+
+    n8n llama esto después de /extract-text, mandando el resultado de
+    ese paso más el chat_id de Telegram del usuario. Así el texto
+    queda guardado de forma permanente, en vez de perderse.
+    """
+    documento = Document(
+        telegram_user_id=payload.telegram_user_id,
+        filename=payload.filename,
+        char_count=payload.char_count,
+        extracted_text=payload.text,
+    )
+    db.add(documento)
+    db.commit()
+    db.refresh(documento)
+
+    return {
+        "id": str(documento.id),
+        "created_at": documento.created_at.isoformat(),
     }
