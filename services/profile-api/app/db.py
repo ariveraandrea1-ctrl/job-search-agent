@@ -11,7 +11,11 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 DATABASE_URL = os.environ["DATABASE_URL"]
 
-engine = create_engine(DATABASE_URL, future=True)
+# pool_pre_ping=True: antes de usar una conexion guardada, la prueba con
+# un "SELECT 1". Si Postgres se reinicio (por ejemplo porque el Mac se
+# durmio o Docker se reinicio), descarta la conexion muerta y abre una
+# nueva sola, en vez de fallar con "server closed the connection".
+engine = create_engine(DATABASE_URL, future=True, pool_pre_ping=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 Base = declarative_base()
