@@ -58,3 +58,14 @@ Estamos en el Proyecto 1 (perfil + radar).
   a la pregunta de entrevista posterior al CV (n8n: nodo después de "Enviar
   un mensaje de texto1"). Pendiente del lado de Andrea: commit en
   `feature/interview-answers` y el nodo de n8n que llama a este endpoint.
+- 2026-09-23 (tarde): `interview-answers` terminado de punta a punta
+  (nodos "Enviar pregunta de entrevista" → salida `respuesta` del Switch →
+  "Guardar respuesta de entrevista" → "Confirmar respuesta guardada"),
+  probado en Telegram y verificado en la tabla. Workflow exportado a
+  `n8n/workflows/telegram-invitacion.json`. Notas de los nodos van en
+  Ajustes → Notas (no sticky notes, que se desordenan al ordenar el lienzo).
+- 2026-09-23: `app/db.py` usa `pool_pre_ping=True`. Motivo: si el Mac se
+  duerme o Docker se reinicia, Postgres se reinicia y profile-api quedaba
+  con una conexión muerta ("terminating connection due to administrator
+  command") → HTTP 500 en `/documents`. Al volver de una pausa, correr
+  primero `bash scripts/start-local.sh` (el túnel de Cloudflare también se cae).
