@@ -6,6 +6,10 @@ archivo (PDF o DOCX) y devuelve el texto plano que contiene, para que
 n8n pueda seguir procesándolo (guardarlo, analizarlo, etc.).
 Semana 4: endpoint de guardado (/documents) — recibe el texto ya
 extraído y lo guarda en PostgreSQL, para que no se pierda.
+Semana 5: endpoint de entrevista (/interview-answers) — recibe la
+respuesta que el usuario da a la pregunta de entrevista (la que se
+manda justo después de confirmar la recepción del CV) y la guarda en
+PostgreSQL, igual que se hace con el texto del CV.
 """
 import io
 
@@ -16,7 +20,7 @@ from docx import Document as DocxDocument
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import Document
+from app.models import Document, InterviewAnswer
 
 app = FastAPI(title="profile-api", version="0.1.0")
 
@@ -99,4 +103,38 @@ def save_document(payload: DocumentIn, db: Session = Depends(get_db)) -> dict:
     return {
         "id": str(documento.id),
         "created_at": documento.created_at.isoformat(),
+    }
+
+
+class InterviewAnswerIn(BaseModel):
+    """Lo que n8n manda cuando el usuario contesta la pregunta de entrevista."""
+
+    telegram_user_id: int
+    question: str
+    answer: str
+
+
+@app.post("/interview-answers")
+def save_interview_answer(
+    payload: InterviewAnswerIn, db: Session = Depends(get_db)
+) -> dict:
+    """Guarda en PostgreSQL la respuesta del usuario a la pregunta de entrevista.
+
+    n8n llama esto después de que el usuario responde (por Telegram) a la
+    pregunta que se le hizo justo después de confirmar la recepción del
+    CV. Así la respuesta queda guardada de forma permanente, en vez de
+    perderse, igual que ya pasa con el texto extraído del CV.
+    """
+    respuesta = InterviewAnswer(
+        telegram_user_id=payload.telegram_user_id,
+        question=payload.question,
+        answer=payload.answer,
+    )
+    db.add(respuesta)
+    db.commit()
+    db.refresh(respuesta)
+
+    return {
+        "id": str(respuesta.id),
+        "created_at": respuesta.created_at.isoformat(),
     }
