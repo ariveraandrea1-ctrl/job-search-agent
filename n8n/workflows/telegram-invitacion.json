@@ -150,7 +150,7 @@
       "typeVersion": 1.2,
       "position": [
         672,
-        192
+        480
       ],
       "id": "48b723c1-ed2f-42bf-bcfe-702e05c773f3",
       "name": "Get a file",
@@ -174,7 +174,7 @@
       "typeVersion": 1.2,
       "position": [
         1344,
-        192
+        480
       ],
       "id": "6064ff84-8e86-4315-9997-8300f71b5a4d",
       "name": "Send a text message1",
@@ -209,7 +209,7 @@
       "typeVersion": 4.5,
       "position": [
         896,
-        192
+        480
       ],
       "id": "11ff53cc-173d-416d-8f5a-82d7494cde62",
       "name": "HTTP Request",
@@ -229,7 +229,7 @@
       "typeVersion": 4.5,
       "position": [
         1120,
-        192
+        480
       ],
       "id": "435a5f15-f44e-46a4-8d16-31f78a7e1566",
       "name": "HTTP Request1",
@@ -246,7 +246,7 @@
       "typeVersion": 1.2,
       "position": [
         1568,
-        192
+        480
       ],
       "id": "ca3bbc8a-d22f-4e79-adde-06df444a0ae8",
       "name": "Enviar pregunta de entrevista",
@@ -272,8 +272,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
-        560,
-        448
+        1120,
+        96
       ],
       "id": "b4c281dc-659b-4f5c-b5c0-ab539f7d2942",
       "name": "Guardar respuesta de entrevista",
@@ -289,8 +289,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        784,
-        448
+        1568,
+        96
       ],
       "id": "4efa2efe-bb76-4a9c-9d55-95c4ab0f9b44",
       "name": "Confirmar respuesta guardada",
@@ -333,6 +333,142 @@
       "name": "Call 'verificar-acceso'",
       "notesInFlow": true,
       "notes": "Portero: revisa que quien escribe esté autorizado (mi chat_id) antes de dejar seguir el mensaje."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO conversation_state (telegram_user_id, step, updated_at)\nVALUES ($1, 'esperando_respuesta_entrevista', now())\nON CONFLICT (telegram_user_id)\nDO UPDATE SET step = EXCLUDED.step, updated_at = now();",
+        "options": {
+          "queryReplacement": "={{ $('Telegram Trigger').item.json.message.chat.id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1792,
+        480
+      ],
+      "id": "a5ea0da8-c5df-4e86-aa85-fc3df3d291f2",
+      "name": "Anotar: esperando respuesta",
+      "notesInFlow": true,
+      "credentials": {
+        "postgres": {
+          "id": "EvPGGiXFOJMKZE5Q",
+          "name": "Postgres account"
+        }
+      },
+      "notes": "Libreta: anota en conversation_state que esta persona está esperando respuesta a la pregunta de entrevista."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM conversation_state WHERE telegram_user_id = $1;",
+        "options": {
+          "queryReplacement": "={{ $('Telegram Trigger').item.json.message.chat.id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1344,
+        96
+      ],
+      "id": "1a84276c-cf2c-47bc-824a-dbefcb58d670",
+      "name": "Borrar anotación",
+      "notesInFlow": true,
+      "credentials": {
+        "postgres": {
+          "id": "EvPGGiXFOJMKZE5Q",
+          "name": "Postgres account"
+        }
+      },
+      "notes": "Libreta: borra la anotación porque la persona ya respondió."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT step FROM conversation_state WHERE telegram_user_id = $1;",
+        "options": {
+          "queryReplacement": "={{ $('Telegram Trigger').item.json.message.chat.id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        672,
+        192
+      ],
+      "id": "c36d8617-98a9-4cae-80ab-86f13f235ecb",
+      "name": "Leer anotación",
+      "alwaysOutputData": true,
+      "notesInFlow": true,
+      "credentials": {
+        "postgres": {
+          "id": "EvPGGiXFOJMKZE5Q",
+          "name": "Postgres account"
+        }
+      },
+      "notes": "Libreta: busca si esta persona está esperando respuesta. \"Always Output Data\" activado para seguir aunque no haya anotación."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "33526a6c-72dc-416e-8851-f26aaac83991",
+              "leftValue": "={{ $json.step }}",
+              "rightValue": "esperando_respuesta_entrevista",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        896,
+        192
+      ],
+      "id": "25af712d-ff17-44f4-bdf4-8fc8365a9104",
+      "name": "¿Esperaba respuesta?",
+      "notesInFlow": true,
+      "notes": "Decide: si la libreta dice \"esperando respuesta\" → true (guarda). Si no → false (responde que no entendió)."
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "No entendí 🤔 Escribe /start para empezar o envíame tu CV en PDF o Word.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1120,
+        288
+      ],
+      "id": "c746c21b-8105-4f02-8bf1-44bb6a488f82",
+      "name": "Responder: no entendí",
+      "webhookId": "99fd0b43-1cfe-45ab-b9fd-8bf1136e3bb1",
+      "notesInFlow": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "aF0RvNa5kJZkarDY",
+          "name": "Telegram account"
+        }
+      },
+      "notes": "No entendí: llegó un texto pero la persona no estaba esperando respuesta."
     }
   ],
   "pinData": {},
@@ -366,7 +502,7 @@
         ],
         [
           {
-            "node": "Guardar respuesta de entrevista",
+            "node": "Leer anotación",
             "type": "main",
             "index": 0
           }
@@ -421,7 +557,7 @@
       "main": [
         [
           {
-            "node": "Confirmar respuesta guardada",
+            "node": "Borrar anotación",
             "type": "main",
             "index": 0
           }
@@ -438,6 +574,57 @@
           }
         ]
       ]
+    },
+    "Enviar pregunta de entrevista": {
+      "main": [
+        [
+          {
+            "node": "Anotar: esperando respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Borrar anotación": {
+      "main": [
+        [
+          {
+            "node": "Confirmar respuesta guardada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer anotación": {
+      "main": [
+        [
+          {
+            "node": "¿Esperaba respuesta?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Esperaba respuesta?": {
+      "main": [
+        [
+          {
+            "node": "Guardar respuesta de entrevista",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder: no entendí",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -445,7 +632,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "df62ca17-5993-427d-bf2a-515413430f3d",
+  "versionId": "d8595f27-4bf8-421c-aec6-7eac4db405de",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"

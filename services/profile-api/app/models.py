@@ -2,8 +2,9 @@
 
 "Document": un CV que un usuario mando por Telegram, con el texto que
 le sacamos. "InterviewAnswer": la respuesta que el usuario da a la
-pregunta de entrevista posterior al CV. Mas adelante se agregaran las
-tablas de perfil, etc.
+pregunta de entrevista posterior al CV. "ConversationState": en que paso
+de la conversacion va cada usuario (la usa n8n directamente). Mas
+adelante se agregaran las tablas de perfil, etc.
 """
 import uuid
 from datetime import datetime, timezone
@@ -44,5 +45,21 @@ class InterviewAnswer(Base):
     question: Mapped[str] = mapped_column(Text, nullable=False)
     answer: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+
+
+class ConversationState(Base):
+    """En que paso de la conversacion va cada usuario de Telegram.
+
+    No tiene endpoint en profile-api: n8n la lee y escribe con el nodo
+    Postgres. Esta aqui para que el modelo refleje el esquema real.
+    """
+
+    __tablename__ = "conversation_state"
+
+    telegram_user_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    step: Mapped[str] = mapped_column(Text, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
