@@ -167,7 +167,7 @@
     {
       "parameters": {
         "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
-        "text": "=¡Recibí tu archivo y extraje {{ $json.char_count }} caracteres de texto! Pronto lo voy a analizar.",
+        "text": "=¡Recibí tu archivo y extraje {{ $('HTTP Request').item.json.char_count }} caracteres de texto! Pronto lo voy a analizar.",
         "additionalFields": {}
       },
       "type": "n8n-nodes-base.telegram",
@@ -632,7 +632,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "d8595f27-4bf8-421c-aec6-7eac4db405de",
+  "versionId": "efde5da3-1293-4fce-af76-90b265fdb537",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"
