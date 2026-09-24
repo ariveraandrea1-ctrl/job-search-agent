@@ -70,23 +70,24 @@ Estamos en el Proyecto 1 (perfil + radar).
   command") → HTTP 500 en `/documents`. Al volver de una pausa, correr
   primero `bash scripts/start-local.sh` (el túnel de Cloudflare también se cae).
 
-## Dónde quedamos (2026-09-23 noche) — rama `feature/estado-conversacion`, SIN COMMIT
+## Estado y lecciones (actualizado 2026-09-24)
 
-- Hecho y probado (4 casos en Telegram + verificación en BD): tabla
+- 2026-09-23: estado de conversación terminado y mergeado a develop: tabla
   `conversation_state` (migración `0003`, modelo `ConversationState`) y
   nodos n8n "Anotar: esperando respuesta" → "Leer anotación" (Always Output
   Data) → If "¿Esperaba respuesta?" (true: guardar → "Borrar anotación" →
-  confirmar; false: "Responder: no entendí"). Workflow exportado ya copiado a
-  `n8n/workflows/telegram-invitacion.json`.
-- PENDIENTE 1: commit en esta rama (migración 0003, models.py, workflow,
-  CLAUDE.md) → push → merge a develop → push.
-- PENDIENTE 2 (bug encontrado por Andrea, va en rama `fix/` propia):
-  "Send a text message1" dice "extraje  caracteres" sin número, porque usa
-  `{{ $json.char_count }}` y su nodo anterior es "HTTP Request1"
-  (/documents), que solo devuelve id y created_at. Arreglo:
-  `{{ $('HTTP Request').item.json.char_count }}`.
+  confirmar; false: "Responder: no entendí"). Probado con 4 casos en
+  Telegram + verificación en BD.
+- 2026-09-24 (rama `fix/cv-char-count`): "Send a text message1" decía
+  "extraje  caracteres" sin número porque usaba `{{ $json.char_count }}` y su
+  nodo anterior es "HTTP Request1" (/documents), que solo devuelve id y
+  created_at. Ahora usa `{{ $('HTTP Request').item.json.char_count }}`.
 - Lección: en campos de expresión de n8n un espacio escondido tras el `=`
   (`"= {{ $json.step }}"`) rompe comparaciones del If. Revisar copiando el
   nodo (clic + Cmd+C) y mirando el JSON.
+- Lección: el Telegram Trigger no permite ejecuciones de prueba mientras el
+  workflow está publicado (hay que despublicar un momento). Sin datos de
+  ejecución, el panel INPUT no muestra campos para arrastrar.
 - Al descargar workflows, el navegador nombra `telegram-invitacion (N).json`;
-  usar `ls -t ~/Downloads | head -3` para ver el nombre exacto.
+  usar `ls -t ~/Downloads | head -3` para ver el nombre exacto y revisar que
+  sea la versión nueva antes de moverla al repo.
