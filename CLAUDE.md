@@ -82,6 +82,22 @@ Estamos en el Proyecto 1 (perfil + radar).
   "extraje  caracteres" sin número porque usaba `{{ $json.char_count }}` y su
   nodo anterior es "HTTP Request1" (/documents), que solo devuelve id y
   created_at. Ahora usa `{{ $('HTTP Request').item.json.char_count }}`.
+- 2026-09-25 (rama `feature/entrevista-varias-preguntas`): entrevista de
+  varias preguntas. Migración `0004`: tabla `interview_questions`
+  (position, question; 3 preguntas sembradas: rol, modalidad, ubicación) y
+  columna `conversation_state.question_position`. Las preguntas viven SOLO en
+  esa tabla (no escritas en nodos): para agregar una, insertar una fila.
+  Flujo n8n — CV: "Buscar primera pregunta" → "Enviar pregunta de
+  entrevista" ({{ $json.question }}) → "Anotar: esperando respuesta" (guarda
+  position). Respuesta: "Leer anotación" (JOIN con interview_questions) →
+  If → "Guardar respuesta" (question de Leer anotación) → "Buscar siguiente
+  pregunta" (position > actual, Always Output Data) → If "¿Hay otra
+  pregunta?" (true: "Enviar siguiente pregunta" → "Anotar: siguiente
+  pregunta" UPDATE; false: "Borrar anotación" → "Confirmar fin de
+  entrevista"). Probado con 5 casos + verificación en BD.
+- Próximo (Semana 4, según la especificación): secciones de preguntas,
+  entrevista adaptativa con IA (no preguntar lo que ya está en el CV),
+  confirmar inferencias y guardar respuestas en campos del perfil.
 - Lección: en campos de expresión de n8n un espacio escondido tras el `=`
   (`"= {{ $json.step }}"`) rompe comparaciones del If. Revisar copiando el
   nodo (clic + Cmd+C) y mirando el JSON.

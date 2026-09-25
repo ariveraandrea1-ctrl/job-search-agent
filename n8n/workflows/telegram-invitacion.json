@@ -239,13 +239,13 @@
     {
       "parameters": {
         "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
-        "text": "Cuéntame: ¿qué tipo de rol estás buscando?",
+        "text": "={{ $json.question }}",
         "additionalFields": {}
       },
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        1568,
+        1792,
         480
       ],
       "id": "ca3bbc8a-d22f-4e79-adde-06df444a0ae8",
@@ -258,7 +258,7 @@
           "name": "Telegram account"
         }
       },
-      "notes": "Pregunta: la respuesta llega como mensaje nuevo y entra por la fila \"respuesta\". El texto debe ser idéntico al de \"Guardar respuesta de entrevista\""
+      "notes": "Pregunta: envía la pregunta que trae el nodo anterior (sale de la lista interview_questions)."
     },
     {
       "parameters": {
@@ -266,7 +266,7 @@
         "url": "http://profile-api:8000/interview-answers",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"telegram_user_id\": {{ $('Telegram Trigger').item.json.message.chat.id }},\n  \"question\": \"Cuéntame: ¿qué tipo de rol estás buscando?\",\n  \"answer\": {{ JSON.stringify($('Telegram Trigger').item.json.message.text) }}\n}",
+        "jsonBody": "={\n  \"telegram_user_id\": {{ $('Telegram Trigger').item.json.message.chat.id }},\n  \"question\": {{ JSON.stringify($('Leer anotación').item.json.question) }},\n  \"answer\": {{ JSON.stringify($('Telegram Trigger').item.json.message.text) }}\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -278,31 +278,7 @@
       "id": "b4c281dc-659b-4f5c-b5c0-ab539f7d2942",
       "name": "Guardar respuesta de entrevista",
       "notesInFlow": true,
-      "notes": "Guarda respuesta: envía quién respondió, la pregunta y la respuesta a profile-api. Si cambias la pregunta, cámbiala también en \"Enviar pregunta de entrevista\"."
-    },
-    {
-      "parameters": {
-        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
-        "text": "¡Gracias! Guardé tu respuesta.",
-        "additionalFields": {}
-      },
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
-      "position": [
-        1568,
-        96
-      ],
-      "id": "4efa2efe-bb76-4a9c-9d55-95c4ab0f9b44",
-      "name": "Confirmar respuesta guardada",
-      "webhookId": "d49f8164-9031-4fac-afc6-9c69f8dd6c0e",
-      "notesInFlow": true,
-      "credentials": {
-        "telegramApi": {
-          "id": "aF0RvNa5kJZkarDY",
-          "name": "Telegram account"
-        }
-      },
-      "notes": "Confirma respuesta: avisa que la respuesta quedó guardada."
+      "notes": "Guarda respuesta: envía quién respondió, la pregunta (de Leer anotación) y la respuesta a profile-api."
     },
     {
       "parameters": {
@@ -337,15 +313,15 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO conversation_state (telegram_user_id, step, updated_at)\nVALUES ($1, 'esperando_respuesta_entrevista', now())\nON CONFLICT (telegram_user_id)\nDO UPDATE SET step = EXCLUDED.step, updated_at = now();",
+        "query": "INSERT INTO conversation_state (telegram_user_id, step, question_position, updated_at)\nVALUES ($1, 'esperando_respuesta_entrevista', $2, now())\nON CONFLICT (telegram_user_id)\nDO UPDATE SET step = EXCLUDED.step,\n              question_position = EXCLUDED.question_position,\n              updated_at = now();",
         "options": {
-          "queryReplacement": "={{ $('Telegram Trigger').item.json.message.chat.id }}"
+          "queryReplacement": "={{ $('Telegram Trigger').item.json.message.chat.id }},{{ $('Buscar primera pregunta').item.json.position }}"
         }
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.7,
       "position": [
-        1792,
+        2016,
         480
       ],
       "id": "a5ea0da8-c5df-4e86-aa85-fc3df3d291f2",
@@ -370,8 +346,8 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.7,
       "position": [
-        1344,
-        96
+        1792,
+        0
       ],
       "id": "1a84276c-cf2c-47bc-824a-dbefcb58d670",
       "name": "Borrar anotación",
@@ -387,7 +363,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT step FROM conversation_state WHERE telegram_user_id = $1;",
+        "query": "SELECT s.step, s.question_position, q.question\nFROM conversation_state s\nLEFT JOIN interview_questions q ON q.position = s.question_position\nWHERE s.telegram_user_id = $1;",
         "options": {
           "queryReplacement": "={{ $('Telegram Trigger').item.json.message.chat.id }}"
         }
@@ -469,6 +445,165 @@
         }
       },
       "notes": "No entendí: llegó un texto pero la persona no estaba esperando respuesta."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT position, question FROM interview_questions ORDER BY position LIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1568,
+        480
+      ],
+      "id": "bda6b98f-aa68-4a2f-be7e-8d1e54316d59",
+      "name": "Buscar primera pregunta",
+      "notesInFlow": true,
+      "credentials": {
+        "postgres": {
+          "id": "EvPGGiXFOJMKZE5Q",
+          "name": "Postgres account"
+        }
+      },
+      "notes": "Lista: trae la pregunta #1 de interview_questions para empezar la entrevista."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT position, question FROM interview_questions\nWHERE position > $1\nORDER BY position\nLIMIT 1;",
+        "options": {
+          "queryReplacement": "={{ $('Leer anotación').item.json.question_position }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1344,
+        96
+      ],
+      "id": "693fd242-972c-41a3-a309-e2b0d3d1c166",
+      "name": "Buscar siguiente pregunta",
+      "alwaysOutputData": true,
+      "notesInFlow": true,
+      "credentials": {
+        "postgres": {
+          "id": "EvPGGiXFOJMKZE5Q",
+          "name": "Postgres account"
+        }
+      },
+      "notes": "Lista: trae la pregunta que sigue. Si no hay más, sale vacío (\"Always Output Data\" activado)."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "7572ba99-dd3a-4c73-ab60-90ee6d058448",
+              "leftValue": "={{ $json.position }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1568,
+        96
+      ],
+      "id": "b91cd287-7341-4a9e-9be0-16f6d6c08d1a",
+      "name": "¿Hay otra pregunta?",
+      "notesInFlow": true,
+      "notes": "Decide: si hay siguiente pregunta → true (la envía). Si no → false (termina la entrevista)."
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $('Buscar siguiente pregunta').item.json.question }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1792,
+        192
+      ],
+      "id": "d9d295fd-c8a4-4dc4-b255-7923aad85c7e",
+      "name": "Enviar siguiente pregunta",
+      "webhookId": "82a2d69f-0fe3-4f24-bbc2-9f23dbd66d8f",
+      "notesInFlow": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "aF0RvNa5kJZkarDY",
+          "name": "Telegram account"
+        }
+      },
+      "notes": "Pregunta: envía la siguiente pregunta de la lista."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE conversation_state\nSET question_position = $2, updated_at = now()\nWHERE telegram_user_id = $1;",
+        "options": {
+          "queryReplacement": "={{ $('Telegram Trigger').item.json.message.chat.id }},{{ $('Buscar siguiente pregunta').item.json.position }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        2016,
+        192
+      ],
+      "id": "bf0a6909-f954-4bf1-b6a7-83fc3b75ae45",
+      "name": "Anotar: siguiente pregunta",
+      "notesInFlow": true,
+      "credentials": {
+        "postgres": {
+          "id": "EvPGGiXFOJMKZE5Q",
+          "name": "Postgres account"
+        }
+      },
+      "notes": "Libreta: actualiza en qué número de pregunta va la persona."
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "¡Listo! Terminamos la entrevista. Guardé todas tus respuestas. 🙌",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2016,
+        0
+      ],
+      "id": "4efa2efe-bb76-4a9c-9d55-95c4ab0f9b44",
+      "name": "Confirmar fin de entrevista",
+      "webhookId": "d49f8164-9031-4fac-afc6-9c69f8dd6c0e",
+      "notesInFlow": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "aF0RvNa5kJZkarDY",
+          "name": "Telegram account"
+        }
+      },
+      "notes": "Fin: avisa que la entrevista terminó (no quedan más preguntas"
     }
   ],
   "pinData": {},
@@ -546,7 +681,7 @@
       "main": [
         [
           {
-            "node": "Enviar pregunta de entrevista",
+            "node": "Buscar primera pregunta",
             "type": "main",
             "index": 0
           }
@@ -557,7 +692,7 @@
       "main": [
         [
           {
-            "node": "Borrar anotación",
+            "node": "Buscar siguiente pregunta",
             "type": "main",
             "index": 0
           }
@@ -590,7 +725,7 @@
       "main": [
         [
           {
-            "node": "Confirmar respuesta guardada",
+            "node": "Confirmar fin de entrevista",
             "type": "main",
             "index": 0
           }
@@ -625,6 +760,57 @@
           }
         ]
       ]
+    },
+    "Buscar primera pregunta": {
+      "main": [
+        [
+          {
+            "node": "Enviar pregunta de entrevista",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar siguiente pregunta": {
+      "main": [
+        [
+          {
+            "node": "¿Hay otra pregunta?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Hay otra pregunta?": {
+      "main": [
+        [
+          {
+            "node": "Enviar siguiente pregunta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Borrar anotación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar siguiente pregunta": {
+      "main": [
+        [
+          {
+            "node": "Anotar: siguiente pregunta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -632,7 +818,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "efde5da3-1293-4fce-af76-90b265fdb537",
+  "versionId": "2c6e5f03-b53b-496d-a7a1-a0323be3e9ea",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"
