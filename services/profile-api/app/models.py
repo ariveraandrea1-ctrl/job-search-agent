@@ -2,7 +2,8 @@
 
 "Document": un CV que un usuario mando por Telegram, con el texto que
 le sacamos. "InterviewAnswer": la respuesta que el usuario da a la
-pregunta de entrevista posterior al CV. "ConversationState": en que paso
+pregunta de entrevista posterior al CV. "InterviewQuestion": la lista de
+preguntas de la entrevista. "ConversationState": en que paso
 de la conversacion va cada usuario (la usa n8n directamente). Mas
 adelante se agregaran las tablas de perfil, etc.
 """
@@ -60,6 +61,20 @@ class ConversationState(Base):
 
     telegram_user_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     step: Mapped[str] = mapped_column(Text, nullable=False)
+    # En que pregunta de interview_questions va (None si no esta en entrevista).
+    question_position: Mapped[int | None] = mapped_column(Integer, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
+
+
+class InterviewQuestion(Base):
+    """Una pregunta de la entrevista. El orden lo da "position" (1, 2, 3...).
+
+    No tiene endpoint en profile-api: n8n la lee con el nodo Postgres.
+    """
+
+    __tablename__ = "interview_questions"
+
+    position: Mapped[int] = mapped_column(Integer, primary_key=True)
+    question: Mapped[str] = mapped_column(Text, nullable=False)
