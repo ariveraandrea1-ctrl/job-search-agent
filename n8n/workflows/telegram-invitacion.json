@@ -246,7 +246,7 @@
       "typeVersion": 1.2,
       "position": [
         1792,
-        480
+        384
       ],
       "id": "ca3bbc8a-d22f-4e79-adde-06df444a0ae8",
       "name": "Enviar pregunta de entrevista",
@@ -322,7 +322,7 @@
       "typeVersion": 2.7,
       "position": [
         2016,
-        480
+        384
       ],
       "id": "a5ea0da8-c5df-4e86-aa85-fc3df3d291f2",
       "name": "Anotar: esperando respuesta",
@@ -456,7 +456,7 @@
       "typeVersion": 2.7,
       "position": [
         1568,
-        480
+        384
       ],
       "id": "bda6b98f-aa68-4a2f-be7e-8d1e54316d59",
       "name": "Buscar primera pregunta",
@@ -604,6 +604,91 @@
         }
       },
       "notes": "Fin: avisa que la entrevista terminó (no quedan más preguntas"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f0072052-fa35-4c5d-b59c-2841c9efe533",
+              "name": "system_prompt",
+              "value": "Eres un asistente que extrae datos de hojas de vida (CV).  Reglas obligatorias: 1. Usa SOLO información que aparezca en el CV. No inventes, no supongas, no completes. 2. Si un dato no aparece, usa null (o [] si es una lista). 3. Fechas en formato \"AAAA-MM\". Si solo hay año, \"AAAA\". Si dice \"actual\" o \"presente\", usa \"actual\". 4. Responde ÚNICAMENTE con un JSON válido, sin texto antes ni después y sin ```.  Formato exacto de la respuesta: {   \"contacto\": {     \"nombre\": null, \"email\": null, \"telefono\": null,     \"ciudad\": null, \"pais\": null,     \"linkedin\": null, \"github\": null, \"portafolio\": null   },   \"perfil\": {     \"cargos\": [],     \"resumen\": null   },   \"experiencia\": [     { \"empresa\": null, \"cargo\": null, \"inicio\": null, \"fin\": null, \"logros\": [] }   ],   \"proyectos\": [     { \"nombre\": null, \"contexto\": null, \"rol\": null, \"inicio\": null, \"fin\": null, \"logros\": [], \"tecnologias\": [] }   ],   \"educacion\": [     { \"institucion\": null, \"titulo\": null, \"inicio\": null, \"fin\": null }   ],   \"certificaciones\": [     { \"nombre\": null, \"emisor\": null, \"fecha\": null }   ],   \"habilidades\": {     \"qa\": [],     \"automatizacion\": [],     \"bases_de_datos\": [],     \"herramientas\": [],     \"blandas\": []   },   \"idiomas\": [     { \"idioma\": null, \"nivel\": null }   ],   \"faltantes\": [] }  Cómo llenar cada sección: - \"cargos\": los roles o títulos profesionales del CV. No repitas variantes del mismo rol (por ejemplo, \"QA Engineer\" y \"QA Engineer Jr.\" son uno solo: deja el más específico). - \"experiencia\": SOLO empleos reales (trabajos con una empresa o empleador). - \"proyectos\": proyectos de formación, bootcamp, cursos o personales. Si un proyecto pertenece a un curso o bootcamp, escribe el nombre de ese curso en \"contexto\". Nunca pongas un proyecto dentro de \"experiencia\". - \"habilidades.qa\": técnicas y prácticas de pruebas (diseño de casos de prueba, gestión de defectos, pruebas de regresión, valores límite, etc.). - \"habilidades.automatizacion\": lenguajes, librerías y herramientas para automatizar (Python, pytest, Selenium, n8n, etc.). - \"habilidades.bases_de_datos\": motores y lenguajes de datos (SQL, PostgreSQL, etc.). - \"habilidades.herramientas\": otras herramientas de trabajo (Postman, JIRA, Git, Docker, etc.). - \"habilidades.blandas\": SOLO habilidades personales o interpersonales (comunicación, trabajo en equipo, etc.). Nada técnico.  Para \"faltantes\", revisa esta lista y agrega una frase corta en español por cada dato que NO esté en el CV o no quede claro: - Ciudad de residencia - Modalidad de trabajo preferida (remoto, híbrido, presencial) - Salario esperado - Disponibilidad para empezar - Nivel de inglés (si no está, o si no es claro para trabajar en inglés) - Tipo de contrato buscado - Certificaciones formales Agrega también cualquier otro dato importante para buscar empleo que falte o sea confuso.",
+              "type": "string"
+            },
+            {
+              "id": "6f04dc49-07a8-4e07-837c-898496125160",
+              "name": "user_text",
+              "value": "={{ $('HTTP Request').item.json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1568,
+        576
+      ],
+      "id": "503aef32-6e23-4361-9632-fd34395a97bd",
+      "name": "Instrucciones: extraer CV",
+      "notesInFlow": true,
+      "notes": "Prompt: instrucciones para que la IA saque los datos del CV en JSON."
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "VALpbW0FR4kckirx",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/VALpbW0FR4kckirx",
+          "cachedResultName": "ai-model-router"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "system_prompt": "={{ $json.system_prompt }}",
+            "user_text": "={{ $json.user_text }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "system_prompt",
+              "displayName": "system_prompt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "user_text",
+              "displayName": "user_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1792,
+        576
+      ],
+      "id": "03f61865-7700-4127-8b6a-dc1cea9e8e2c",
+      "name": "Analizar CV con IA",
+      "notesInFlow": true,
+      "notes": " IA: manda el CV a la central (ai-model-router) y recibe los datos en JSON."
     }
   ],
   "pinData": {},
@@ -682,6 +767,11 @@
         [
           {
             "node": "Buscar primera pregunta",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Instrucciones: extraer CV",
             "type": "main",
             "index": 0
           }
@@ -811,6 +901,17 @@
           }
         ]
       ]
+    },
+    "Instrucciones: extraer CV": {
+      "main": [
+        [
+          {
+            "node": "Analizar CV con IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -818,7 +919,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "2c6e5f03-b53b-496d-a7a1-a0323be3e9ea",
+  "versionId": "856086a5-911d-4cc2-9b41-55f5058e6c41",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"
