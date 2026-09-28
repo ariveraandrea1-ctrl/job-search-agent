@@ -98,6 +98,30 @@ Estamos en el Proyecto 1 (perfil + radar).
 - Próximo (Semana 4, según la especificación): secciones de preguntas,
   entrevista adaptativa con IA (no preguntar lo que ya está en el CV),
   confirmar inferencias y guardar respuestas en campos del perfil.
+- 2026-09-28 (rama `feature/ai-model-router`): workflow nuevo
+  `ai-model-router` (n8n/workflows/ai-model-router.json). Timbre "When
+  Executed by Another Workflow" recibe `system_prompt` + `user_text` →
+  "Groq: preguntar a la IA" (HTTP a api.groq.com, credencial Groq,
+  model `openai/gpt-oss-120b`, max_completion_tokens 4096,
+  reasoning_effort low, response_format json_object; On Error = continue
+  using error output) → "Respuesta limpia" {text, provider:"groq"}. Salida
+  Error → "Gemini: respaldo" (models/gemini-3.5-flash-lite; 2.5 ya no está
+  disponible para cuentas nuevas) → "Respuesta limpia (Gemini)" {text,
+  provider:"gemini"}. Respaldo probado con falla simulada y con falla real.
+  Ojo: response_format json_object obliga a responder JSON; si una tarea
+  futura necesita texto libre, volverlo opcional.
+  En telegram-invitacion: rama desde "Send a text message1" →
+  "Instrucciones: extraer CV" (Set con system_prompt = prompt v2 y
+  user_text = $('HTTP Request').item.json.text) → "Analizar CV con IA"
+  (Execute Workflow → ai-model-router). Todavía NO se guarda el resultado.
+  Lecciones: gpt-oss-20b se quedaba sin tokens (finish_reason "length",
+  reasoning gastaba ~60%) y generaba JSON roto; 120b funciona. El nodo
+  "When Executed by Another Workflow" no aparecía en el buscador de n8n:
+  se creó importando el JSON.
+- PENDIENTE próximo: prompt v3 (en `experiencia` los logros salen vacíos:
+  pedir copiar todos los logros); luego guardar el JSON del perfil en BD;
+  al final del proyecto, actualizar el CV de Andrea con todo lo construido
+  (n8n, APIs, SQL práctico, Docker, IA con respaldo).
 - Lección: en campos de expresión de n8n un espacio escondido tras el `=`
   (`"= {{ $json.step }}"`) rompe comparaciones del If. Revisar copiando el
   nodo (clic + Cmd+C) y mirando el JSON.
@@ -107,3 +131,11 @@ Estamos en el Proyecto 1 (perfil + radar).
 - Al descargar workflows, el navegador nombra `telegram-invitacion (N).json`;
   usar `ls -t ~/Downloads | head -3` para ver el nombre exacto y revisar que
   sea la versión nueva antes de moverla al repo.
+- Decisión 2026-09-25 (Andrea): proveedor de IA principal = **Groq** (plan
+  gratis, modelos gpt-oss; límites ~1.000 req/día, 8.000 tokens/min);
+  respaldo = **Gemini Flash-Lite**. Todo pasa por un subworkflow
+  `ai-model-router` para poder cambiar de proveedor en un solo lugar; los
+  prompts van en `prompts/`, no dentro de los nodos. Ojo: Gemini gratis usa
+  los datos para mejorar sus productos → con usuarios reales pasar a plan
+  pago. Próximo paso: crear cuenta en Groq, credencial en n8n y armar el
+  `ai-model-router`.
