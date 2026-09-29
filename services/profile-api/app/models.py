@@ -4,14 +4,14 @@
 le sacamos. "InterviewAnswer": la respuesta que el usuario da a la
 pregunta de entrevista posterior al CV. "InterviewQuestion": la lista de
 preguntas de la entrevista. "ConversationState": en que paso
-de la conversacion va cada usuario (la usa n8n directamente). Mas
-adelante se agregaran las tablas de perfil, etc.
+de la conversacion va cada usuario (la usa n8n directamente).
+"Profile": el perfil que la IA arma a partir del CV (JSON completo).
 """
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import BigInteger, DateTime, Integer, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -78,3 +78,28 @@ class InterviewQuestion(Base):
 
     position: Mapped[int] = mapped_column(Integer, primary_key=True)
     question: Mapped[str] = mapped_column(Text, nullable=False)
+
+
+class Profile(Base):
+    """El perfil que la IA arma a partir de un CV.
+
+    "data" guarda el JSON completo tal como lo devolvio la IA (contacto,
+    experiencia, proyectos, habilidades, faltantes...). Cada CV nuevo
+    agrega una fila; el perfil vigente es la fila mas reciente del usuario.
+    """
+
+    __tablename__ = "profiles"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    telegram_user_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    document_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("documents.id"), nullable=True
+    )
+    data: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    provider: Mapped[str] = mapped_column(String(50), nullable=False)
+    prompt_version: Mapped[str] = mapped_column(String(20), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )

@@ -46,40 +46,52 @@ Estamos en el Proyecto 1 (perfil + radar).
    simple `"0001"`, `"0002"`, etc., solo con las tablas propias del servicio).
    Detalle paso a paso: `docs/runbooks/entorno-local.md`.
 
-3. El servicio `profile-api` NO tiene bind mount en el compose local — el
+3. **Las migraciones se aplican SOLAS al arrancar profile-api**: el
+   `CMD` del Dockerfile es `alembic upgrade head && uvicorn ...`. O sea,
+   `build profile-api` + `up -d profile-api` ya crea las tablas nuevas; el
+   `alembic upgrade head` manual no hace nada (no imprime "Running
+   upgrade"). Verificar con `exec profile-api alembic current`. Por esto
+   mismo una migración autogenerada sin revisar se aplicaría sola.
+
+4. El servicio `profile-api` NO tiene bind mount en el compose local — el
    código se copia al construir la imagen. Cualquier cambio en `app/` requiere
    `docker compose ... build profile-api` + `up -d profile-api` para que
    tome efecto (no alcanza con reiniciar el contenedor).
 
-## ▶ PRÓXIMA SESIÓN — empezar por aquí (actualizado 2026-09-28)
+## ▶ PRÓXIMA SESIÓN — empezar por aquí (actualizado 2026-09-29)
 
 Arranque: `cd ~/projects/job-search-agent` → `bash scripts/start-local.sh`
 (con Docker Desktop abierto). Si "Publish" falla con "Bad request" en el
-Telegram Trigger, el túnel se cayó: volver a correr el script.
+Telegram Trigger, el túnel se cayó: volver a correr el script y recargar n8n.
 
 Qué sigue, en orden:
-1. **Prompt v3** del nodo "Instrucciones: extraer CV" (telegram-invitacion):
-   - En `experiencia` los `logros` salen vacíos → agregar regla "copia TODOS
-     los logros de cada empleo y proyecto, tal cual aparecen".
-   - Menores: "atención al cliente" quedó en habilidades blandas; en QA a
-     veces mete REST/JSON (son herramientas/conocimientos técnicos); Gemini
-     cambió "con" por "com" (reforzar: copiar el texto sin modificarlo).
-   - Probar con el CV real y comparar contra la v2 (ya validada con 120b).
-2. **Guardar el perfil** que devuelve la IA (JSON en `text`) en la BD:
-   nueva tabla/migración `0005` + endpoint en profile-api o nodo Postgres.
-3. Usar `faltantes` para que la entrevista pregunte solo lo que falta
-   (entrevista adaptativa, Semana 4 de la especificación).
+1. **Entrevista adaptativa** (Semana 4 de la especificación): usar
+   `faltantes` del último perfil guardado (tabla `profiles`) para que la
+   entrevista pregunte solo lo que falta, en vez de las 3 preguntas fijas
+   de `interview_questions`. Idea inicial: después de "Guardar perfil",
+   convertir cada faltante en pregunta (o mapear faltantes → preguntas).
+2. Guardar las respuestas de la entrevista en campos del perfil
+   (hoy van sueltas a `interview_answers`).
+3. Limpiezas menores del perfil: duplicados en `habilidades.herramientas`
+   ("REST" y "APIs REST").
 4. Al terminar el Proyecto 1: actualizar el CV de Andrea con todo lo
-   construido (n8n, integración de APIs, SQL práctico, Docker, Git con
-   ramas, IA con respaldo entre proveedores).
+   construido (n8n, integración de APIs, SQL práctico con JSONB, Docker,
+   Git con ramas, IA con respaldo entre proveedores).
 
 Pequeños arreglos pendientes:
-- Nota del nodo "Groq: preguntar a la IA" dice "gpt-oss-20b" → cambiar a 120b.
-- Nota de "Confirmar fin de entrevista" le falta el paréntesis de cierre.
+- En n8n, la URL del nodo "Guardar perfil" todavía tiene 1 espacio al
+  inicio (" http://profile-api:8000/profiles"). Funciona igual, pero
+  quitarlo: clic en la caja URL → Cmd+← (ir al inicio) → fn+Delete una
+  vez. En el JSON del repo ya está limpio; al próximo export revisar.
 - Carpeta `Claude outputs/` en la raíz del repo (imágenes de ayuda): no
   versionar; Andrea puede borrarla.
 - Desactivar el traductor de Chrome en localhost:5678 (traduce nombres de
   campos en pantalla y confunde).
+
+Forma de trabajo con Andrea (importante): está aprendiendo. Explicar UN
+paso a la vez, corto, esperar su "listo" antes del siguiente. Decir
+exactamente dónde hacer clic en n8n y qué pegar. Nada de listas largas de
+pasos de golpe.
 
 ## Historial de cambios relevantes
 
@@ -167,3 +179,20 @@ Pequeños arreglos pendientes:
   prompts van en `prompts/`, no dentro de los nodos. Ojo: Gemini gratis usa
   los datos para mejorar sus productos → con usuarios reales pasar a plan
   pago. (Hecho el 2026-09-28: credenciales Groq y Gemini creadas en n8n.)
+- 2026-09-29 (rama `feature/prompt-cv-v3`): **prompt v3** del CV
+  (`prompts/templates/extraer-cv-v3.txt`; v2 guardada al lado). Cambios:
+  copiar TODOS los logros, copiar textos exactos, REST/JSON/HTTP van en
+  `herramientas`, categoría nueva `habilidades.profesionales` (atención al
+  cliente). Probado con el CV real: logros completos, clasificación bien.
+  **Guardar perfil**: migración `0005` tabla `profiles` (telegram_user_id,
+  document_id FK a documents, data JSONB, provider, prompt_version,
+  created_at; una fila por CV = historial) + endpoint `POST /profiles`
+  (valida que `text` sea JSON objeto; si no, 422 y no guarda; devuelve id,
+  created_at y faltantes). n8n: nodo "Guardar perfil" (HTTP Request) después
+  de "Analizar CV con IA", body con `$('Telegram Trigger')...chat.id`,
+  `$('HTTP Request1').item.json.id`, `$json.text`, `$json.provider`,
+  `"v3"`. Probado: curl positivo/negativo + Telegram + verificación en BD.
+  Consulta útil: `data->'contacto'->>'nombre'`.
+  También: `/extract-text` normaliza el texto del PDF con NFKC (las
+  ligaduras "ﬁ" salían en el resumen: "ﬁnal" → "final").
+

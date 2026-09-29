@@ -603,7 +603,7 @@
           "name": "Telegram account"
         }
       },
-      "notes": "Fin: avisa que la entrevista terminó (no quedan más preguntas"
+      "notes": "Fin: avisa que la entrevista terminó (no quedan más preguntas)"
     },
     {
       "parameters": {
@@ -612,7 +612,7 @@
             {
               "id": "f0072052-fa35-4c5d-b59c-2841c9efe533",
               "name": "system_prompt",
-              "value": "Eres un asistente que extrae datos de hojas de vida (CV).  Reglas obligatorias: 1. Usa SOLO información que aparezca en el CV. No inventes, no supongas, no completes. 2. Si un dato no aparece, usa null (o [] si es una lista). 3. Fechas en formato \"AAAA-MM\". Si solo hay año, \"AAAA\". Si dice \"actual\" o \"presente\", usa \"actual\". 4. Responde ÚNICAMENTE con un JSON válido, sin texto antes ni después y sin ```.  Formato exacto de la respuesta: {   \"contacto\": {     \"nombre\": null, \"email\": null, \"telefono\": null,     \"ciudad\": null, \"pais\": null,     \"linkedin\": null, \"github\": null, \"portafolio\": null   },   \"perfil\": {     \"cargos\": [],     \"resumen\": null   },   \"experiencia\": [     { \"empresa\": null, \"cargo\": null, \"inicio\": null, \"fin\": null, \"logros\": [] }   ],   \"proyectos\": [     { \"nombre\": null, \"contexto\": null, \"rol\": null, \"inicio\": null, \"fin\": null, \"logros\": [], \"tecnologias\": [] }   ],   \"educacion\": [     { \"institucion\": null, \"titulo\": null, \"inicio\": null, \"fin\": null }   ],   \"certificaciones\": [     { \"nombre\": null, \"emisor\": null, \"fecha\": null }   ],   \"habilidades\": {     \"qa\": [],     \"automatizacion\": [],     \"bases_de_datos\": [],     \"herramientas\": [],     \"blandas\": []   },   \"idiomas\": [     { \"idioma\": null, \"nivel\": null }   ],   \"faltantes\": [] }  Cómo llenar cada sección: - \"cargos\": los roles o títulos profesionales del CV. No repitas variantes del mismo rol (por ejemplo, \"QA Engineer\" y \"QA Engineer Jr.\" son uno solo: deja el más específico). - \"experiencia\": SOLO empleos reales (trabajos con una empresa o empleador). - \"proyectos\": proyectos de formación, bootcamp, cursos o personales. Si un proyecto pertenece a un curso o bootcamp, escribe el nombre de ese curso en \"contexto\". Nunca pongas un proyecto dentro de \"experiencia\". - \"habilidades.qa\": técnicas y prácticas de pruebas (diseño de casos de prueba, gestión de defectos, pruebas de regresión, valores límite, etc.). - \"habilidades.automatizacion\": lenguajes, librerías y herramientas para automatizar (Python, pytest, Selenium, n8n, etc.). - \"habilidades.bases_de_datos\": motores y lenguajes de datos (SQL, PostgreSQL, etc.). - \"habilidades.herramientas\": otras herramientas de trabajo (Postman, JIRA, Git, Docker, etc.). - \"habilidades.blandas\": SOLO habilidades personales o interpersonales (comunicación, trabajo en equipo, etc.). Nada técnico.  Para \"faltantes\", revisa esta lista y agrega una frase corta en español por cada dato que NO esté en el CV o no quede claro: - Ciudad de residencia - Modalidad de trabajo preferida (remoto, híbrido, presencial) - Salario esperado - Disponibilidad para empezar - Nivel de inglés (si no está, o si no es claro para trabajar en inglés) - Tipo de contrato buscado - Certificaciones formales Agrega también cualquier otro dato importante para buscar empleo que falte o sea confuso.",
+              "value": "Eres un asistente que extrae datos de hojas de vida (CV).  Reglas obligatorias: 1. Usa SOLO información que aparezca en el CV. No inventes, no supongas, no completes. 2. Si un dato no aparece, usa null (o [] si es una lista). 3. Fechas en formato \"AAAA-MM\". Si solo hay año, \"AAAA\". Si dice \"actual\" o \"presente\", usa \"actual\". 4. Responde ÚNICAMENTE con un JSON válido, sin texto antes ni después y sin ```. 5. Copia los textos EXACTAMENTE como aparecen en el CV: no corrijas ortografía, no cambies palabras, no traduzcas, no resumas.  Formato exacto de la respuesta: {   \"contacto\": {     \"nombre\": null, \"email\": null, \"telefono\": null,     \"ciudad\": null, \"pais\": null,     \"linkedin\": null, \"github\": null, \"portafolio\": null   },   \"perfil\": {     \"cargos\": [],     \"resumen\": null   },   \"experiencia\": [     { \"empresa\": null, \"cargo\": null, \"inicio\": null, \"fin\": null, \"logros\": [] }   ],   \"proyectos\": [     { \"nombre\": null, \"contexto\": null, \"rol\": null, \"inicio\": null, \"fin\": null, \"logros\": [], \"tecnologias\": [] }   ],   \"educacion\": [     { \"institucion\": null, \"titulo\": null, \"inicio\": null, \"fin\": null }   ],   \"certificaciones\": [     { \"nombre\": null, \"emisor\": null, \"fecha\": null }   ],   \"habilidades\": {     \"qa\": [],     \"automatizacion\": [],     \"bases_de_datos\": [],     \"herramientas\": [],     \"profesionales\": [],     \"blandas\": []   },   \"idiomas\": [     { \"idioma\": null, \"nivel\": null }   ],   \"faltantes\": [] }  Cómo llenar cada sección: - \"cargos\": los roles o títulos profesionales del CV. No repitas variantes del mismo rol (por ejemplo, \"QA Engineer\" y \"QA Engineer Jr.\" son uno solo: deja el más específico). - \"experiencia\": SOLO empleos reales (trabajos con una empresa o empleador). - \"logros\" (en experiencia y en proyectos): copia TODOS los logros, funciones o viñetas que el CV lista bajo ese empleo o proyecto, uno por elemento, tal cual aparecen. No los dejes vacíos si el CV los tiene; no omitas ninguno. - \"proyectos\": proyectos de formación, bootcamp, cursos o personales. Si un proyecto pertenece a un curso o bootcamp, escribe el nombre de ese curso en \"contexto\". Nunca pongas un proyecto dentro de \"experiencia\". - \"habilidades.qa\": SOLO técnicas y prácticas de pruebas (diseño de casos de prueba, gestión de defectos, pruebas de regresión, valores límite, etc.). No pongas aquí tecnologías, formatos ni protocolos. - \"habilidades.automatizacion\": lenguajes, librerías y herramientas para automatizar (Python, pytest, Selenium, n8n, etc.). - \"habilidades.bases_de_datos\": motores y lenguajes de datos (SQL, PostgreSQL, etc.). - \"habilidades.herramientas\": otras herramientas y conocimientos técnicos (Postman, JIRA, Git, Docker, APIs REST, JSON, HTTP, etc.). - \"habilidades.profesionales\": competencias de oficio que no son técnicas ni personales (atención al cliente, servicio al cliente, manejo de PQRS, soporte a usuarios, liderazgo de equipos de servicio, etc.). - \"habilidades.blandas\": SOLO habilidades personales o interpersonales (comunicación, trabajo en equipo, etc.). Nada técnico y nada de oficio (\"atención al cliente\" va en \"profesionales\").  Para \"faltantes\", revisa esta lista y agrega una frase corta en español por cada dato que NO esté en el CV o no quede claro: - Ciudad de residencia - Modalidad de trabajo preferida (remoto, híbrido, presencial) - Salario esperado - Disponibilidad para empezar - Nivel de inglés (si no está, o si no es claro para trabajar en inglés) - Tipo de contrato buscado - Certificaciones formales Agrega también cualquier otro dato importante para buscar empleo que falte o sea confuso.",
               "type": "string"
             },
             {
@@ -689,6 +689,26 @@
       "name": "Analizar CV con IA",
       "notesInFlow": true,
       "notes": " IA: manda el CV a la central (ai-model-router) y recibe los datos en JSON."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://profile-api:8000/profiles",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"telegram_user_id\": {{ $('Telegram Trigger').item.json.message.chat.id }},\n  \"document_id\": {{ JSON.stringify($('HTTP Request1').item.json.id) }},\n  \"text\": {{ JSON.stringify($json.text) }},\n  \"provider\": {{ JSON.stringify($json.provider) }},\n  \"prompt_version\": \"v3\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2016,
+        576
+      ],
+      "id": "49a57758-cc7f-45a7-aea5-38133fec46e9",
+      "name": "Guardar perfil",
+      "notesInFlow": true,
+      "notes": "Guarda en la tabla profiles (POST /profiles) el perfil que armó la IA a partir del CV: usuario de Telegram, id del CV (de HTTP Request1), JSON del perfil, proveedor (groq o gemini) y versión del prompt (v3). Si la IA devolvió un JSON roto, profile-api responde 422 y no guarda nada."
     }
   ],
   "pinData": {},
@@ -912,6 +932,17 @@
           }
         ]
       ]
+    },
+    "Analizar CV con IA": {
+      "main": [
+        [
+          {
+            "node": "Guardar perfil",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -919,7 +950,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "856086a5-911d-4cc2-9b41-55f5058e6c41",
+  "versionId": "fcd1df68-ab82-426e-9a58-4a810f450a83",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"
