@@ -10,8 +10,13 @@ Semana 5: endpoint de entrevista (/interview-answers) — recibe la
 respuesta que el usuario da a la pregunta de entrevista (la que se
 manda justo después de confirmar la recepción del CV) y la guarda en
 PostgreSQL, igual que se hace con el texto del CV.
+Semana 6: endpoint de perfil (/profiles) — recibe el JSON que la IA armó
+a partir del CV, revisa que sea JSON válido y lo guarda en PostgreSQL.
 """
 import io
+import json
+import unicodedata
+import uuid
 
 from fastapi import Depends, FastAPI, HTTPException, UploadFile
 from pydantic import BaseModel
@@ -20,7 +25,7 @@ from docx import Document as DocxDocument
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import Document, InterviewAnswer
+from app.models import Document, InterviewAnswer, Profile
 
 app = FastAPI(title="profile-api", version="0.1.0")
 
@@ -35,7 +40,11 @@ def _extraer_texto_pdf(contenido: bytes) -> str:
     """Lee un PDF en memoria y devuelve el texto de todas sus páginas."""
     lector = PdfReader(io.BytesIO(contenido))
     paginas = [pagina.extract_text() or "" for pagina in lector.pages]
-    return "\n".join(paginas).strip()
+    texto = "\n".join(paginas).strip()
+    # Algunos PDF guardan "fi", "fl", etc. como un solo caracter especial
+    # (ligadura: "ﬁnal" en vez de "final"). NFKC los convierte en letras
+    # normales para que la IA y las busquedas vean el texto correcto.
+    return unicodedata.normalize("NFKC", texto)
 
 
 def _extraer_texto_docx(contenido: bytes) -> str:
@@ -137,4 +146,58 @@ def save_interview_answer(
     return {
         "id": str(respuesta.id),
         "created_at": respuesta.created_at.isoformat(),
+    }
+
+
+class ProfileIn(BaseModel):
+    """Lo que n8n manda después de "Analizar CV con IA".
+
+    "text" es el JSON del perfil tal como lo devuelve ai-model-router
+    (viene como texto, no como objeto). "document_id" es el id que
+    devolvió /documents al guardar el CV (opcional).
+    """
+
+    telegram_user_id: int
+    document_id: uuid.UUID | None = None
+    text: str
+    provider: str
+    prompt_version: str
+
+
+@app.post("/profiles")
+def save_profile(payload: ProfileIn, db: Session = Depends(get_db)) -> dict:
+    """Guarda en PostgreSQL el perfil que la IA armó a partir del CV.
+
+    Antes de guardar revisa que "text" sea un JSON válido con forma de
+    objeto ({...}). Si la IA devolvió algo roto, responde 422 con un
+    mensaje claro y NO guarda nada, para no llenar la tabla de basura.
+    """
+    try:
+        datos = json.loads(payload.text)
+    except json.JSONDecodeError as error:
+        raise HTTPException(
+            status_code=422,
+            detail=f"La IA no devolvió un JSON válido: {error.msg} (posición {error.pos}).",
+        )
+    if not isinstance(datos, dict):
+        raise HTTPException(
+            status_code=422,
+            detail="La IA devolvió JSON, pero no es un objeto {...} con el perfil.",
+        )
+
+    perfil = Profile(
+        telegram_user_id=payload.telegram_user_id,
+        document_id=payload.document_id,
+        data=datos,
+        provider=payload.provider,
+        prompt_version=payload.prompt_version,
+    )
+    db.add(perfil)
+    db.commit()
+    db.refresh(perfil)
+
+    return {
+        "id": str(perfil.id),
+        "created_at": perfil.created_at.isoformat(),
+        "faltantes": datos.get("faltantes", []),
     }

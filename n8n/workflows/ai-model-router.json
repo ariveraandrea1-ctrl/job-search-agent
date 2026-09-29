@@ -52,7 +52,7 @@
         }
       },
       "onError": "continueErrorOutput",
-      "notes": "IA principal: manda instrucciones + texto a Groq (gpt-oss-20b)."
+      "notes": "IA principal: manda instrucciones + texto a Groq (gpt-oss-120b)."
     },
     {
       "parameters": {
@@ -211,7 +211,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "0abdeec8-dba4-4b1a-9d6e-cd563039f3bc",
+  "versionId": "3123ce67-1b97-4a5d-856c-e8e3a566c335",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"
