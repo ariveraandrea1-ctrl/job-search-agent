@@ -51,13 +51,42 @@ Estamos en el Proyecto 1 (perfil + radar).
    `docker compose ... build profile-api` + `up -d profile-api` para que
    tome efecto (no alcanza con reiniciar el contenedor).
 
+## ▶ PRÓXIMA SESIÓN — empezar por aquí (actualizado 2026-09-28)
+
+Arranque: `cd ~/projects/job-search-agent` → `bash scripts/start-local.sh`
+(con Docker Desktop abierto). Si "Publish" falla con "Bad request" en el
+Telegram Trigger, el túnel se cayó: volver a correr el script.
+
+Qué sigue, en orden:
+1. **Prompt v3** del nodo "Instrucciones: extraer CV" (telegram-invitacion):
+   - En `experiencia` los `logros` salen vacíos → agregar regla "copia TODOS
+     los logros de cada empleo y proyecto, tal cual aparecen".
+   - Menores: "atención al cliente" quedó en habilidades blandas; en QA a
+     veces mete REST/JSON (son herramientas/conocimientos técnicos); Gemini
+     cambió "con" por "com" (reforzar: copiar el texto sin modificarlo).
+   - Probar con el CV real y comparar contra la v2 (ya validada con 120b).
+2. **Guardar el perfil** que devuelve la IA (JSON en `text`) en la BD:
+   nueva tabla/migración `0005` + endpoint en profile-api o nodo Postgres.
+3. Usar `faltantes` para que la entrevista pregunte solo lo que falta
+   (entrevista adaptativa, Semana 4 de la especificación).
+4. Al terminar el Proyecto 1: actualizar el CV de Andrea con todo lo
+   construido (n8n, integración de APIs, SQL práctico, Docker, Git con
+   ramas, IA con respaldo entre proveedores).
+
+Pequeños arreglos pendientes:
+- Nota del nodo "Groq: preguntar a la IA" dice "gpt-oss-20b" → cambiar a 120b.
+- Nota de "Confirmar fin de entrevista" le falta el paréntesis de cierre.
+- Carpeta `Claude outputs/` en la raíz del repo (imágenes de ayuda): no
+  versionar; Andrea puede borrarla.
+- Desactivar el traductor de Chrome en localhost:5678 (traduce nombres de
+  campos en pantalla y confunde).
+
 ## Historial de cambios relevantes
 
 - 2026-09-23: agregado endpoint `POST /interview-answers` + modelo
   `InterviewAnswer` + migración `0002`, para guardar la respuesta del usuario
   a la pregunta de entrevista posterior al CV (n8n: nodo después de "Enviar
-  un mensaje de texto1"). Pendiente del lado de Andrea: commit en
-  `feature/interview-answers` y el nodo de n8n que llama a este endpoint.
+  un mensaje de texto1"). (Ya commiteado y conectado en n8n.)
 - 2026-09-23 (tarde): `interview-answers` terminado de punta a punta
   (nodos "Enviar pregunta de entrevista" → salida `respuesta` del Switch →
   "Guardar respuesta de entrevista" → "Confirmar respuesta guardada"),
@@ -137,5 +166,4 @@ Estamos en el Proyecto 1 (perfil + radar).
   `ai-model-router` para poder cambiar de proveedor en un solo lugar; los
   prompts van en `prompts/`, no dentro de los nodos. Ojo: Gemini gratis usa
   los datos para mejorar sus productos → con usuarios reales pasar a plan
-  pago. Próximo paso: crear cuenta en Groq, credencial en n8n y armar el
-  `ai-model-router`.
+  pago. (Hecho el 2026-09-28: credenciales Groq y Gemini creadas en n8n.)
