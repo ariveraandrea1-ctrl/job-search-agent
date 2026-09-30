@@ -78,6 +78,9 @@ class InterviewQuestion(Base):
 
     position: Mapped[int] = mapped_column(Integer, primary_key=True)
     question: Mapped[str] = mapped_column(Text, nullable=False)
+    # Tema de la pregunta (ej. "salario"). Coincide con las claves que la
+    # IA devuelve en "faltantes" (prompt v4): solo se pregunta lo que falta.
+    topic: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
 
 
 class Profile(Base):

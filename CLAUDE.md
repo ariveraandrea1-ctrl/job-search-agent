@@ -65,24 +65,20 @@ Arranque: `cd ~/projects/job-search-agent` → `bash scripts/start-local.sh`
 Telegram Trigger, el túnel se cayó: volver a correr el script y recargar n8n.
 
 Qué sigue, en orden:
-1. **Entrevista adaptativa** (Semana 4 de la especificación): usar
-   `faltantes` del último perfil guardado (tabla `profiles`) para que la
-   entrevista pregunte solo lo que falta, en vez de las 3 preguntas fijas
-   de `interview_questions`. Idea inicial: después de "Guardar perfil",
-   convertir cada faltante en pregunta (o mapear faltantes → preguntas).
-2. Guardar las respuestas de la entrevista en campos del perfil
-   (hoy van sueltas a `interview_answers`).
-3. Limpiezas menores del perfil: duplicados en `habilidades.herramientas`
+1. Guardar las respuestas de la entrevista en el perfil: hoy van sueltas a
+   `interview_answers` (question + answer). Idea: guardar también el
+   `topic` de la pregunta respondida y/o completar el JSON del perfil
+   (p. ej. una sección "preferencias": salario, modalidad, etc.).
+2. Limpiezas menores del perfil: duplicados en `habilidades.herramientas`
    ("REST" y "APIs REST").
-4. Al terminar el Proyecto 1: actualizar el CV de Andrea con todo lo
+3. Al terminar el Proyecto 1: actualizar el CV de Andrea con todo lo
    construido (n8n, integración de APIs, SQL práctico con JSONB, Docker,
-   Git con ramas, IA con respaldo entre proveedores).
+   Git con ramas, IA con respaldo entre proveedores, entrevista adaptativa).
 
 Pequeños arreglos pendientes:
-- En n8n, la URL del nodo "Guardar perfil" todavía tiene 1 espacio al
-  inicio (" http://profile-api:8000/profiles"). Funciona igual, pero
-  quitarlo: clic en la caja URL → Cmd+← (ir al inicio) → fn+Delete una
-  vez. En el JSON del repo ya está limpio; al próximo export revisar.
+- Nota de "Guardar perfil" todavía dice "(v3)" → cambiar a "(v4)".
+- Texto de "Avisar: perfil completo" empieza con un espacio
+  (" ¡Tu perfil está completo!...") → quitarlo.
 - Carpeta `Claude outputs/` en la raíz del repo (imágenes de ayuda): no
   versionar; Andrea puede borrarla.
 - Desactivar el traductor de Chrome en localhost:5678 (traduce nombres de
@@ -195,4 +191,21 @@ pasos de golpe.
   Consulta útil: `data->'contacto'->>'nombre'`.
   También: `/extract-text` normaliza el texto del PDF con NFKC (las
   ligaduras "ﬁ" salían en el resumen: "ﬁnal" → "final").
+- 2026-09-29 (rama `feature/entrevista-adaptativa`): **entrevista
+  adaptativa**. Migración `0006`: columna `interview_questions.topic`
+  (única) + 5 preguntas nuevas → 8 temas: rol_buscado, modalidad, ciudad,
+  salario, disponibilidad, ingles, contrato, certificaciones. **Prompt v4**
+  (`prompts/templates/extraer-cv-v4.txt`): `faltantes` = lista SOLO de esas
+  claves (deben coincidir EXACTO con `topic`). n8n: la entrevista ya no sale
+  de "Send a text message1" sino de "Guardar perfil" → "Buscar primera
+  pregunta" (SQL: topic IN faltantes del último perfil del usuario, vía
+  `jsonb_array_elements_text`; $1 = chat.id; Always Output Data) → If
+  "¿Hay preguntas?" (true: "Enviar pregunta de entrevista"; false: "Avisar:
+  perfil completo"). "Buscar siguiente pregunta": position > $1 AND topic
+  IN faltantes ($2 = chat.id). "Guardar perfil" manda prompt_version "v4".
+  Probado: CV real → 7 preguntas (se saltó `ingles`, que el CV ya tenía),
+  coincide con faltantes en BD; CV ficticio completo
+  (Laura Prueba Gómez) → faltantes [] → mensaje "perfil completo" sin
+  preguntas. Ojo: el perfil vigente es el ÚLTIMO de `profiles`; después de
+  probar con un CV ficticio, volver a mandar el CV real.
 
