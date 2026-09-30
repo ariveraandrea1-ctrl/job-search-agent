@@ -12,6 +12,8 @@ manda justo después de confirmar la recepción del CV) y la guarda en
 PostgreSQL, igual que se hace con el texto del CV.
 Semana 6: endpoint de perfil (/profiles) — recibe el JSON que la IA armó
 a partir del CV, revisa que sea JSON válido y lo guarda en PostgreSQL.
+Semana 7: perfil vigente (GET /profiles/{telegram_user_id}/current) — junta
+el último perfil del CV con las respuestas de la entrevista (preferencias).
 """
 import io
 import json
@@ -22,6 +24,7 @@ from fastapi import Depends, FastAPI, HTTPException, UploadFile
 from pydantic import BaseModel
 from pypdf import PdfReader
 from docx import Document as DocxDocument
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -121,6 +124,8 @@ class InterviewAnswerIn(BaseModel):
     telegram_user_id: int
     question: str
     answer: str
+    # Tema de la pregunta (ej. "salario"). Opcional para no romper llamadas viejas.
+    topic: str | None = None
 
 
 @app.post("/interview-answers")
@@ -138,6 +143,7 @@ def save_interview_answer(
         telegram_user_id=payload.telegram_user_id,
         question=payload.question,
         answer=payload.answer,
+        topic=payload.topic,
     )
     db.add(respuesta)
     db.commit()
@@ -201,3 +207,156 @@ def save_profile(payload: ProfileIn, db: Session = Depends(get_db)) -> dict:
         "created_at": perfil.created_at.isoformat(),
         "faltantes": datos.get("faltantes", []),
     }
+
+
+# Nombres bonitos de cada tema, para mostrarlos en Telegram.
+ETIQUETAS_TEMAS = {
+    "rol_buscado": "Rol buscado",
+    "modalidad": "Modalidad",
+    "ciudad": "Ciudad",
+    "salario": "Aspiración salarial",
+    "disponibilidad": "Disponibilidad",
+    "ingles": "Inglés",
+    "contrato": "Tipo de contrato",
+    "certificaciones": "Certificaciones",
+}
+
+
+def _perfil_vigente(db: Session, telegram_user_id: int):
+    """Busca el último perfil del usuario y le junta las preferencias.
+
+    Devuelve (perfil, preferencias, faltantes_sin_responder), o None si el
+    usuario todavía no tiene ningún perfil.
+    """
+    perfil = db.scalars(
+        select(Profile)
+        .where(Profile.telegram_user_id == telegram_user_id)
+        .order_by(Profile.created_at.desc())
+        .limit(1)
+    ).first()
+    if perfil is None:
+        return None
+
+    respuestas = db.scalars(
+        select(InterviewAnswer)
+        .where(
+            InterviewAnswer.telegram_user_id == telegram_user_id,
+            InterviewAnswer.topic.is_not(None),
+        )
+        .order_by(InterviewAnswer.created_at.asc())
+    ).all()
+    # De la más vieja a la más nueva: la última respuesta de cada tema gana.
+    preferencias: dict[str, str] = {}
+    for respuesta in respuestas:
+        preferencias[respuesta.topic] = respuesta.answer
+
+    faltantes = perfil.data.get("faltantes", []) or []
+    sin_responder = [tema for tema in faltantes if tema not in preferencias]
+    return perfil, preferencias, sin_responder
+
+
+@app.get("/profiles/{telegram_user_id}/current")
+def get_current_profile(telegram_user_id: int, db: Session = Depends(get_db)) -> dict:
+    """Devuelve el perfil vigente del usuario: CV + preferencias.
+
+    - "perfil": el JSON del último perfil que armó la IA a partir del CV.
+    - "preferencias": la respuesta MÁS RECIENTE de la entrevista para cada
+      tema (salario, modalidad, ciudad...). Solo cuenta respuestas con tema.
+    - "faltantes_sin_responder": temas que la IA marcó como faltantes y que
+      todavía no tienen respuesta.
+    Si el usuario no tiene ningún perfil, responde 404.
+    """
+    resultado = _perfil_vigente(db, telegram_user_id)
+    if resultado is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Este usuario todavía no tiene perfil. Primero debe enviar su CV.",
+        )
+    perfil, preferencias, sin_responder = resultado
+
+    return {
+        "profile_id": str(perfil.id),
+        "prompt_version": perfil.prompt_version,
+        "created_at": perfil.created_at.isoformat(),
+        "perfil": perfil.data,
+        "preferencias": preferencias,
+        "faltantes_sin_responder": sin_responder,
+    }
+
+
+def _lista(valores, maximo: int = 8) -> str:
+    """Une una lista en texto ("a, b, c"), cortando si es muy larga."""
+    valores = [str(v) for v in (valores or []) if v]
+    if not valores:
+        return "—"
+    texto = ", ".join(valores[:maximo])
+    if len(valores) > maximo:
+        texto += f" (+{len(valores) - maximo} más)"
+    return texto
+
+
+@app.get("/profiles/{telegram_user_id}/summary")
+def get_profile_summary(telegram_user_id: int, db: Session = Depends(get_db)) -> dict:
+    """Devuelve el perfil vigente como TEXTO listo para enviar por Telegram.
+
+    Siempre responde 200 con {"text": ...}: si el usuario no tiene perfil,
+    el texto le pide que envíe su CV (así n8n no tiene que manejar errores).
+    Texto plano, sin Markdown, para que ningún carácter del CV rompa el envío.
+    """
+    resultado = _perfil_vigente(db, telegram_user_id)
+    if resultado is None:
+        return {
+            "has_profile": False,
+            "text": "Todavía no tengo tu perfil 📄 Envíame tu CV en PDF o Word y lo armo.",
+        }
+    perfil, preferencias, sin_responder = resultado
+    datos = perfil.data
+    contacto = datos.get("contacto") or {}
+    habilidades = datos.get("habilidades") or {}
+
+    lineas = ["👤 TU PERFIL", ""]
+    lineas.append(f"Nombre: {contacto.get('nombre') or '—'}")
+    lineas.append(f"Cargos: {_lista((datos.get('perfil') or {}).get('cargos'))}")
+    ubicacion = ", ".join(x for x in [contacto.get("ciudad"), contacto.get("pais")] if x)
+    lineas.append(f"Ubicación (CV): {ubicacion or '—'}")
+
+    lineas += ["", "💼 EXPERIENCIA"]
+    for empleo in datos.get("experiencia") or []:
+        fechas = f"{empleo.get('inicio') or '?'} – {empleo.get('fin') or '?'}"
+        lineas.append(f"• {empleo.get('cargo') or '—'} en {empleo.get('empresa') or '—'} ({fechas})")
+    if not datos.get("experiencia"):
+        lineas.append("—")
+
+    lineas += ["", "🧪 PROYECTOS"]
+    lineas.append(_lista([p.get("nombre") for p in datos.get("proyectos") or []]))
+
+    lineas += ["", "🛠 HABILIDADES"]
+    lineas.append(f"QA: {_lista(habilidades.get('qa'))}")
+    lineas.append(f"Automatización: {_lista(habilidades.get('automatizacion'))}")
+    lineas.append(f"Bases de datos: {_lista(habilidades.get('bases_de_datos'))}")
+    lineas.append(f"Herramientas: {_lista(habilidades.get('herramientas'))}")
+
+    idiomas = [
+        f"{i.get('idioma')} ({i.get('nivel')})" if i.get("nivel") else i.get("idioma")
+        for i in datos.get("idiomas") or []
+        if i.get("idioma")
+    ]
+    lineas.append(f"Idiomas: {_lista(idiomas)}")
+
+    lineas += ["", "🎯 PREFERENCIAS"]
+    if preferencias:
+        for tema, etiqueta in ETIQUETAS_TEMAS.items():
+            if tema in preferencias:
+                lineas.append(f"{etiqueta}: {preferencias[tema]}")
+    else:
+        lineas.append("—")
+
+    if sin_responder:
+        pendientes = [ETIQUETAS_TEMAS.get(t, t) for t in sin_responder]
+        lineas += ["", f"⏳ Me falta saber: {_lista(pendientes)}"]
+
+    texto = "\n".join(lineas)
+    # Telegram acepta máximo 4096 caracteres por mensaje.
+    if len(texto) > 4000:
+        texto = texto[:3990] + "\n…"
+    return {"has_profile": True, "text": texto}

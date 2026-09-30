@@ -65,15 +65,17 @@ Arranque: `cd ~/projects/job-search-agent` → `bash scripts/start-local.sh`
 Telegram Trigger, el túnel se cayó: volver a correr el script y recargar n8n.
 
 Qué sigue, en orden:
-1. Guardar las respuestas de la entrevista en el perfil: hoy van sueltas a
-   `interview_answers` (question + answer). Idea: guardar también el
-   `topic` de la pregunta respondida y/o completar el JSON del perfil
-   (p. ej. una sección "preferencias": salario, modalidad, etc.).
-2. Limpiezas menores del perfil: duplicados en `habilidades.herramientas`
-   ("REST" y "APIs REST").
-3. Al terminar el Proyecto 1: actualizar el CV de Andrea con todo lo
-   construido (n8n, integración de APIs, SQL práctico con JSONB, Docker,
-   Git con ramas, IA con respaldo entre proveedores, entrevista adaptativa).
+1. **Confirmar o corregir el perfil** (última parte de la Semana 4): desde
+   `/perfil`, que Andrea pueda corregir un dato (ej. salario, o
+   certificaciones: hoy quedó solo "Si" sin decir cuáles). Idea: comando
+   `/corregir` o botones inline de Telegram por tema → reescribe la
+   respuesta de ese tema (la más reciente gana en `/current`).
+2. Perfil maestro versionado (una versión "oficial" confirmada).
+3. Limpiezas del perfil: duplicados en `habilidades.herramientas`
+   ("REST"/"APIs REST"); fechas que no respetan "AAAA-MM"
+   (ej. educación "jul. 2026").
+4. Semana 5: radar de vacantes (3 fuentes).
+5. Al terminar el Proyecto 1: actualizar el CV de Andrea.
 
 Pequeños arreglos pendientes:
 - Nota de "Guardar perfil" todavía dice "(v3)" → cambiar a "(v4)".
@@ -208,4 +210,19 @@ pasos de golpe.
   (Laura Prueba Gómez) → faltantes [] → mensaje "perfil completo" sin
   preguntas. Ojo: el perfil vigente es el ÚLTIMO de `profiles`; después de
   probar con un CV ficticio, volver a mandar el CV real.
+- 2026-09-30 (rama `feature/preferencias-perfil`): **preferencias en el
+  perfil + comando /perfil**. Migración `0007`: `interview_answers.topic`
+  (NULL en respuestas viejas). `POST /interview-answers` acepta `topic`
+  opcional. Endpoints nuevos: `GET /profiles/{id}/current` (JSON: perfil +
+  `preferencias` = respuesta más reciente por tema + `faltantes_sin_responder`;
+  404 si no hay perfil) y `GET /profiles/{id}/summary` (texto plano listo
+  para Telegram, siempre 200; si no hay perfil pide el CV). Ambos usan
+  `_perfil_vigente()`. n8n: "Leer anotación" trae `q.topic`; "Guardar
+  respuesta de entrevista" manda `topic`; Switch con 4ª salida `perfil`
+  (`/perfil`) → "Pedir resumen del perfil" (GET /summary) → "Enviar resumen
+  del perfil" (Append n8n Attribution apagado). Probado en Telegram.
+  Lección: el editor tenía el cambio pero el bot usaba la versión vieja →
+  SIEMPRE verificar que el Publish quedó en verde (si no, el bot corre la
+  versión publicada anterior). Diagnóstico útil: pestaña Executions → abrir
+  el nodo y mirar su OUTPUT real.
 
