@@ -45,6 +45,9 @@ class InterviewAnswer(Base):
     telegram_user_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     question: Mapped[str] = mapped_column(Text, nullable=False)
     answer: Mapped[str] = mapped_column(Text, nullable=False)
+    # Tema de la pregunta respondida (ej. "salario"). NULL en respuestas
+    # guardadas antes de que existieran los temas.
+    topic: Mapped[str | None] = mapped_column(String(50), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
