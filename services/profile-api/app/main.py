@@ -12,6 +12,8 @@ manda justo después de confirmar la recepción del CV) y la guarda en
 PostgreSQL, igual que se hace con el texto del CV.
 Semana 6: endpoint de perfil (/profiles) — recibe el JSON que la IA armó
 a partir del CV, revisa que sea JSON válido y lo guarda en PostgreSQL.
+Radar: oportunidades (POST /opportunities) — guarda una vacante o proyecto
+freelance sin duplicados (huella = link normalizado o fuente:id).
 Semana 7: perfil vigente (GET /profiles/{telegram_user_id}/current) — junta
 el último perfil del CV con las respuestas de la entrevista (preferencias).
 """
@@ -19,16 +21,19 @@ import io
 import json
 import unicodedata
 import uuid
+from typing import Literal
+from urllib.parse import urlsplit, urlunsplit
 
 from fastapi import Depends, FastAPI, HTTPException, UploadFile
 from pydantic import BaseModel
 from pypdf import PdfReader
 from docx import Document as DocxDocument
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import Document, InterviewAnswer, Profile
+from app.models import Document, InterviewAnswer, Opportunity, Profile
 
 app = FastAPI(title="profile-api", version="0.1.0")
 
@@ -366,3 +371,84 @@ def get_profile_summary(telegram_user_id: int, db: Session = Depends(get_db)) ->
     if len(texto) > 4000:
         texto = texto[:3990] + "\n…"
     return {"has_profile": True, "text": texto}
+
+
+def _normalizar_url(url: str) -> str:
+    """Deja el link "limpio" para comparar vacantes.
+
+    Quita los parámetros de seguimiento (?utm=..., &trk=...), el #ancla, la
+    barra final y pasa el dominio a minúsculas. Así el mismo aviso que llega
+    con links distintos (uno por cada correo de alerta) da la misma huella.
+    """
+    partes = urlsplit(url.strip())
+    ruta = partes.path.rstrip("/")
+    return urlunsplit((partes.scheme.lower(), partes.netloc.lower(), ruta, "", ""))
+
+
+class OpportunityIn(BaseModel):
+    """Lo que n8n manda por cada vacante encontrada por el radar."""
+
+    telegram_user_id: int
+    tipo: Literal["empleo", "freelance"]
+    source: str
+    title: str
+    url: str
+    external_id: str | None = None
+    company: str | None = None
+    location: str | None = None
+    description: str | None = None
+    raw: dict | None = None
+
+
+@app.post("/opportunities")
+def save_opportunity(payload: OpportunityIn, db: Session = Depends(get_db)) -> dict:
+    """Guarda una oportunidad del radar, SIN duplicados.
+
+    La huella (dedup_key) es "fuente:id" si la fuente trae un id propio, o el
+    link normalizado si no. Si ya existe una oportunidad con la misma huella
+    para este usuario, no se guarda otra vez: responde created = false y el
+    id de la que ya estaba. Así n8n puede reintentar sin miedo.
+    """
+    source = payload.source.strip().lower()
+    if payload.external_id:
+        huella = f"{source}:{payload.external_id.strip()}"
+    else:
+        huella = _normalizar_url(payload.url)
+
+    existente = db.scalars(
+        select(Opportunity).where(
+            Opportunity.telegram_user_id == payload.telegram_user_id,
+            Opportunity.dedup_key == huella,
+        )
+    ).first()
+    if existente is not None:
+        return {"created": False, "id": str(existente.id), "dedup_key": huella}
+
+    oportunidad = Opportunity(
+        telegram_user_id=payload.telegram_user_id,
+        tipo=payload.tipo,
+        source=source,
+        external_id=payload.external_id,
+        title=payload.title.strip(),
+        company=payload.company,
+        location=payload.location,
+        url=payload.url.strip(),
+        description=payload.description,
+        raw=payload.raw,
+        dedup_key=huella,
+    )
+    db.add(oportunidad)
+    try:
+        db.commit()
+    except IntegrityError:
+        # Dos pedidos iguales llegaron casi al mismo tiempo: el otro ganó.
+        db.rollback()
+        existente = db.scalars(
+            select(Opportunity).where(
+                Opportunity.telegram_user_id == payload.telegram_user_id,
+                Opportunity.dedup_key == huella,
+            )
+        ).first()
+        return {"created": False, "id": str(existente.id), "dedup_key": huella}
+    db.refresh(oportunidad)
+    return {"created": True, "id": str(oportunidad.id), "dedup_key": huella}

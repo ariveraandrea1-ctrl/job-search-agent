@@ -65,9 +65,23 @@ Arranque: `cd ~/projects/job-search-agent` → `bash scripts/start-local.sh`
 Telegram Trigger, el túnel se cayó: volver a correr el script y recargar n8n.
 
 Qué sigue, en orden:
-1. **Semana 5: radar de vacantes** (3 tipos de fuentes; empezar por
-   alertas de correo LinkedIn/Indeed → Gmail, luego Greenhouse/Lever,
-   luego URL manual). Nueva rama `feature/radar-...`.
+1. **Semana 5: radar de vacantes** (decidido con Andrea 2026-09-30).
+   Nueva rama `feature/radar-...`. 3 tipos de fuentes:
+   a. **Alertas por correo → Gmail → n8n**: LinkedIn, Indeed, Computrabajo
+      y **Workana** (freelance). Un "lector" por formato de correo.
+      Upwork / Freelancer.com después (verificar primero qué avisos por
+      correo ofrecen hoy).
+   b. **APIs públicas Greenhouse / Lever** por empresa (revisar cuáles de
+      las empresas objetivo de Andrea las usan).
+   c. **URL manual** enviada por Telegram.
+   NO scraping directo de LinkedIn/Indeed/Computrabajo (ToS).
+   Diseño freelance: cada oportunidad lleva `tipo` = empleo | freelance;
+   freelance → aviso inmediato por Telegram (la velocidad importa);
+   palabras clave extra: QA/testing, n8n, automatización, Zapier/Make,
+   soporte administrativo. En Semana 6 (scoring) la IA marca señales de
+   alerta (pedir documentos/KYC, probar cuentas financieras, pagos fuera
+   de la plataforma) y criterios distintos para freelance (presupuesto,
+   duración, reputación del cliente, nº de propuestas).
 2. Limpiezas del perfil: duplicados en `habilidades.herramientas`
    ("REST"/"APIs REST"); fechas que no respetan "AAAA-MM"
    (ej. educación "jul. 2026").
@@ -238,4 +252,29 @@ pasos de golpe.
   invita a /perfil y /corregir (= confirmar o corregir inferencias, cierra
   Semana 4). Append n8n Attribution apagado en TODOS los nodos Telegram.
   Probado: tema válido, tema inválido, sin tema, libreta limpia después.
+- 2026-09-30 (rama `feature/radar-vacantes`): **radar, sesión 1**.
+  Migración `0008` tabla `opportunities` (tipo empleo|freelance, source,
+  external_id, title, company, location, url, description, raw JSONB,
+  status nueva|guardada|descartada, score, dedup_key; UNIQUE
+  (telegram_user_id, dedup_key)). `POST /opportunities`: huella =
+  "source:external_id" o URL normalizada (sin query/#/barra final);
+  si ya existe → created=false (idempotente, también ante carreras con
+  IntegrityError). Probado: nueva, duplicada con otro ?trk=, tipo inválido 422.
+  **Gmail**: verificación en 2 pasos activada; contraseña de aplicación
+  "n8n radar" guardada en n8n como credencial IMAP **"Gmail radar (IMAP)"**
+  (imap.gmail.com:993 SSL). Etiqueta Gmail **"Radar"** + 2 filtros:
+  from:(jobs-noreply@linkedin.com OR jobalerts-noreply@linkedin.com) y
+  from:(donotreply@jobalert.indeed.com OR notification@notifications.workana.com
+  OR empleos_co@computrabajo.com). n8n debe leer SOLO la carpeta/etiqueta
+  Radar. Formatos vistos: LinkedIn "Alertas de empleo" (jobalerts: "X busca
+  personal para el puesto de Y") + jobs-noreply (recomendaciones "solicita
+  ya…" y AVISOS DE POSTULACIÓN "se ha enviado tu solicitud"/"ha visto tu
+  solicitud" → ignorar en el radar, útiles en Proyecto 2); Indeed "Cargo en
+  Empresa. N empleos más en …"; Computrabajo "Equipo de Computrabajo" y
+  "Tu lista de empleos" (muchas son de Bogotá/senior → Andrea podría ajustar
+  sus alertas a Medellín/QA Jr); Workana "Nuevos proyectos de Soporte
+  Administrativo" (solo esa categoría → agregar QA/testing y automatización
+  en las notificaciones de Workana). Lección: al crear etiqueta nueva desde
+  el filtro quedó llamada "crear"; se renombró a "Radar".
+  SIGUIENTE: nodo Email Trigger (IMAP) leyendo "Radar" → lector LinkedIn.
 
