@@ -65,22 +65,19 @@ Arranque: `cd ~/projects/job-search-agent` → `bash scripts/start-local.sh`
 Telegram Trigger, el túnel se cayó: volver a correr el script y recargar n8n.
 
 Qué sigue, en orden:
-1. **Confirmar o corregir el perfil** (última parte de la Semana 4): desde
-   `/perfil`, que Andrea pueda corregir un dato (ej. salario, o
-   certificaciones: hoy quedó solo "Si" sin decir cuáles). Idea: comando
-   `/corregir` o botones inline de Telegram por tema → reescribe la
-   respuesta de ese tema (la más reciente gana en `/current`).
-2. Perfil maestro versionado (una versión "oficial" confirmada).
-3. Limpiezas del perfil: duplicados en `habilidades.herramientas`
+1. **Semana 5: radar de vacantes** (3 tipos de fuentes; empezar por
+   alertas de correo LinkedIn/Indeed → Gmail, luego Greenhouse/Lever,
+   luego URL manual). Nueva rama `feature/radar-...`.
+2. Limpiezas del perfil: duplicados en `habilidades.herramientas`
    ("REST"/"APIs REST"); fechas que no respetan "AAAA-MM"
    (ej. educación "jul. 2026").
-4. Semana 5: radar de vacantes (3 fuentes).
-5. Al terminar el Proyecto 1: actualizar el CV de Andrea.
+3. Al terminar el Proyecto 1: actualizar el CV de Andrea.
 
 Pequeños arreglos pendientes:
-- Nota de "Guardar perfil" todavía dice "(v3)" → cambiar a "(v4)".
-- Texto de "Avisar: perfil completo" empieza con un espacio
-  (" ¡Tu perfil está completo!...") → quitarlo.
+- En n8n, Switch: la regla 4 (/perfil) tiene Output Name "corregir" y la
+  regla 5 (/corregir) no tiene nombre → poner "perfil" y "corregir".
+  (Funciona igual porque las conexiones van por posición; en el JSON del
+  repo ya está corregido.)
 - Carpeta `Claude outputs/` en la raíz del repo (imágenes de ayuda): no
   versionar; Andrea puede borrarla.
 - Desactivar el traductor de Chrome en localhost:5678 (traduce nombres de
@@ -225,4 +222,20 @@ pasos de golpe.
   SIEMPRE verificar que el Publish quedó en verde (si no, el bot corre la
   versión publicada anterior). Diagnóstico útil: pestaña Executions → abrir
   el nodo y mirar su OUTPUT real.
+- 2026-09-30 (rama `feature/corregir-perfil`): **/corregir <tema>**. Switch
+  regla 5 (starts with "/corregir") → "Buscar pregunta a corregir" (SQL:
+  `topic LIKE $1 || '%'` AND `length($1) > 0`; $1 = texto sin "/corregir",
+  trim, minúsculas, sin tildes, `|| 'ninguno'` si queda vacío — un parámetro
+  vacío hacía fallar el nodo Postgres en silencio; Always Output Data) → If
+  "¿Tema válido?" (true: "Enviar pregunta a corregir" → "Anotar:
+  corrigiendo" con step='corrigiendo'; false: "Explicar /corregir").
+  "¿Esperaba respuesta?" acepta step esperando_respuesta_entrevista OR
+  corrigiendo. Después de "Guardar respuesta de entrevista": If "¿Era
+  corrección?" (true: "Borrar anotación (corrección)" → "Confirmar
+  corrección"; false: "Buscar siguiente pregunta"). Lección: al insertar un
+  If en medio de una línea, n8n conecta lo que seguía a TRUE; revisar.
+  `/summary` termina con ayuda de /corregir. "Confirmar fin de entrevista"
+  invita a /perfil y /corregir (= confirmar o corregir inferencias, cierra
+  Semana 4). Append n8n Attribution apagado en TODOS los nodos Telegram.
+  Probado: tema válido, tema inválido, sin tema, libreta limpia después.
 

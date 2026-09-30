@@ -355,6 +355,12 @@ def get_profile_summary(telegram_user_id: int, db: Session = Depends(get_db)) ->
         pendientes = [ETIQUETAS_TEMAS.get(t, t) for t in sin_responder]
         lineas += ["", f"⏳ Me falta saber: {_lista(pendientes)}"]
 
+    lineas += [
+        "",
+        "✏️ Para corregir un dato escribe /corregir y el tema. Ejemplo: /corregir salario",
+        "Temas: rol, modalidad, ciudad, salario, disponibilidad, ingles, contrato, certificaciones",
+    ]
+
     texto = "\n".join(lineas)
     # Telegram acepta máximo 4096 caracteres por mensaje.
     if len(texto) > 4000:

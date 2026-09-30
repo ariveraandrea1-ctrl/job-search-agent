@@ -12,7 +12,7 @@
       "typeVersion": 1.5,
       "position": [
         0,
-        192
+        288
       ],
       "id": "2cf3dc7e-377a-4fb8-81c1-e12852adb021",
       "name": "Telegram Trigger",
@@ -123,6 +123,31 @@
               },
               "renameOutput": true,
               "outputKey": "respuesta"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "fe19e5d9-fb5b-4e8a-9e5e-b5e7daa84691",
+                    "leftValue": "={{ $json.message.text }}",
+                    "rightValue": "/perfil",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "perfil"
             }
           ]
         },
@@ -133,12 +158,12 @@
       "typeVersion": 3.4,
       "position": [
         448,
-        176
+        256
       ],
       "id": "d89a4433-e329-4059-b272-50e6d40eb013",
       "name": "Switch",
       "notesInFlow": true,
-      "notes": "Reparte: start = /start, cv = llegó archivo, respuesta = texto normal (respuesta a la pregunta de entrevista)."
+      "notes": "Reparte: start = /start, cv = llegó archivo, respuesta = texto normal (respuesta a la pregunta de entrevista), perfil = /perfil (muestra el perfil)."
     },
     {
       "parameters": {
@@ -266,7 +291,7 @@
         "url": "http://profile-api:8000/interview-answers",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"telegram_user_id\": {{ $('Telegram Trigger').item.json.message.chat.id }},\n  \"question\": {{ JSON.stringify($('Leer anotación').item.json.question) }},\n  \"answer\": {{ JSON.stringify($('Telegram Trigger').item.json.message.text) }}\n}",
+        "jsonBody": "={\n  \"telegram_user_id\": {{ $('Telegram Trigger').item.json.message.chat.id }},\n  \"question\": {{ JSON.stringify($('Leer anotación').item.json.question) }},\n  \"answer\": {{ JSON.stringify($('Telegram Trigger').item.json.message.text) }},\n  \"topic\": {{ JSON.stringify($('Leer anotación').item.json.topic) }}\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -303,7 +328,7 @@
       "typeVersion": 1.3,
       "position": [
         224,
-        192
+        288
       ],
       "id": "0b3912dc-d588-4b3d-82f2-66ef31420277",
       "name": "Call 'verificar-acceso'",
@@ -363,7 +388,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT s.step, s.question_position, q.question\nFROM conversation_state s\nLEFT JOIN interview_questions q ON q.position = s.question_position\nWHERE s.telegram_user_id = $1;",
+        "query": "SELECT s.step, s.question_position, q.question, q.topic\nFROM conversation_state s\nLEFT JOIN interview_questions q ON q.position = s.question_position\nWHERE s.telegram_user_id = $1;",
         "options": {
           "queryReplacement": "={{ $('Telegram Trigger').item.json.message.chat.id }}"
         }
@@ -772,6 +797,48 @@
         }
       },
       "notes": "Fin sin entrevista: el CV no tiene datos faltantes, así que no se hacen preguntas."
+    },
+    {
+      "parameters": {
+        "url": "=http://profile-api:8000/profiles/{{ $('Telegram Trigger').item.json.message.chat.id }}/summary",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        672,
+        672
+      ],
+      "id": "20d0c382-086d-4482-8e1c-208f7910e368",
+      "name": "Pedir resumen del perfil",
+      "notesInFlow": true,
+      "notes": "Perfil: pide a profile-api (GET /profiles/{chat_id}/summary) el perfil vigente como texto listo para Telegram (CV + preferencias de la entrevista). Si el usuario no tiene perfil, el texto le pide enviar su CV."
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        896,
+        672
+      ],
+      "id": "2e8c11a6-b8dd-4415-9d36-0fa27d83e439",
+      "name": "Enviar resumen del perfil",
+      "webhookId": "926be70b-0b70-4a0e-84b5-e7957554a727",
+      "notesInFlow": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "aF0RvNa5kJZkarDY",
+          "name": "Telegram account"
+        }
+      },
+      "notes": "Perfil: envía por Telegram el resumen del perfil que armó profile-api."
     }
   ],
   "pinData": {},
@@ -806,6 +873,13 @@
         [
           {
             "node": "Leer anotación",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pedir resumen del perfil",
             "type": "main",
             "index": 0
           }
@@ -1030,6 +1104,17 @@
           }
         ]
       ]
+    },
+    "Pedir resumen del perfil": {
+      "main": [
+        [
+          {
+            "node": "Enviar resumen del perfil",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -1037,7 +1122,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "dddf6c26-f1c0-4f0a-b79d-288d9d8abb9c",
+  "versionId": "0644f5a5-0494-4150-9610-e87171a33b30",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"
