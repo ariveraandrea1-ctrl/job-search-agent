@@ -277,4 +277,26 @@ pasos de golpe.
   en las notificaciones de Workana). Lección: al crear etiqueta nueva desde
   el filtro quedó llamada "crear"; se renombró a "Radar".
   SIGUIENTE: nodo Email Trigger (IMAP) leyendo "Radar" → lector LinkedIn.
+- 2026-09-30 (radar, sesión 2): workflow n8n nuevo **radar-correo**:
+  "Timbre: correo en Radar" (Email Trigger IMAP, credencial Gmail radar,
+  Mailbox "Radar", Action Nothing, Format Resolved; al probar trae los NO
+  leídos de Radar) → "Leer vacantes del correo" (HTTP POST
+  profile-api /radar/email con telegram_user_id fijo 8553351572 —cambiar al
+  ser multiusuario—, from_address = $json.from.value[0].address, subject,
+  text). profile-api: `app/parsers.py` (lectores puros: parse_linkedin —
+  bloques hasta "Ver anuncio de empleo: URL", toma las ÚLTIMAS 3 líneas no
+  ruido = título/empresa/ubicación, external_id = id de /jobs/view/;
+  parse_workana — "Título / ---- / desc / Leer más: URL", tipo freelance;
+  parse_computrabajo → [] porque los correos resumen no listan vacantes;
+  Indeed pendiente sin muestra) + `elegir_lector(remitente)`.
+  `_guardar_oportunidad()` compartida por POST /opportunities y
+  POST /radar/email (responde found/created/duplicates/new_items).
+  Tests: `services/profile-api/tests/test_parsers.py` (pytest, textos
+  inventados sin datos personales; correr: cd services/profile-api &&
+  python3 -m pytest tests -v). Bug encontrado y corregido con test de
+  regresión: línea "N personas estudiaron en la misma institución…"
+  corría los campos. Probado con 13 correos reales: 26 vacantes LinkedIn +
+  2 Workana guardadas; re-ejecutar → todo duplicates (idempotente).
+  SIGUIENTE: aviso por Telegram de las nuevas (freelance inmediato),
+  lector Indeed (falta un correo de ejemplo), publicar el workflow.
 

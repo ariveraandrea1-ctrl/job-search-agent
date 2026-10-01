@@ -12,6 +12,8 @@ manda justo después de confirmar la recepción del CV) y la guarda en
 PostgreSQL, igual que se hace con el texto del CV.
 Semana 6: endpoint de perfil (/profiles) — recibe el JSON que la IA armó
 a partir del CV, revisa que sea JSON válido y lo guarda en PostgreSQL.
+Radar: correos (POST /radar/email) — lee un correo de alertas (LinkedIn,
+Workana...), saca las vacantes con app/parsers.py y las guarda sin duplicados.
 Radar: oportunidades (POST /opportunities) — guarda una vacante o proyecto
 freelance sin duplicados (huella = link normalizado o fuente:id).
 Semana 7: perfil vigente (GET /profiles/{telegram_user_id}/current) — junta
@@ -34,6 +36,7 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models import Document, InterviewAnswer, Opportunity, Profile
+from app.parsers import elegir_lector
 
 app = FastAPI(title="profile-api", version="0.1.0")
 
@@ -400,41 +403,42 @@ class OpportunityIn(BaseModel):
     raw: dict | None = None
 
 
-@app.post("/opportunities")
-def save_opportunity(payload: OpportunityIn, db: Session = Depends(get_db)) -> dict:
-    """Guarda una oportunidad del radar, SIN duplicados.
+def _guardar_oportunidad(db: Session, telegram_user_id: int, datos: dict):
+    """Guarda una oportunidad SIN duplicados. Devuelve (creada, oportunidad).
 
     La huella (dedup_key) es "fuente:id" si la fuente trae un id propio, o el
-    link normalizado si no. Si ya existe una oportunidad con la misma huella
-    para este usuario, no se guarda otra vez: responde created = false y el
-    id de la que ya estaba. Así n8n puede reintentar sin miedo.
+    link normalizado si no. Si ya existe una con la misma huella para este
+    usuario, no se guarda otra vez (creada = False).
     """
-    source = payload.source.strip().lower()
-    if payload.external_id:
-        huella = f"{source}:{payload.external_id.strip()}"
+    source = datos["source"].strip().lower()
+    if datos.get("external_id"):
+        huella = f"{source}:{str(datos['external_id']).strip()}"
     else:
-        huella = _normalizar_url(payload.url)
+        huella = _normalizar_url(datos["url"])
 
-    existente = db.scalars(
-        select(Opportunity).where(
-            Opportunity.telegram_user_id == payload.telegram_user_id,
-            Opportunity.dedup_key == huella,
-        )
-    ).first()
+    def buscar():
+        return db.scalars(
+            select(Opportunity).where(
+                Opportunity.telegram_user_id == telegram_user_id,
+                Opportunity.dedup_key == huella,
+            )
+        ).first()
+
+    existente = buscar()
     if existente is not None:
-        return {"created": False, "id": str(existente.id), "dedup_key": huella}
+        return False, existente
 
     oportunidad = Opportunity(
-        telegram_user_id=payload.telegram_user_id,
-        tipo=payload.tipo,
+        telegram_user_id=telegram_user_id,
+        tipo=datos["tipo"],
         source=source,
-        external_id=payload.external_id,
-        title=payload.title.strip(),
-        company=payload.company,
-        location=payload.location,
-        url=payload.url.strip(),
-        description=payload.description,
-        raw=payload.raw,
+        external_id=datos.get("external_id"),
+        title=datos["title"].strip(),
+        company=datos.get("company"),
+        location=datos.get("location"),
+        url=datos["url"].strip(),
+        description=datos.get("description"),
+        raw=datos.get("raw"),
         dedup_key=huella,
     )
     db.add(oportunidad)
@@ -443,12 +447,72 @@ def save_opportunity(payload: OpportunityIn, db: Session = Depends(get_db)) -> d
     except IntegrityError:
         # Dos pedidos iguales llegaron casi al mismo tiempo: el otro ganó.
         db.rollback()
-        existente = db.scalars(
-            select(Opportunity).where(
-                Opportunity.telegram_user_id == payload.telegram_user_id,
-                Opportunity.dedup_key == huella,
-            )
-        ).first()
-        return {"created": False, "id": str(existente.id), "dedup_key": huella}
+        return False, buscar()
     db.refresh(oportunidad)
-    return {"created": True, "id": str(oportunidad.id), "dedup_key": huella}
+    return True, oportunidad
+
+
+@app.post("/opportunities")
+def save_opportunity(payload: OpportunityIn, db: Session = Depends(get_db)) -> dict:
+    """Guarda una oportunidad del radar, SIN duplicados.
+
+    Responde created = false (y el id de la que ya estaba) si ya existía, así
+    n8n puede reintentar sin miedo.
+    """
+    creada, oportunidad = _guardar_oportunidad(
+        db, payload.telegram_user_id, payload.model_dump()
+    )
+    return {"created": creada, "id": str(oportunidad.id), "dedup_key": oportunidad.dedup_key}
+
+
+class RadarEmailIn(BaseModel):
+    """Lo que n8n manda por cada correo que llega a la etiqueta Radar."""
+
+    telegram_user_id: int
+    from_address: str
+    subject: str | None = None
+    text: str | None = None
+
+
+@app.post("/radar/email")
+def radar_email(payload: RadarEmailIn, db: Session = Depends(get_db)) -> dict:
+    """Lee un correo de alertas, saca sus vacantes y guarda las nuevas.
+
+    Elige el lector según el remitente (app/parsers.py). Responde cuántas
+    vacantes encontró, cuántas eran nuevas y cuántas ya estaban, más la lista
+    de las NUEVAS (para que n8n avise por Telegram solo de esas).
+    Si el remitente no tiene lector, responde parser = null y no guarda nada.
+    """
+    fuente, lector = elegir_lector(payload.from_address)
+    if lector is None:
+        return {"source": None, "parser": None, "found": 0, "created": 0,
+                "duplicates": 0, "new_items": []}
+
+    ofertas = lector(payload.text or "")
+    nuevas = []
+    duplicadas = 0
+    for oferta in ofertas:
+        oferta["raw"] = {"email_subject": payload.subject}
+        creada, oportunidad = _guardar_oportunidad(db, payload.telegram_user_id, oferta)
+        if creada:
+            nuevas.append(
+                {
+                    "id": str(oportunidad.id),
+                    "tipo": oportunidad.tipo,
+                    "title": oportunidad.title,
+                    "company": oportunidad.company,
+                    "location": oportunidad.location,
+                    "url": oportunidad.url,
+                }
+            )
+        else:
+            duplicadas += 1
+
+    return {
+        "source": fuente,
+        "parser": lector.__name__,
+        "found": len(ofertas),
+        "created": len(nuevas),
+        "duplicates": duplicadas,
+        "new_items": nuevas,
+    }

@@ -1,0 +1,76 @@
+{
+  "name": "radar-correo",
+  "nodes": [
+    {
+      "parameters": {
+        "mailbox": "Radar",
+        "postProcessAction": "nothing",
+        "format": "resolved",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "fba6bec5-aad9-41e8-bd1c-b61500036a77",
+      "name": "Timbre: correo en Radar",
+      "notesInFlow": true,
+      "credentials": {
+        "imap": {
+          "id": "YOibyutjQjhMv6Uq",
+          "name": "Gmail radar (IMAP)"
+        }
+      },
+      "notes": "Radar: se activa con cada correo nuevo que llega a la etiqueta \"Radar\" de Gmail (alertas de LinkedIn, Indeed, Computrabajo, Workana). No marca los correos como leídos."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://profile-api:8000/radar/email",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"telegram_user_id\": 8553351572,\n  \"from_address\": {{ JSON.stringify($json.from.value[0].address) }},\n  \"subject\": {{ JSON.stringify($json.subject) }},\n  \"text\": {{ JSON.stringify($json.text) }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "ab909a03-3d04-42c0-8a58-72f4ad7fb174",
+      "name": "Leer vacantes del correo",
+      "notesInFlow": true,
+      "notes": "Radar: manda el correo a profile-api (POST /radar/email), que elige el lector según el remitente, saca las vacantes y guarda solo las nuevas (sin duplicados). Responde found / created / duplicates / new_items."
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Timbre: correo en Radar": {
+      "main": [
+        [
+          {
+            "node": "Leer vacantes del correo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "8d2759f0-06f2-4768-9278-fe091bd8102e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"
+  },
+  "nodeGroups": [],
+  "id": "ssxLErwzuTO5Qn0M",
+  "tags": []
+}
