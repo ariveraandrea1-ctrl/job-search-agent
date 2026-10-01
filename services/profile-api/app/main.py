@@ -36,7 +36,7 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models import Document, InterviewAnswer, Opportunity, Profile
-from app.parsers import elegir_lector
+from app.parsers import elegir_lector, identificar_url, leer_mensaje_vacante
 
 app = FastAPI(title="profile-api", version="0.1.0")
 
@@ -524,7 +524,63 @@ NOMBRES_FUENTES = {
     "workana": "Workana",
     "computrabajo": "Computrabajo",
     "indeed": "Indeed",
+    "greenhouse": "Greenhouse",
+    "lever": "Lever",
+    "manual": "otro sitio",
 }
+
+AYUDA_VACANTE = (
+    "Para guardar una vacante, mándame:\n"
+    "/vacante <link>\n"
+    "o con un título para reconocerla:\n"
+    "/vacante <link> QA Jr en Empresa X"
+)
+
+
+class RadarUrlIn(BaseModel):
+    """Lo que n8n manda cuando escribes /vacante <link> en Telegram."""
+
+    telegram_user_id: int
+    text: str
+
+
+@app.post("/radar/url")
+def radar_url(payload: RadarUrlIn, db: Session = Depends(get_db)) -> dict:
+    """Guarda una vacante que el usuario mandó a mano (link), SIN duplicados.
+
+    No abre el link (nada de scraping): reconoce el portal y el id por el
+    texto del link. Si la misma vacante ya había llegado por una alerta de
+    correo, la reconoce (misma huella) y no la duplica. Siempre responde
+    200 con telegram_text listo para mandar.
+    """
+    link, titulo = leer_mensaje_vacante(payload.text)
+    if link is None:
+        return {"ok": False, "created": False, "telegram_text":
+                "No encontré ningún link en tu mensaje.\n\n" + AYUDA_VACANTE}
+
+    datos = identificar_url(link)
+    nombre = NOMBRES_FUENTES.get(datos["source"], datos["source"])
+    datos["title"] = titulo or f"Vacante de {nombre} (sin título)"
+    datos["raw"] = {"origen": "telegram", "mensaje": payload.text}
+    creada, oportunidad = _guardar_oportunidad(db, payload.telegram_user_id, datos)
+
+    if creada:
+        texto = (f"✅ Guardé la vacante ({nombre}).\n"
+                 f"• {oportunidad.title}\n   {oportunidad.url}")
+        if not titulo:
+            texto += "\n\nTip: puedes agregar un título después del link."
+    else:
+        texto = (f"👌 Esa vacante ya la tenías guardada ({nombre}).\n"
+                 f"• {oportunidad.title}\n   {oportunidad.url}")
+    return {
+        "ok": True,
+        "created": creada,
+        "id": str(oportunidad.id),
+        "source": datos["source"],
+        "title": oportunidad.title,
+        "url": oportunidad.url,
+        "telegram_text": texto,
+    }
 
 
 def _texto_telegram_radar(fuente: str, nuevas: list[dict], maximo: int = 10) -> str | None:

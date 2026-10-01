@@ -76,7 +76,7 @@ Qué sigue, en orden:
    c. **URL manual** enviada por Telegram.
    NO scraping directo de LinkedIn/Indeed/Computrabajo (ToS).
    ESTADO 2026-10-01: (a) hecho para LinkedIn, Indeed, Workana (+aviso
-   Telegram); Computrabajo resumen → []. Falta (b) y (c).
+   Telegram); Computrabajo resumen → []. (c) hecho (/vacante). Falta (b).
    Diseño freelance: cada oportunidad lleva `tipo` = empleo | freelance;
    freelance → aviso inmediato por Telegram (la velocidad importa);
    palabras clave extra: QA/testing, n8n, automatización, Zapier/Make,
@@ -105,10 +105,6 @@ Qué sigue, en orden:
    sencillas.
 
 Pequeños arreglos pendientes:
-- En n8n, Switch: la regla 4 (/perfil) tiene Output Name "corregir" y la
-  regla 5 (/corregir) no tiene nombre → poner "perfil" y "corregir".
-  (Funciona igual porque las conexiones van por posición; en el JSON del
-  repo ya está corregido.)
 - Carpeta `Claude outputs/` en la raíz del repo (imágenes de ayuda): no
   versionar; Andrea puede borrarla.
 - Desactivar el traductor de Chrome en localhost:5678 (traduce nombres de
@@ -340,4 +336,20 @@ pasos de golpe.
   vacantes fuera de QA; sugerido ajustar alertas en origen. El filtro por
   preferencias + scoring IA es Semana 6.
   SIGUIENTE: Greenhouse/Lever, URL manual por Telegram; luego Semana 6.
+- 2026-10-01 (radar, sesión 4): **/vacante <link> [título]** en Telegram.
+  profile-api POST /radar/url {telegram_user_id, text}: `leer_mensaje_vacante`
+  saca link + título; `identificar_url` reconoce LinkedIn (/jobs/view/<id>,
+  slug-<id>, currentJobId), Indeed (jk/vjk), Workana (/job/<slug>,
+  freelance), Greenhouse y Lever (id "empresa/id"), Computrabajo (sin id) y
+  "manual" para el resto. El id es EL MISMO que sacan los lectores de correo
+  → una vacante mandada a mano que ya llegó por alerta NO se duplica
+  (probado con la de Rappi). NO abre el link (sin scraping). Sin título →
+  "Vacante de X (sin título)". 16 tests. n8n telegram-invitacion: Switch
+  regla 6 `vacante` (startsWith "/vacante") → "Guardar vacante manual" →
+  "Responder vacante guardada". Regresión atrapada al revisar el JSON
+  exportado: reglas 4/5 del Switch habían perdido la "/" (se escribió el
+  nombre en la caja del valor) → corregido: /perfil→perfil, /corregir→corregir.
+  Pendiente menor: actualizar la nota del Switch para mencionar `vacante`.
+  SIGUIENTE: Greenhouse/Lever por empresa (lista de empresas objetivo);
+  luego Semana 6.
 

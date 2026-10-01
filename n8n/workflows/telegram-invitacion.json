@@ -12,7 +12,7 @@
       "typeVersion": 1.5,
       "position": [
         0,
-        288
+        576
       ],
       "id": "2cf3dc7e-377a-4fb8-81c1-e12852adb021",
       "name": "Telegram Trigger",
@@ -28,13 +28,15 @@
       "parameters": {
         "chatId": "={{ $json.message.chat.id }}",
         "text": "={{ $json.message.chat.last_name }}",
-        "additionalFields": {}
+        "additionalFields": {
+          "appendAttribution": false
+        }
       },
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
         672,
-        0
+        96
       ],
       "id": "df877e31-a3e9-479b-b3cb-9aca7301e948",
       "name": "Send a text message",
@@ -148,6 +150,30 @@
               },
               "renameOutput": true,
               "outputKey": "perfil"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "f4dc93d6-0d28-45dd-82aa-899d4b0c7217",
+                    "leftValue": "={{ $json.message.text }}",
+                    "rightValue": "/corregir",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "corregir"
             }
           ]
         },
@@ -158,12 +184,12 @@
       "typeVersion": 3.4,
       "position": [
         448,
-        256
+        528
       ],
       "id": "d89a4433-e329-4059-b272-50e6d40eb013",
       "name": "Switch",
       "notesInFlow": true,
-      "notes": "Reparte: start = /start, cv = llegó archivo, respuesta = texto normal (respuesta a la pregunta de entrevista), perfil = /perfil (muestra el perfil)."
+      "notes": "Reparte: start = /start, cv = llegó archivo, respuesta = texto normal (respuesta a una pregunta), perfil = /perfil (muestra el perfil), corregir = /corregir <tema> (corrige un dato)."
     },
     {
       "parameters": {
@@ -175,7 +201,7 @@
       "typeVersion": 1.2,
       "position": [
         672,
-        480
+        576
       ],
       "id": "48b723c1-ed2f-42bf-bcfe-702e05c773f3",
       "name": "Get a file",
@@ -193,13 +219,15 @@
       "parameters": {
         "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
         "text": "=¡Recibí tu archivo y extraje {{ $('HTTP Request').item.json.char_count }} caracteres de texto! Pronto lo voy a analizar.",
-        "additionalFields": {}
+        "additionalFields": {
+          "appendAttribution": false
+        }
       },
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
         1344,
-        480
+        576
       ],
       "id": "6064ff84-8e86-4315-9997-8300f71b5a4d",
       "name": "Send a text message1",
@@ -234,7 +262,7 @@
       "typeVersion": 4.5,
       "position": [
         896,
-        480
+        576
       ],
       "id": "11ff53cc-173d-416d-8f5a-82d7494cde62",
       "name": "HTTP Request",
@@ -254,7 +282,7 @@
       "typeVersion": 4.5,
       "position": [
         1120,
-        480
+        576
       ],
       "id": "435a5f15-f44e-46a4-8d16-31f78a7e1566",
       "name": "HTTP Request1",
@@ -265,13 +293,15 @@
       "parameters": {
         "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
         "text": "={{ $json.question }}",
-        "additionalFields": {}
+        "additionalFields": {
+          "appendAttribution": false
+        }
       },
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
         2688,
-        384
+        480
       ],
       "id": "ca3bbc8a-d22f-4e79-adde-06df444a0ae8",
       "name": "Enviar pregunta de entrevista",
@@ -298,7 +328,7 @@
       "typeVersion": 4.5,
       "position": [
         1120,
-        96
+        192
       ],
       "id": "b4c281dc-659b-4f5c-b5c0-ab539f7d2942",
       "name": "Guardar respuesta de entrevista",
@@ -328,7 +358,7 @@
       "typeVersion": 1.3,
       "position": [
         224,
-        288
+        576
       ],
       "id": "0b3912dc-d588-4b3d-82f2-66ef31420277",
       "name": "Call 'verificar-acceso'",
@@ -347,7 +377,7 @@
       "typeVersion": 2.7,
       "position": [
         2912,
-        384
+        480
       ],
       "id": "a5ea0da8-c5df-4e86-aa85-fc3df3d291f2",
       "name": "Anotar: esperando respuesta",
@@ -371,7 +401,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.7,
       "position": [
-        1792,
+        2016,
         0
       ],
       "id": "1a84276c-cf2c-47bc-824a-dbefcb58d670",
@@ -397,7 +427,7 @@
       "typeVersion": 2.7,
       "position": [
         672,
-        192
+        288
       ],
       "id": "c36d8617-98a9-4cae-80ab-86f13f235ecb",
       "name": "Leer anotación",
@@ -429,9 +459,19 @@
                 "type": "string",
                 "operation": "equals"
               }
+            },
+            {
+              "id": "0b51b692-9a7d-4595-9467-4039e744986c",
+              "leftValue": "={{ $json.step }}",
+              "rightValue": "corrigiendo",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
             }
           ],
-          "combinator": "and"
+          "combinator": "or"
         },
         "looseTypeValidation": true,
         "options": {}
@@ -440,24 +480,26 @@
       "typeVersion": 2.3,
       "position": [
         896,
-        192
+        288
       ],
       "id": "25af712d-ff17-44f4-bdf4-8fc8365a9104",
       "name": "¿Esperaba respuesta?",
       "notesInFlow": true,
-      "notes": "Decide: si la libreta dice \"esperando respuesta\" → true (guarda). Si no → false (responde que no entendió)."
+      "notes": "Decide: si la libreta dice \"esperando respuesta\" o \"corrigiendo\" → true (guarda la respuesta). Si no → false (responde que no entendió)."
     },
     {
       "parameters": {
         "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
         "text": "No entendí 🤔 Escribe /start para empezar o envíame tu CV en PDF o Word.",
-        "additionalFields": {}
+        "additionalFields": {
+          "appendAttribution": false
+        }
       },
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
         1120,
-        288
+        384
       ],
       "id": "c746c21b-8105-4f02-8bf1-44bb6a488f82",
       "name": "Responder: no entendí",
@@ -483,7 +525,7 @@
       "typeVersion": 2.7,
       "position": [
         2240,
-        480
+        576
       ],
       "id": "bda6b98f-aa68-4a2f-be7e-8d1e54316d59",
       "name": "Buscar primera pregunta",
@@ -508,7 +550,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.7,
       "position": [
-        1344,
+        1568,
         96
       ],
       "id": "693fd242-972c-41a3-a309-e2b0d3d1c166",
@@ -552,7 +594,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        1568,
+        1792,
         96
       ],
       "id": "b91cd287-7341-4a9e-9be0-16f6d6c08d1a",
@@ -564,12 +606,14 @@
       "parameters": {
         "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
         "text": "={{ $('Buscar siguiente pregunta').item.json.question }}",
-        "additionalFields": {}
+        "additionalFields": {
+          "appendAttribution": false
+        }
       },
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        1792,
+        2016,
         192
       ],
       "id": "d9d295fd-c8a4-4dc4-b255-7923aad85c7e",
@@ -595,7 +639,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.7,
       "position": [
-        2016,
+        2240,
         192
       ],
       "id": "bf0a6909-f954-4bf1-b6a7-83fc3b75ae45",
@@ -612,13 +656,15 @@
     {
       "parameters": {
         "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
-        "text": "¡Listo! Terminamos la entrevista. Guardé todas tus respuestas. 🙌",
-        "additionalFields": {}
+        "text": "¡Listo! Terminamos la entrevista. Guardé todas tus respuestas. 🙌 Escribe /perfil para revisar tu perfil y /corregir si algo quedó mal.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
       },
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        2016,
+        2240,
         0
       ],
       "id": "4efa2efe-bb76-4a9c-9d55-95c4ab0f9b44",
@@ -657,7 +703,7 @@
       "typeVersion": 3.5,
       "position": [
         1568,
-        480
+        576
       ],
       "id": "503aef32-6e23-4361-9632-fd34395a97bd",
       "name": "Instrucciones: extraer CV",
@@ -711,7 +757,7 @@
       "typeVersion": 1.3,
       "position": [
         1792,
-        480
+        576
       ],
       "id": "03f61865-7700-4127-8b6a-dc1cea9e8e2c",
       "name": "Analizar CV con IA",
@@ -731,12 +777,12 @@
       "typeVersion": 4.5,
       "position": [
         2016,
-        480
+        576
       ],
       "id": "49a57758-cc7f-45a7-aea5-38133fec46e9",
       "name": "Guardar perfil",
       "notesInFlow": true,
-      "notes": "Guarda en la tabla profiles (POST /profiles) el perfil que armó la IA a partir del CV: usuario de Telegram, id del CV (de HTTP Request1), JSON del perfil, proveedor (groq o gemini) y versión del prompt (v3). Si la IA devolvió un JSON roto, profile-api responde 422 y no guarda nada."
+      "notes": "Guarda en la tabla profiles (POST /profiles) el perfil que armó la IA a partir del CV: usuario de Telegram, id del CV (de HTTP Request1), JSON del perfil, proveedor (groq o gemini) y versión del prompt (v4). Si la IA devolvió un JSON roto, profile-api responde 422 y no guarda nada."
     },
     {
       "parameters": {
@@ -767,7 +813,7 @@
       "typeVersion": 2.3,
       "position": [
         2464,
-        480
+        576
       ],
       "id": "775bab59-abad-466e-83ea-b0c842d68191",
       "name": "¿Hay preguntas?",
@@ -777,14 +823,16 @@
     {
       "parameters": {
         "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
-        "text": " ¡Tu perfil está completo! No tengo preguntas por ahora. 🙌",
-        "additionalFields": {}
+        "text": "¡Tu perfil está completo! No tengo preguntas por ahora. 🙌",
+        "additionalFields": {
+          "appendAttribution": false
+        }
       },
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
         2688,
-        576
+        672
       ],
       "id": "aa6847ba-99ef-4ab6-94bf-7fb7e9e71c94",
       "name": "Avisar: perfil completo",
@@ -807,7 +855,7 @@
       "typeVersion": 4.5,
       "position": [
         672,
-        672
+        1056
       ],
       "id": "20d0c382-086d-4482-8e1c-208f7910e368",
       "name": "Pedir resumen del perfil",
@@ -826,7 +874,7 @@
       "typeVersion": 1.2,
       "position": [
         896,
-        672
+        1056
       ],
       "id": "2e8c11a6-b8dd-4415-9d36-0fa27d83e439",
       "name": "Enviar resumen del perfil",
@@ -839,6 +887,232 @@
         }
       },
       "notes": "Perfil: envía por Telegram el resumen del perfil que armó profile-api."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT position, question, topic FROM interview_questions\nWHERE length($1) > 0\nAND topic LIKE $1 || '%'\nORDER BY position\nLIMIT 1;",
+        "options": {
+          "queryReplacement": "={{ $('Telegram Trigger').item.json.message.text.replace('/corregir', '').trim().toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '') || 'ninguno' }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        672,
+        864
+      ],
+      "id": "31bc6996-0f3b-49f0-95bb-4a2b70aa8d64",
+      "name": "Buscar pregunta a corregir",
+      "alwaysOutputData": true,
+      "notesInFlow": true,
+      "credentials": {
+        "postgres": {
+          "id": "EvPGGiXFOJMKZE5Q",
+          "name": "Postgres account"
+        }
+      },
+      "notes": "Corregir: busca en interview_questions la pregunta cuyo tema empieza con lo que escribió el usuario después de /corregir (sin tildes ni mayúsculas). \"Always Output Data\" activado por si el tema no existe."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "86fa51fd-a72b-4f76-a1e4-15400c6fa5ac",
+              "leftValue": "={{ $json.position }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        896,
+        864
+      ],
+      "id": "bc5a060b-76a6-4669-aee4-1dc11c681f42",
+      "name": "¿Tema válido?",
+      "notesInFlow": true,
+      "notes": "Decide: si encontró la pregunta del tema → true (la envía). Si no → false (explica cómo usar /corregir)."
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "No reconocí ese tema 🤔 Escribe /corregir y uno de estos: rol, modalidad, ciudad, salario, disponibilidad, ingles, contrato, certificaciones. Ejemplo: /corregir salario",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1120,
+        960
+      ],
+      "id": "9917f62f-3ecf-4f84-9369-eeb96660bd26",
+      "name": "Explicar /corregir",
+      "webhookId": "25886849-1f2d-412d-8f86-482711faf2ae",
+      "notesInFlow": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "aF0RvNa5kJZkarDY",
+          "name": "Telegram account"
+        }
+      },
+      "notes": "Corregir: el tema no existe (o no escribió ninguno); le muestra la lista de temas válidos."
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $('Buscar pregunta a corregir').item.json.question }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1120,
+        768
+      ],
+      "id": "02c43796-8390-456e-a222-994cc4c341e0",
+      "name": "Enviar pregunta a corregir",
+      "webhookId": "ce2e00c1-016c-4081-8154-ba39075e4727",
+      "notesInFlow": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "aF0RvNa5kJZkarDY",
+          "name": "Telegram account"
+        }
+      },
+      "notes": "Corregir: envía la pregunta del tema que el usuario quiere corregir."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO conversation_state (telegram_user_id, step, question_position, updated_at)\nVALUES ($1, 'corrigiendo', $2, now())\nON CONFLICT (telegram_user_id)\nDO UPDATE SET step = EXCLUDED.step,\n              question_position = EXCLUDED.question_position,\n              updated_at = now();",
+        "options": {
+          "queryReplacement": "={{ $('Telegram Trigger').item.json.message.chat.id }},{{ $('Buscar pregunta a corregir').item.json.position }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1344,
+        768
+      ],
+      "id": "65a1be73-891a-4951-b483-54c6a40d95f7",
+      "name": "Anotar: corrigiendo",
+      "notesInFlow": true,
+      "credentials": {
+        "postgres": {
+          "id": "EvPGGiXFOJMKZE5Q",
+          "name": "Postgres account"
+        }
+      },
+      "notes": "Libreta: anota en conversation_state que esta persona está corrigiendo un dato (step = corrigiendo) y en qué pregunta."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c90c494c-d31e-4665-8136-e6f07e9f8951",
+              "leftValue": "={{ $('Leer anotación').item.json.step }}",
+              "rightValue": "corrigiendo",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1344,
+        192
+      ],
+      "id": "615d401f-cd1c-48cc-9a36-d49024faf375",
+      "name": "¿Era corrección?",
+      "notesInFlow": true,
+      "notes": "Decide: si la libreta decía \"corrigiendo\" → true (confirma la corrección y termina). Si no → false (sigue la entrevista normal con la siguiente pregunta)."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM conversation_state WHERE telegram_user_id = $1;",
+        "options": {
+          "queryReplacement": "={{ $('Telegram Trigger').item.json.message.chat.id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1568,
+        288
+      ],
+      "id": "462801d3-6e16-40da-88e9-a6f54398ed67",
+      "name": "Borrar anotación (corrección)",
+      "notesInFlow": true,
+      "credentials": {
+        "postgres": {
+          "id": "EvPGGiXFOJMKZE5Q",
+          "name": "Postgres account"
+        }
+      },
+      "notes": "Libreta: borra la anotación porque la corrección ya se guardó."
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "✅ Listo, actualicé ese dato de tu perfil. Escribe /perfil para verlo.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1792,
+        288
+      ],
+      "id": "2976f955-6358-4c0b-9124-8ed3e498fa35",
+      "name": "Confirmar corrección",
+      "webhookId": "01da11c8-d3c3-42cc-945e-dd770fce7821",
+      "notesInFlow": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "aF0RvNa5kJZkarDY",
+          "name": "Telegram account"
+        }
+      },
+      "notes": "Corregir: avisa que el dato se actualizó (en /perfil gana la respuesta más reciente de cada tema)."
     }
   ],
   "pinData": {},
@@ -880,6 +1154,13 @@
         [
           {
             "node": "Pedir resumen del perfil",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Buscar pregunta a corregir",
             "type": "main",
             "index": 0
           }
@@ -934,7 +1215,7 @@
       "main": [
         [
           {
-            "node": "Buscar siguiente pregunta",
+            "node": "¿Era corrección?",
             "type": "main",
             "index": 0
           }
@@ -1115,6 +1396,75 @@
           }
         ]
       ]
+    },
+    "Buscar pregunta a corregir": {
+      "main": [
+        [
+          {
+            "node": "¿Tema válido?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Tema válido?": {
+      "main": [
+        [
+          {
+            "node": "Enviar pregunta a corregir",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Explicar /corregir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar pregunta a corregir": {
+      "main": [
+        [
+          {
+            "node": "Anotar: corrigiendo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Era corrección?": {
+      "main": [
+        [
+          {
+            "node": "Borrar anotación (corrección)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Buscar siguiente pregunta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Borrar anotación (corrección)": {
+      "main": [
+        [
+          {
+            "node": "Confirmar corrección",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -1122,7 +1472,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "0644f5a5-0494-4150-9610-e87171a33b30",
+  "versionId": "2d62e431-39cc-4044-ab5b-772f1e1b824a",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"

@@ -210,6 +210,68 @@ def parse_computrabajo(texto: str) -> list[dict]:
     return []
 
 
+# ------------------------------------------------------ Link manual (URL)
+
+# Cada portal tiene su forma de identificar una vacante dentro del link.
+# El id que sacamos aquí es EL MISMO que sacan los lectores de correo, así
+# una vacante enviada a mano y la misma que llega por alerta dan la misma
+# huella (dedup_key) y no se guardan dos veces.
+_URL_PATRONES = [
+    ("linkedin", "empleo", re.compile(r"linkedin\.com.*?(?:/jobs/view/(?:[^/?#]*-)?|[?&]currentJobId=)(\d+)")),
+    ("indeed", "empleo", re.compile(r"indeed\.com/.*?[?&]v?jk=([0-9a-f]+)", re.IGNORECASE)),
+    ("workana", "freelance", re.compile(r"workana\.com/job/([^/?#\s]+)")),
+    ("greenhouse", "empleo", re.compile(r"greenhouse\.io/([^/?#]+)/jobs/(\d+)")),
+    ("lever", "empleo", re.compile(r"jobs\.lever\.co/([^/?#]+)/([0-9a-f-]{36})", re.IGNORECASE)),
+]
+_URLS_LIMPIAS = {
+    "linkedin": "https://www.linkedin.com/jobs/view/{id}/",
+    "indeed": "https://co.indeed.com/viewjob?jk={id}",
+    "workana": "https://www.workana.com/job/{id}",
+}
+_URL_EN_TEXTO = re.compile(r"https?://\S+")
+
+
+def identificar_url(url: str) -> dict:
+    """Reconoce de qué portal es un link de vacante y saca su id.
+
+    Devuelve {source, tipo, external_id, url}. Si no reconoce el portal:
+    source "manual", external_id None y el link tal cual (la huella será el
+    link normalizado). NO abre el link: solo lee el texto del link.
+    """
+    url = url.strip().rstrip(".,;)>")
+    for fuente, tipo, patron in _URL_PATRONES:
+        m = patron.search(url)
+        if not m:
+            continue
+        if fuente in ("greenhouse", "lever"):
+            # El id solo es único dentro de la empresa: "empresa/id".
+            external_id = f"{m.group(1).lower()}/{m.group(2).lower()}"
+            limpia = url.split("?")[0].split("#")[0]
+            if fuente == "greenhouse":
+                limpia = f"https://boards.greenhouse.io/{external_id.replace('/', '/jobs/')}"
+        else:
+            external_id = m.group(1).lower() if fuente == "indeed" else m.group(1)
+            external_id = external_id.rstrip("/")
+            limpia = _URLS_LIMPIAS[fuente].format(id=external_id)
+        return {"source": fuente, "tipo": tipo, "external_id": external_id, "url": limpia}
+    if "computrabajo." in url:
+        return {"source": "computrabajo", "tipo": "empleo", "external_id": None,
+                "url": url.split("?")[0].split("#")[0]}
+    return {"source": "manual", "tipo": "empleo", "external_id": None, "url": url}
+
+
+def leer_mensaje_vacante(texto: str) -> tuple[str | None, str | None]:
+    """De "/vacante <link> [título]" saca (link, título). Sin link → (None, None)."""
+    texto = (texto or "").strip()
+    texto = re.sub(r"^/vacante(@\w+)?", "", texto, flags=re.IGNORECASE).strip()
+    m = _URL_EN_TEXTO.search(texto)
+    if not m:
+        return None, None
+    titulo = (texto[: m.start()] + " " + texto[m.end():]).strip(" -—:\n\t")
+    titulo = " ".join(titulo.split())
+    return m.group(0), (titulo or None)
+
+
 # --------------------------------------------------------------- Despacho
 
 LECTORES = {

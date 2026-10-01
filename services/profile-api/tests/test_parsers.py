@@ -6,6 +6,8 @@ services/profile-api con:  python3 -m pytest tests -v
 """
 from app.parsers import (
     elegir_lector,
+    identificar_url,
+    leer_mensaje_vacante,
     parse_computrabajo,
     parse_indeed,
     parse_linkedin,
@@ -210,3 +212,40 @@ def test_indeed_descripcion_sin_salario_ni_etiquetas():
 
 def test_indeed_elegir_lector():
     assert elegir_lector("donotreply@jobalert.indeed.com")[0] == "indeed"
+
+
+def test_url_linkedin_da_el_mismo_id_que_el_correo():
+    a = identificar_url("https://www.linkedin.com/comm/jobs/view/1111111111/?trackingId=abc")
+    b = identificar_url("https://co.linkedin.com/jobs/view/analista-qa-en-empresa-uno-1111111111")
+    c = identificar_url("https://www.linkedin.com/jobs/collections/recommended/?currentJobId=1111111111")
+    assert a["source"] == b["source"] == c["source"] == "linkedin"
+    assert a["external_id"] == b["external_id"] == c["external_id"] == "1111111111"
+    assert a["url"] == "https://www.linkedin.com/jobs/view/1111111111/"
+
+
+def test_url_indeed_workana_greenhouse_lever():
+    indeed = identificar_url("https://co.indeed.com/viewjob?jk=AAAA1111bbbb2222&from=share")
+    assert (indeed["source"], indeed["external_id"]) == ("indeed", "aaaa1111bbbb2222")
+    workana = identificar_url("https://www.workana.com/job/pruebas-de-app-web?ref=x")
+    assert (workana["source"], workana["tipo"], workana["external_id"]) == (
+        "workana", "freelance", "pruebas-de-app-web")
+    gh = identificar_url("https://boards.greenhouse.io/EmpresaUno/jobs/4567890?gh_src=a")
+    assert (gh["source"], gh["external_id"]) == ("greenhouse", "empresauno/4567890")
+    lever = identificar_url(
+        "https://jobs.lever.co/empresados/0f1e2d3c-4b5a-6978-8a9b-0c1d2e3f4a5b/apply")
+    assert lever["source"] == "lever"
+    assert lever["external_id"] == "empresados/0f1e2d3c-4b5a-6978-8a9b-0c1d2e3f4a5b"
+
+
+def test_url_desconocida_queda_como_manual():
+    otra = identificar_url("https://empleos.empresa-tres.com/vacante/qa?utm_source=x")
+    assert otra["source"] == "manual" and otra["external_id"] is None
+
+
+def test_leer_mensaje_vacante():
+    assert leer_mensaje_vacante("/vacante https://x.com/job/1 QA Jr en Empresa X") == (
+        "https://x.com/job/1", "QA Jr en Empresa X")
+    assert leer_mensaje_vacante("/vacante https://x.com/job/1") == ("https://x.com/job/1", None)
+    assert leer_mensaje_vacante("/vacante QA Jr - https://x.com/job/1") == (
+        "https://x.com/job/1", "QA Jr")
+    assert leer_mensaje_vacante("/vacante") == (None, None)
