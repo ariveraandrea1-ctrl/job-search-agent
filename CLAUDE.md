@@ -58,7 +58,7 @@ Estamos en el Proyecto 1 (perfil + radar).
    `docker compose ... build profile-api` + `up -d profile-api` para que
    tome efecto (no alcanza con reiniciar el contenedor).
 
-## ▶ PRÓXIMA SESIÓN — empezar por aquí (actualizado 2026-09-29)
+## ▶ PRÓXIMA SESIÓN — empezar por aquí (actualizado 2026-10-01)
 
 Arranque: `cd ~/projects/job-search-agent` → `bash scripts/start-local.sh`
 (con Docker Desktop abierto). Si "Publish" falla con "Bad request" en el
@@ -75,6 +75,8 @@ Qué sigue, en orden:
       las empresas objetivo de Andrea las usan).
    c. **URL manual** enviada por Telegram.
    NO scraping directo de LinkedIn/Indeed/Computrabajo (ToS).
+   ESTADO 2026-10-01: (a) hecho para LinkedIn, Indeed, Workana (+aviso
+   Telegram); Computrabajo resumen → []. Falta (b) y (c).
    Diseño freelance: cada oportunidad lleva `tipo` = empleo | freelance;
    freelance → aviso inmediato por Telegram (la velocidad importa);
    palabras clave extra: QA/testing, n8n, automatización, Zapier/Make,
@@ -86,6 +88,21 @@ Qué sigue, en orden:
    ("REST"/"APIs REST"); fechas que no respetan "AAAA-MM"
    (ej. educación "jul. 2026").
 3. Al terminar el Proyecto 1: actualizar el CV de Andrea.
+4. **Al terminar el Proyecto 1 (pedido por Andrea 2026-09-30): sesión de
+   REPASO** de todo lo construido y CÓMO se hizo, con PREGUNTAS DE
+   ENTREVISTA posibles y cómo responderlas con sus palabras (ej.: cómo
+   evitaste duplicados, qué hace la consulta con jsonb_array_elements_text,
+   por qué IMAP y no OAuth, cómo probaste el bot, qué bug encontraste y cómo
+   lo corregiste con test de regresión, por qué IA con respaldo, Gitflow,
+   migraciones a mano). Andrea quiere poder explicar el proyecto en
+   entrevistas. Formato acordado: (a) presentación corta del proyecto
+   (pitch 1–2 min) y versión larga tipo exposición (arquitectura, decisiones,
+   problemas y cómo se resolvieron, pruebas); (b) banco de preguntas de
+   entrevista CON RESPUESTAS que ella pueda dar con sus palabras, incluyendo
+   el manejo que le dio a todo (cómo probó, cómo depuró, decisiones de
+   seguridad/ToS); (c) simulacro: Claude pregunta, Andrea responde, Claude
+   da retroalimentación. Reforzar también: que ella escriba consultas SQL
+   sencillas.
 
 Pequeños arreglos pendientes:
 - En n8n, Switch: la regla 4 (/perfil) tiene Output Name "corregir" y la
@@ -299,4 +316,28 @@ pasos de golpe.
   2 Workana guardadas; re-ejecutar → todo duplicates (idempotente).
   SIGUIENTE: aviso por Telegram de las nuevas (freelance inmediato),
   lector Indeed (falta un correo de ejemplo), publicar el workflow.
+- 2026-10-01 (radar, sesión 3): **aviso por Telegram + lector Indeed**.
+  profile-api: POST /radar/email devuelve `telegram_text` (None si no hay
+  nuevas; freelance primero con ⚡; tope 10 líneas / 4000 caracteres).
+  n8n radar-correo: "¿Hay vacantes nuevas?" (If `created` > 0) → TRUE →
+  "Avisar vacantes nuevas" (Telegram, chat fijo 8553351572, sin atribución,
+  sin vista previa de links). Publicado y exportado. `parse_indeed`:
+  bloques separados por línea en blanco "Título / Empresa - Ubicación /
+  (salario, etiquetas) / descripción / fecha / URL con jk=<id>";
+  external_id = jk; url limpia https://co.indeed.com/viewjob?jk=<id>;
+  "Desde casa" → "Remoto"; empresa/ubicación cortadas en el ÚLTIMO " - ".
+  4 tests nuevos (12 en total). Probado con correo real: 8/8 vacantes.
+  Lecciones de prueba (para el repaso): (1) el Email Trigger solo se
+  dispara con correos que LLEGAN nuevos; marcar como no leído uno viejo no
+  lo dispara. (2) "Execute step" en n8n reutiliza resultados anteriores de
+  los nodos padres → resultados confusos (duplicates / created 0). Solución:
+  fijar (pin) la salida de "Leer vacantes del correo" con created > 0,
+  ejecutar el nodo de Telegram, y luego QUITAR el pin. (3) SQL desde la
+  terminal: `docker compose --env-file .env -f
+  compose/docker-compose.local.yml exec postgres psql -U job_search_agent
+  -d job_search_agent -c "<consulta>;"` (pegar SQL suelto en zsh falla).
+  Nota: la alerta de Indeed de Andrea era "business analyst" → llegan
+  vacantes fuera de QA; sugerido ajustar alertas en origen. El filtro por
+  preferencias + scoring IA es Semana 6.
+  SIGUIENTE: Greenhouse/Lever, URL manual por Telegram; luego Semana 6.
 

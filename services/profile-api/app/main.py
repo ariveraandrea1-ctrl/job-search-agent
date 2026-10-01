@@ -515,4 +515,44 @@ def radar_email(payload: RadarEmailIn, db: Session = Depends(get_db)) -> dict:
         "created": len(nuevas),
         "duplicates": duplicadas,
         "new_items": nuevas,
+        "telegram_text": _texto_telegram_radar(fuente, nuevas),
     }
+
+
+NOMBRES_FUENTES = {
+    "linkedin": "LinkedIn",
+    "workana": "Workana",
+    "computrabajo": "Computrabajo",
+    "indeed": "Indeed",
+}
+
+
+def _texto_telegram_radar(fuente: str, nuevas: list[dict], maximo: int = 10) -> str | None:
+    """Arma el aviso de Telegram con las oportunidades NUEVAS de un correo.
+
+    Devuelve None si no hay nuevas (así n8n no manda nada). Texto plano, sin
+    Markdown. Las freelance van primero y marcadas con ⚡ porque en freelance
+    gana quien propone primero.
+    """
+    if not nuevas:
+        return None
+    nombre = NOMBRES_FUENTES.get(fuente, fuente)
+    ordenadas = sorted(nuevas, key=lambda o: o["tipo"] != "freelance")
+    freelance = sum(1 for o in nuevas if o["tipo"] == "freelance")
+
+    if freelance == len(nuevas):
+        titulo = f"⚡ {len(nuevas)} proyecto(s) freelance nuevo(s) en {nombre}"
+    else:
+        titulo = f"📥 {len(nuevas)} oportunidad(es) nueva(s) de {nombre}"
+    lineas = [titulo, ""]
+
+    for o in ordenadas[:maximo]:
+        marca = "⚡ " if o["tipo"] == "freelance" else "• "
+        detalle = " — ".join(x for x in [o.get("company"), o.get("location")] if x)
+        lineas.append(f"{marca}{o['title']}" + (f" ({detalle})" if detalle else ""))
+        lineas.append(f"   {o['url']}")
+    if len(nuevas) > maximo:
+        lineas.append(f"… y {len(nuevas) - maximo} más.")
+
+    texto = "\n".join(lineas)
+    return texto[:3990] + "\n…" if len(texto) > 4000 else texto

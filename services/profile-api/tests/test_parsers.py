@@ -4,7 +4,13 @@ Usan textos de ejemplo INVENTADOS con la misma estructura que los correos
 reales (sin datos personales ni links de seguimiento). Correr desde
 services/profile-api con:  python3 -m pytest tests -v
 """
-from app.parsers import elegir_lector, parse_computrabajo, parse_linkedin, parse_workana
+from app.parsers import (
+    elegir_lector,
+    parse_computrabajo,
+    parse_indeed,
+    parse_linkedin,
+    parse_workana,
+)
 
 LINKEDIN = """Tu alerta de empleo para ("QA Analyst" OR "Software Tester")
 AND
@@ -141,3 +147,66 @@ def test_linkedin_ignora_personas_de_tu_institucion():
     institución..." corría los campos (título = empresa, empresa = ciudad)."""
     qa = [o for o in parse_linkedin(LINKEDIN) if o["external_id"] == "4444444444"][0]
     assert (qa["title"], qa["company"], qa["location"]) == ("QA Funcional", "Empresa Cuatro", "Bogotá")
+
+
+INDEED = """Indeed Job Alert
+3 puestos disponibles de tester en remoto
+
+Jobs 1-3 of 3 new jobs
+See matching results on Indeed: https://co.indeed.com/jobs?q=tester&l=remoto&from=ja
+
+Tester Manual Jr
+Empresa Alfa - Desde casa
+Buscamos tester para pruebas funcionales de una app web…
+Recién publicado
+https://co.indeed.com/rc/clk/dl?jk=aaaa1111bbbb2222&from=ja&qd=xyz&tk=1
+
+QA Automation
+Empresa Beta S.A.S.  - Medellín, Antioquia
+$5.000.000 - $6.000.000 por mes
+Postulación vía Indeed
+Automatización con Python y pytest para servicios REST.
+hace 3 días
+https://co.indeed.com/rc/clk/dl?jk=cccc3333dddd4444&from=ja
+
+Analista de Pruebas
+Empresa Gamma - Norte - Bogotá, Cundinamarca
+Esta empresa responde a los candidatos
+Pruebas de regresión y reporte de bugs en Jira.
+hace 1 día
+https://co.indeed.com/rc/clk/dl?jk=eeee5555ffff6666&from=ja
+
+No compartas este email
+En este email, se incluyen enlaces seguros personalizados para ti.
+
+Administrar alertas de empleo: https://subscriptions.indeed.com?token=abc
+"""
+
+
+def test_indeed_saca_las_tres_vacantes():
+    vacantes = parse_indeed(INDEED)
+    assert [v["external_id"] for v in vacantes] == [
+        "aaaa1111bbbb2222", "cccc3333dddd4444", "eeee5555ffff6666"]
+    assert all(v["source"] == "indeed" and v["tipo"] == "empleo" for v in vacantes)
+
+
+def test_indeed_separa_empresa_ubicacion_y_limpia_url():
+    primera, segunda, tercera = parse_indeed(INDEED)
+    assert primera["title"] == "Tester Manual Jr"
+    assert primera["company"] == "Empresa Alfa"
+    assert primera["location"] == "Remoto"
+    assert primera["url"] == "https://co.indeed.com/viewjob?jk=aaaa1111bbbb2222"
+    assert segunda["company"] == "Empresa Beta S.A.S."
+    assert segunda["location"] == "Medellín, Antioquia"
+    # Empresa con guion en el nombre: se corta en el ÚLTIMO " - ".
+    assert tercera["company"] == "Empresa Gamma - Norte"
+    assert tercera["location"] == "Bogotá, Cundinamarca"
+
+
+def test_indeed_descripcion_sin_salario_ni_etiquetas():
+    segunda = parse_indeed(INDEED)[1]
+    assert segunda["description"] == "Automatización con Python y pytest para servicios REST."
+
+
+def test_indeed_elegir_lector():
+    assert elegir_lector("donotreply@jobalert.indeed.com")[0] == "indeed"

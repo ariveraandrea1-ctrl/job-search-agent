@@ -44,6 +44,68 @@
       "name": "Leer vacantes del correo",
       "notesInFlow": true,
       "notes": "Radar: manda el correo a profile-api (POST /radar/email), que elige el lector según el remitente, saca las vacantes y guarda solo las nuevas (sin duplicados). Responde found / created / duplicates / new_items."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "48a98a0c-a40f-4e1f-9aa0-454b5c84495e",
+              "leftValue": "={{ $json.created }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        448,
+        0
+      ],
+      "id": "9cb4a3fa-14ec-44a0-9209-e4f629f11c05",
+      "name": "¿Hay vacantes nuevas?",
+      "notesInFlow": true,
+      "notes": "Decide: si el correo trajo al menos una oportunidad nueva (created > 0) → true (avisa por Telegram). Si todo era repetido o no había vacantes → false (no hace nada)."
+    },
+    {
+      "parameters": {
+        "chatId": "8553351572",
+        "text": "={{ $('Leer vacantes del correo').item.json.telegram_text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        672,
+        -96
+      ],
+      "id": "293500fd-877b-43bb-9f58-35e27fbde3b4",
+      "name": "Avisar vacantes nuevas",
+      "webhookId": "84d7cf59-c124-4e5f-93d6-1aed0b57b10d",
+      "notesInFlow": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "aF0RvNa5kJZkarDY",
+          "name": "Telegram account"
+        }
+      },
+      "notes": "Radar: envía por Telegram el aviso armado por profile-api (telegram_text) con las oportunidades nuevas del correo. Freelance primero, marcadas con ⚡."
     }
   ],
   "pinData": {},
@@ -58,6 +120,28 @@
           }
         ]
       ]
+    },
+    "Leer vacantes del correo": {
+      "main": [
+        [
+          {
+            "node": "¿Hay vacantes nuevas?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Hay vacantes nuevas?": {
+      "main": [
+        [
+          {
+            "node": "Avisar vacantes nuevas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -65,7 +149,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "8d2759f0-06f2-4768-9278-fe091bd8102e",
+  "versionId": "f0af2753-610d-400f-8f10-d6ae7fc0f3d5",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"

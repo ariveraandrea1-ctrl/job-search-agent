@@ -12,7 +12,9 @@ Formatos soportados (vistos en correos reales, 2026-09-30):
   "Título / ----- / descripción / Leer más: URL".
 - Computrabajo (empleos_co@): los correos de "resumen" NO traen vacantes
   individuales (solo un conteo y un link a la lista), así que devuelven [].
-- Indeed: pendiente (todavía no tenemos un correo de ejemplo).
+- Indeed (donotreply@jobalert.indeed.com): bloques separados por línea en
+  blanco "Título / Empresa - Ubicación / (salario, etiquetas) / descripción /
+  fecha / URL con jk=<id>".
 """
 import re
 
@@ -129,6 +131,73 @@ def parse_workana(texto: str) -> list[dict]:
     return resultados
 
 
+# ------------------------------------------------------------------ Indeed
+
+_INDEED_URL = re.compile(
+    r"https://(?:[a-z]{2,3}\.)?indeed\.com/\S*?[?&]jk=([0-9a-f]+)\S*", re.IGNORECASE
+)
+# Líneas "de adorno" dentro de un bloque de Indeed que no son la descripción.
+_INDEED_ETIQUETAS = (
+    "postulación vía indeed",
+    "postularse fácilmente",
+    "easily apply",
+    "esta empresa responde",
+    "responsive employer",
+    "recién publicado",
+    "just posted",
+    "hace ",
+    "urgente",
+)
+# Línea de salario: empieza con "$" (o "Desde $" / "Hasta $"). Una descripción
+# que MENCIONA un salario en medio de la frase sí se conserva.
+_INDEED_SALARIO = re.compile(r"^(?:desde |hasta |de |from |up to )?\$", re.IGNORECASE)
+_INDEED_REMOTO = {"desde casa", "remoto", "remote", "trabajo remoto"}
+
+
+def parse_indeed(texto: str) -> list[dict]:
+    """Saca las vacantes de un correo de alertas de Indeed."""
+    resultados = []
+    vistos = set()
+    for bloque in re.split(r"\n[ \t]*\n", texto.replace("\r\n", "\n")):
+        lineas = [l.strip() for l in bloque.splitlines() if l.strip()]
+        if len(lineas) < 3:
+            continue
+        m = _INDEED_URL.fullmatch(lineas[-1])
+        if not m:
+            continue
+        job_id = m.group(1).lower()
+        if job_id in vistos:
+            continue
+        vistos.add(job_id)
+        titulo = lineas[0]
+        # "Empresa - Ubicación": se corta en el ÚLTIMO " - " por si la
+        # empresa trae guiones en el nombre.
+        empresa, _, ubicacion = lineas[1].rpartition(" - ")
+        if not empresa:
+            empresa, ubicacion = lineas[1], None
+        empresa = empresa.strip() or None
+        ubicacion = (ubicacion or "").strip() or None
+        if ubicacion and ubicacion.lower() in _INDEED_REMOTO:
+            ubicacion = "Remoto"
+        descripcion = [
+            l for l in lineas[2:-1]
+            if not l.lower().startswith(_INDEED_ETIQUETAS) and not _INDEED_SALARIO.search(l)
+        ]
+        resultados.append(
+            {
+                "tipo": "empleo",
+                "source": "indeed",
+                "external_id": job_id,
+                "title": titulo,
+                "company": empresa,
+                "location": ubicacion,
+                "url": f"https://co.indeed.com/viewjob?jk={job_id}",
+                "description": " ".join(descripcion) or None,
+            }
+        )
+    return resultados
+
+
 # ------------------------------------------------------------- Computrabajo
 
 
@@ -147,6 +216,7 @@ LECTORES = {
     "linkedin.com": ("linkedin", parse_linkedin),
     "workana.com": ("workana", parse_workana),
     "computrabajo.com": ("computrabajo", parse_computrabajo),
+    "indeed.com": ("indeed", parse_indeed),
 }
 
 
