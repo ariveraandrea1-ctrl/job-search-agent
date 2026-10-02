@@ -36,7 +36,7 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models import Document, InterviewAnswer, Opportunity, Profile
-from app.parsers import elegir_lector, identificar_url, leer_mensaje_vacante
+from app.parsers import elegir_lector, identificar_url, leer_mensaje_vacante, parse_getonbrd
 
 app = FastAPI(title="profile-api", version="0.1.0")
 
@@ -465,6 +465,28 @@ def save_opportunity(payload: OpportunityIn, db: Session = Depends(get_db)) -> d
     return {"created": creada, "id": str(oportunidad.id), "dedup_key": oportunidad.dedup_key}
 
 
+def _guardar_lote(db: Session, telegram_user_id: int, ofertas: list[dict]):
+    """Guarda varias oportunidades sin duplicados. Devuelve (nuevas, duplicadas)."""
+    nuevas = []
+    duplicadas = 0
+    for oferta in ofertas:
+        creada, oportunidad = _guardar_oportunidad(db, telegram_user_id, oferta)
+        if creada:
+            nuevas.append(
+                {
+                    "id": str(oportunidad.id),
+                    "tipo": oportunidad.tipo,
+                    "title": oportunidad.title,
+                    "company": oportunidad.company,
+                    "location": oportunidad.location,
+                    "url": oportunidad.url,
+                }
+            )
+        else:
+            duplicadas += 1
+    return nuevas, duplicadas
+
+
 class RadarEmailIn(BaseModel):
     """Lo que n8n manda por cada correo que llega a la etiqueta Radar."""
 
@@ -489,24 +511,9 @@ def radar_email(payload: RadarEmailIn, db: Session = Depends(get_db)) -> dict:
                 "duplicates": 0, "new_items": []}
 
     ofertas = lector(payload.text or "")
-    nuevas = []
-    duplicadas = 0
     for oferta in ofertas:
         oferta["raw"] = {"email_subject": payload.subject}
-        creada, oportunidad = _guardar_oportunidad(db, payload.telegram_user_id, oferta)
-        if creada:
-            nuevas.append(
-                {
-                    "id": str(oportunidad.id),
-                    "tipo": oportunidad.tipo,
-                    "title": oportunidad.title,
-                    "company": oportunidad.company,
-                    "location": oportunidad.location,
-                    "url": oportunidad.url,
-                }
-            )
-        else:
-            duplicadas += 1
+    nuevas, duplicadas = _guardar_lote(db, payload.telegram_user_id, ofertas)
 
     return {
         "source": fuente,
@@ -527,7 +534,36 @@ NOMBRES_FUENTES = {
     "greenhouse": "Greenhouse",
     "lever": "Lever",
     "manual": "otro sitio",
+    "getonbrd": "Get on Board",
 }
+
+
+class RadarGetonbrdIn(BaseModel):
+    """Lo que n8n manda: la respuesta COMPLETA de la API de Get on Board."""
+
+    telegram_user_id: int
+    response: dict
+
+
+@app.post("/radar/getonbrd")
+def radar_getonbrd(payload: RadarGetonbrdIn, db: Session = Depends(get_db)) -> dict:
+    """Guarda las vacantes nuevas de Get on Board (API pública, sin scraping).
+
+    Aplica un pre-filtro básico (remota o Colombia, hasta Semi Senior) y
+    guarda sin duplicados. Misma respuesta que /radar/email + "skipped"
+    (cuántas descartó el pre-filtro).
+    """
+    ofertas, descartadas = parse_getonbrd(payload.response)
+    nuevas, duplicadas = _guardar_lote(db, payload.telegram_user_id, ofertas)
+    return {
+        "source": "getonbrd",
+        "found": len(ofertas) + descartadas,
+        "skipped": descartadas,
+        "created": len(nuevas),
+        "duplicates": duplicadas,
+        "new_items": nuevas,
+        "telegram_text": _texto_telegram_radar("getonbrd", nuevas),
+    }
 
 AYUDA_VACANTE = (
     "Para guardar una vacante, mándame:\n"

@@ -222,11 +222,13 @@ _URL_PATRONES = [
     ("workana", "freelance", re.compile(r"workana\.com/job/([^/?#\s]+)")),
     ("greenhouse", "empleo", re.compile(r"greenhouse\.io/([^/?#]+)/jobs/(\d+)")),
     ("lever", "empleo", re.compile(r"jobs\.lever\.co/([^/?#]+)/([0-9a-f-]{36})", re.IGNORECASE)),
+    ("getonbrd", "empleo", re.compile(r"getonbrd\.[a-z.]+/(?:jobs|empleos)/(?:[^/?#]+/)?([^/?#]+)")),
 ]
 _URLS_LIMPIAS = {
     "linkedin": "https://www.linkedin.com/jobs/view/{id}/",
     "indeed": "https://co.indeed.com/viewjob?jk={id}",
     "workana": "https://www.workana.com/job/{id}",
+    "getonbrd": "https://www.getonbrd.com/jobs/{id}",
 }
 _URL_EN_TEXTO = re.compile(r"https?://\S+")
 
@@ -270,6 +272,99 @@ def leer_mensaje_vacante(texto: str) -> tuple[str | None, str | None]:
     titulo = (texto[: m.start()] + " " + texto[m.end():]).strip(" -—:\n\t")
     titulo = " ".join(titulo.split())
     return m.group(0), (titulo or None)
+
+
+# ----------------------------------------------------------- Get on Board
+
+# API pública oficial de Get on Board (sin clave, sin scraping):
+#   GET https://www.getonbrd.com/api/v0/categories/sysadmin-devops-qa/jobs
+#       ?per_page=50&expand=["company"]
+# n8n la consulta y le pasa la respuesta COMPLETA (JSON) a profile-api.
+GETONBRD_NIVELES = {1: "Sin experiencia", 2: "Junior", 3: "Semi Senior", 4: "Senior", 5: "Expert"}
+GETONBRD_NIVEL_MAXIMO = 3  # hasta Semi Senior; Senior/Expert se ignoran
+_ETIQUETA_HTML = re.compile(r"<[^>]+>")
+
+
+def _texto_plano(html: str | None, maximo: int = 1000) -> str | None:
+    if not html:
+        return None
+    texto = " ".join(_ETIQUETA_HTML.sub(" ", html).split())
+    return (texto[:maximo] + "…") if len(texto) > maximo else (texto or None)
+
+
+# La categoría de Get on Board mezcla QA con DevOps/Cloud/infra: solo nos
+# quedamos con títulos de QA / pruebas / calidad / monitoreo / validación.
+_GETONBRD_TITULO_QA = re.compile(
+    r"\bq\s*/?\s*a\b|test|calidad|quality|sdet|automatiza|pruebas|monitoreo|validaci",
+    re.IGNORECASE,
+)
+
+
+def getonbrd_sirve(atributos: dict) -> bool:
+    """Pre-filtro básico (el filtro fino con IA es la Semana 6).
+
+    Se queda solo con vacantes que:
+    - tienen título de QA / pruebas / calidad (la categoría trae DevOps y más),
+    - NO están publicadas en inglés (lang "en" → casi seguro piden inglés),
+    - son remotas o en Colombia,
+    - son de nivel hasta Semi Senior.
+    """
+    if not _GETONBRD_TITULO_QA.search(atributos.get("title") or ""):
+        return False
+    if atributos.get("lang") == "en":
+        return False
+    nivel = ((atributos.get("seniority") or {}).get("data") or {}).get("id")
+    if nivel is not None and nivel > GETONBRD_NIVEL_MAXIMO:
+        return False
+    paises = [str(p).lower() for p in atributos.get("countries") or []]
+    remota = atributos.get("remote_modality") == "fully_remote" or "remote" in paises
+    return remota or "colombia" in paises
+
+
+def parse_getonbrd(respuesta: dict) -> tuple[list[dict], int]:
+    """Convierte la respuesta de la API de Get on Board en oportunidades.
+
+    Devuelve (oportunidades, descartadas_por_prefiltro).
+    """
+    resultados = []
+    descartadas = 0
+    for job in (respuesta or {}).get("data") or []:
+        a = job.get("attributes") or {}
+        if not job.get("id") or not a.get("title"):
+            continue
+        if not getonbrd_sirve(a):
+            descartadas += 1
+            continue
+        empresa = ((((a.get("company") or {}).get("data") or {}).get("attributes")) or {}).get("name")
+        paises = [p for p in a.get("countries") or [] if p and p != "Remote"]
+        if a.get("remote_modality") == "fully_remote" or not paises:
+            ubicacion = "Remoto"
+        else:
+            modalidad = {"hybrid": "Híbrido", "no_remote": "Presencial"}.get(a.get("remote_modality"), "")
+            ubicacion = ", ".join(paises) + (f" ({modalidad})" if modalidad else "")
+        nivel = ((a.get("seniority") or {}).get("data") or {}).get("id")
+        resultados.append(
+            {
+                "tipo": "empleo",
+                "source": "getonbrd",
+                "external_id": job["id"],
+                "title": a["title"].strip(),
+                "company": empresa,
+                "location": ubicacion,
+                "url": ((job.get("links") or {}).get("public_url")
+                        or f"https://www.getonbrd.com/jobs/{job['id']}"),
+                "description": _texto_plano(a.get("description")),
+                "raw": {
+                    "nivel": GETONBRD_NIVELES.get(nivel),
+                    "remote_modality": a.get("remote_modality"),
+                    "countries": a.get("countries"),
+                    "min_salary": a.get("min_salary"),
+                    "max_salary": a.get("max_salary"),
+                    "published_at": a.get("published_at"),
+                },
+            }
+        )
+    return resultados, descartadas
 
 
 # --------------------------------------------------------------- Despacho

@@ -58,7 +58,9 @@ Estamos en el Proyecto 1 (perfil + radar).
    `docker compose ... build profile-api` + `up -d profile-api` para que
    tome efecto (no alcanza con reiniciar el contenedor).
 
-## ▶ PRÓXIMA SESIÓN — empezar por aquí (actualizado 2026-10-01)
+## ▶ PRÓXIMA SESIÓN — empezar por aquí (actualizado 2026-10-01 noche)
+
+RETOMAR: workflow radar-getonbrd, ver historial "radar, sesión 5" → QUEDAMOS EN.
 
 Arranque: `cd ~/projects/job-search-agent` → `bash scripts/start-local.sh`
 (con Docker Desktop abierto). Si "Publish" falla con "Bad request" en el
@@ -76,7 +78,8 @@ Qué sigue, en orden:
    c. **URL manual** enviada por Telegram.
    NO scraping directo de LinkedIn/Indeed/Computrabajo (ToS).
    ESTADO 2026-10-01: (a) hecho para LinkedIn, Indeed, Workana (+aviso
-   Telegram); Computrabajo resumen → []. (c) hecho (/vacante). Falta (b).
+   Telegram); Computrabajo resumen → []. (c) hecho (/vacante). (b) cambiado a
+   Get on Board (API pública), en curso.
    Diseño freelance: cada oportunidad lleva `tipo` = empleo | freelance;
    freelance → aviso inmediato por Telegram (la velocidad importa);
    palabras clave extra: QA/testing, n8n, automatización, Zapier/Make,
@@ -352,4 +355,35 @@ pasos de golpe.
   Pendiente menor: actualizar la nota del Switch para mencionar `vacante`.
   SIGUIENTE: Greenhouse/Lever por empresa (lista de empresas objetivo);
   luego Semana 6.
+- 2026-10-01 (radar, sesión 5): **Get on Board en vez de Greenhouse/Lever**
+  (decidido con Andrea). Investigado: las empresas en Greenhouse/Lever con
+  QA en Colombia son internacionales, senior y piden inglés (CI&T, Monks,
+  Capco sin vacantes CO). Get on Board = portal tech LATAM en español con
+  API pública oficial sin clave (sin scraping):
+  GET https://www.getonbrd.com/api/v0/categories/sysadmin-devops-qa/jobs?per_page=50&expand=%5B%22company%22%5D
+  (seniority id: 1 Sin experiencia, 2 Junior, 3 Semi Senior, 4 Senior,
+  5 Expert; campos attributes.title/lang/remote_modality/countries/
+  seniority/company, links.public_url). profile-api: `parse_getonbrd` +
+  `getonbrd_sirve` (pre-filtro: título de QA/test/calidad/monitoreo/
+  validación, lang != "en", remota o Colombia, nivel <= 3) y POST
+  /radar/getonbrd {telegram_user_id, response} → found/skipped/created/
+  duplicates/new_items/telegram_text. `_guardar_lote` compartido con
+  /radar/email. `identificar_url` reconoce links de Get on Board (mismo id
+  que la API). 20 tests. Probado con datos reales: 50 → 46 descartadas →
+  4 guardadas. Nota: remote_modality "remote_local" puede estar limitada a
+  un país (location_tenants) y "lang" no detecta inglés exigido dentro del
+  texto (ej. Niuro pide C1) → lo resuelve el scoring IA de la Semana 6.
+  n8n workflow NUEVO **radar-getonbrd** (AÚN NO publicado ni exportado):
+  "Reloj: cada 4 horas" (Schedule Trigger) → "Consultar Get on Board" (HTTP
+  GET) → "Guardar vacantes de Get on Board" (HTTP POST profile-api, body
+  {"telegram_user_id": 8553351572, "response": JSON.stringify($json)}).
+  QUEDAMOS EN: fijar (pin) la salida de "Guardar vacantes de Get on Board"
+  (tiene created 4) → agregar If "¿Hay vacantes nuevas?" (created > 0) →
+  TRUE → Telegram "Avisar vacantes nuevas" (chat 8553351572, text
+  $('Guardar vacantes de Get on Board').item.json.telegram_text, sin
+  atribución, sin vista previa) → Execute step en Telegram → QUITAR pin →
+  publicar (verde) → exportar radar-getonbrd.json → commit. Si el pin no
+  quedó y created ya es 0: borrar con
+  `delete from opportunities where source = 'getonbrd';` y re-ejecutar.
+  Luego: Semana 6.
 

@@ -8,6 +8,7 @@ from app.parsers import (
     elegir_lector,
     identificar_url,
     leer_mensaje_vacante,
+    parse_getonbrd,
     parse_computrabajo,
     parse_indeed,
     parse_linkedin,
@@ -249,3 +250,68 @@ def test_leer_mensaje_vacante():
     assert leer_mensaje_vacante("/vacante QA Jr - https://x.com/job/1") == (
         "https://x.com/job/1", "QA Jr")
     assert leer_mensaje_vacante("/vacante") == (None, None)
+
+
+def _job_getonbrd(slug, titulo, nivel, modalidad, paises, empresa="Empresa Uno", lang="es"):
+    return {
+        "id": slug,
+        "type": "job",
+        "attributes": {
+            "title": titulo,
+            "lang": lang,
+            "description": "<ul><li>Pruebas <b>manuales</b> y de API</li></ul>",
+            "remote_modality": modalidad,
+            "countries": paises,
+            "seniority": {"data": {"id": nivel, "type": "seniority"}},
+            "company": {"data": {"id": "x", "type": "company",
+                                 "attributes": {"name": empresa}}},
+        },
+        "links": {"public_url": f"https://www.getonbrd.com/jobs/{slug}"},
+    }
+
+
+GETONBRD = {
+    "data": [
+        _job_getonbrd("qa-jr-empresa-uno-remote", "QA Junior", 2, "fully_remote", ["Remote"]),
+        _job_getonbrd("analista-qa-empresa-dos", "Analista QA", 3, "hybrid", ["Colombia"],
+                      empresa="Empresa Dos"),
+        _job_getonbrd("qa-senior-empresa-tres", "QA Senior", 4, "fully_remote", ["Remote"]),
+        _job_getonbrd("analista-qa-presencial-chile", "Analista QA", 2, "no_remote", ["Chile"]),
+        _job_getonbrd("cloud-engineer-remoto", "Cloud Engineer", 3, "fully_remote", ["Remote"]),
+        _job_getonbrd("qa-engineer-en-ingles", "QA Engineer", 3, "remote_local", ["Remote"],
+                      lang="en"),
+    ],
+    "meta": {"page": 1, "per_page": 4, "total_pages": 1},
+}
+
+
+def test_getonbrd_prefiltro_remota_o_colombia_hasta_semi_senior():
+    vacantes, descartadas = parse_getonbrd(GETONBRD)
+    assert [v["external_id"] for v in vacantes] == [
+        "qa-jr-empresa-uno-remote", "analista-qa-empresa-dos"]
+    # Descartadas: la Senior, la presencial en Chile, la de Cloud (no es QA)
+    # y la publicada en inglés.
+    assert descartadas == 4
+
+
+def test_getonbrd_campos():
+    remota, colombia = parse_getonbrd(GETONBRD)[0]
+    assert remota["source"] == "getonbrd" and remota["tipo"] == "empleo"
+    assert remota["company"] == "Empresa Uno"
+    assert remota["location"] == "Remoto"
+    assert remota["description"] == "Pruebas manuales y de API"
+    assert remota["raw"]["nivel"] == "Junior"
+    assert colombia["location"] == "Colombia (Híbrido)"
+    assert colombia["url"] == "https://www.getonbrd.com/jobs/analista-qa-empresa-dos"
+
+
+def test_getonbrd_respuesta_vacia_o_rara_no_falla():
+    assert parse_getonbrd({}) == ([], 0)
+    assert parse_getonbrd({"data": [{"id": "sin-titulo", "attributes": {}}]}) == ([], 0)
+
+
+def test_url_getonbrd_da_el_mismo_id_que_la_api():
+    a = identificar_url("https://www.getonbrd.com/jobs/sysadmin-devops-qa/qa-junior-lemontech-remote")
+    b = identificar_url("https://www.getonbrd.com.co/empleos/qa-junior-lemontech-remote?utm=x")
+    assert a["source"] == b["source"] == "getonbrd"
+    assert a["external_id"] == b["external_id"] == "qa-junior-lemontech-remote"
