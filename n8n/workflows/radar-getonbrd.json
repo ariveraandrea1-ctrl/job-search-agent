@@ -171,7 +171,11 @@
   "active": true,
   "settings": {
     "executionOrder": "v1",
-    "binaryMode": "separate"
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "ZKLCX1SGXZuJLnhg",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
   },
   "versionId": "6b0c3c60-4f67-413a-af7a-8e7022c48a51",
   "meta": {

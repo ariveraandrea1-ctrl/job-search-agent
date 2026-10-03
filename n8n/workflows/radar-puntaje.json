@@ -20,7 +20,7 @@
       "id": "d43cda0b-d09f-4245-b9f1-0c7e59691bd3",
       "name": "Reloj: cada hora",
       "notesInFlow": true,
-      "notes": "Puntaje: cada hora puntúa con IA hasta 10 vacantes que aún no tienen puntaje."
+      "notes": "  Puntaje: cada hora puntúa con IA hasta 10 vacantes que aún no tienen puntaje."
     },
     {
       "parameters": {
@@ -36,7 +36,7 @@
       "id": "ec524302-43a7-4599-bd85-4962864aefc7",
       "name": "Pedir vacantes sin puntaje",
       "notesInFlow": true,
-      "notes": "Puntaje: pide a profile-api hasta 10 vacantes sin puntaje, cada una con la pregunta lista para la IA (system_prompt + user_text con perfil y vacante). Límite de 10 para cuidar la cuota gratis de la IA."
+      "notes": "  Puntaje: pide a profile-api hasta 10 vacantes sin puntaje, cada una con la pregunta lista para la IA (system_prompt + user_text con perfil y vacante). Límite de 10 para cuidar la cuota gratis de la IA."
     },
     {
       "parameters": {
@@ -181,9 +181,13 @@
   "active": true,
   "settings": {
     "executionOrder": "v1",
-    "binaryMode": "separate"
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "ZKLCX1SGXZuJLnhg",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
   },
-  "versionId": "be33a290-366d-4201-afec-a5852272ca00",
+  "versionId": "0d738e76-da72-4c90-aee0-0b80efb1012b",
   "meta": {
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"
   },

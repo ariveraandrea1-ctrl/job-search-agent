@@ -466,3 +466,13 @@ pasos de golpe.
   /detalle). radar-puntaje subido a limit=10 por hora (73 pendientes tras
   el primer día: llegaron ~80 vacantes en 24 h). Textos "5 por hora"
   cambiados a "cada hora" (no atar el texto al límite). 53 tests.
+- 2026-10-03 (Semana 7, sesión 1): **alertas de errores**. Rama
+  feature/manejo-errores. n8n workflow NUEVO **alertas-errores** (id
+  ZKLCX1SGXZuJLnhg, publicado): "Cuando un flujo falla" (Error Trigger) →
+  "Avisar falla por Telegram" (flujo, nodo, error, hora Bogotá). Settings →
+  Error workflow = alertas-errores en radar-correo, radar-getonbrd,
+  radar-puntaje, radar-resumen-diario, telegram-invitacion y ai-model-router
+  (las Settings se guardan sin re-publicar). Probado con un flujo temporal
+  prueba-error (Schedule cada minuto + Stop and Error): llegó la alerta
+  (2 veces = 2 ejecuciones, no bug); luego archivado y borrado. El Error
+  Trigger solo se dispara en ejecuciones automáticas, no manuales.
