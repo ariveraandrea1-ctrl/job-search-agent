@@ -33,6 +33,7 @@ datos reales · error en uso normal
 | BUG-14 | 2026-10-03 | 🐞 | Listas de Telegram sin link a la vacante | Corregido + test |
 | BUG-15 | 2026-10-03 | 🐞 | Texto "5 por hora" quedó desactualizado al cambiar el límite | Corregido |
 | BUG-16 | 2026-10-01 / 10-03 | 🧭 | Archivo .git/index.lock bloqueaba los commits | Corregido (proceso) |
+| BUG-17 | 2026-10-03 | 🐞 | Prueba de restauración daba PASO revisando solo 1 de 8 tablas (falso positivo) | Corregido + control |
 
 ---
 
@@ -141,6 +142,13 @@ datos reales · error en uso normal
 - **Causa raíz:** el asistente corrió `git status` desde su terminal; eso dejó el archivo de bloqueo y no lo pudo borrar.
 - **Corrección:** `rm -f .git/index.lock`. Regla: el asistente no corre comandos de git; los corre Andrea.
 - **Cómo se detectó:** error al hacer commit.
+
+### BUG-17 · Prueba de restauración con falso positivo
+- **Síntoma:** `probar-restauracion.sh` dijo "PASO: el respaldo se restaura completo", pero la tabla comparativa mostraba solo `opportunities`; faltaban 7 de las 8 tablas.
+- **Causa raíz:** el ciclo `while read ... done < archivo.conteo` comparte la entrada con `docker compose exec -T`, que se leyó el resto del archivo en la primera vuelta. El ciclo terminó después de una tabla y, como esa coincidía, no había fallas.
+- **Corrección:** `< /dev/null` en el comando de docker para que no lea la entrada del ciclo. Además, un control nuevo: si las tablas revisadas no son todas las del conteo, la prueba FALLA.
+- **Lección:** una prueba que pasa también hay que revisarla; un PASO sin verificar cuánto se probó puede esconder el bug.
+- **Cómo se detectó:** revisión de la salida de la prueba (Andrea la pegó y la tabla estaba incompleta).
 
 ---
 
