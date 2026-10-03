@@ -120,6 +120,12 @@ Pequeños arreglos pendientes:
 - Desactivar el traductor de Chrome en localhost:5678 (traduce nombres de
   campos en pantalla y confunde).
 
+Bitácora de bugs: `docs/bitacora-bugs.md` (creada 2026-10-03). Cada bug o
+hallazgo nuevo se agrega ahí (síntoma, causa raíz, corrección, prueba de
+regresión, cómo se detectó). Riesgo anotado para Semana 7: todo depende de
+que el Mac esté prendido (resumen 7 am no se reenvía si estaba dormido) →
+considerar servidor.
+
 Forma de trabajo con Andrea (importante): está aprendiendo. Explicar UN
 paso a la vez, corto, esperar su "listo" antes del siguiente. Decir
 exactamente dónde hacer clic en n8n y qué pegar. Nada de listas largas de
