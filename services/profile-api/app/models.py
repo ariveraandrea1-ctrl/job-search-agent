@@ -139,6 +139,10 @@ class Opportunity(Base):
     raw: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="nueva")
     score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    analysis: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    scored_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    score_provider: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    score_prompt_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
     dedup_key: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)

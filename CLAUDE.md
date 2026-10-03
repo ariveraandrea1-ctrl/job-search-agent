@@ -60,8 +60,10 @@ Estamos en el Proyecto 1 (perfil + radar).
 
 ## ▶ PRÓXIMA SESIÓN — empezar por aquí (actualizado 2026-10-01 noche)
 
-RETOMAR: radar (Semana 5) TERMINADO en `feature/radar-vacantes` (falta merge a
-develop). Siguiente: Semana 6 (normalizar/filtrar por preferencias, scoring IA
+RETOMAR: Semana 6 en rama `feature/puntaje-ia`. HECHO: puntaje con IA
+(workflow radar-puntaje). SIGUE: comandos Telegram /nuevas, /mejores,
+/detalle, /guardar, /descartar; luego resumen diario. (Radar Semana 5 ya
+mergeado a develop.) Plan original Semana 6 (normalizar/filtrar por preferencias, scoring IA
 + señales de alerta + detectar inglés exigido en la descripción, /nuevas,
 /mejores, /detalle, /guardar, /descartar, resumen diario).
 
@@ -393,3 +395,33 @@ pasos de golpe.
   `delete from opportunities where source = 'getonbrd';` y re-ejecutar.
   Luego: Semana 6.
 
+
+- 2026-10-03 (Semana 6, sesión 1, rama `feature/puntaje-ia`): **puntaje con IA**.
+  profile-api: `app/puntaje.py` (funciones puras): PROMPT_PUNTAJE
+  (PROMPT_VERSION "puntaje-v1"; JSON con puntaje 0-100, ingles
+  no_requerido/basico/intermedio/avanzado/desconocido, nivel_vacante,
+  razones_a_favor, razones_en_contra, senales_alerta (KYC, cuentas
+  bancarias, pagos fuera de plataforma...), resumen), armar_resumen_perfil
+  (perfil CV + preferencias), armar_texto_vacante (avisa si no hay
+  descripción; recorta a 3000), leer_respuesta_puntaje (quita ```json,
+  valida, normaliza, y aplica REGLAS FIJAS en código: tope 35 si inglés
+  avanzado, 60 si intermedio, 40 si senior, 20 si hay señales de alerta;
+  guarda puntaje_ia original y reglas_aplicadas). Migración 0009:
+  opportunities.analysis JSONB, scored_at, score_provider,
+  score_prompt_version. Endpoints: GET /opportunities/pending-score
+  ?telegram_user_id&limit (≤20; scored_at NULL, más nuevas primero; trae
+  system_prompt + user_text listos) y POST /opportunities/{id}/score
+  {text, provider, prompt_version} (422 si la IA devolvió basura → queda
+  pendiente). tests/test_puntaje.py: 14 tests (34 en total).
+  n8n workflow NUEVO **radar-puntaje** (publicado): "Reloj: cada hora" →
+  "Pedir vacantes sin puntaje" (limit 5, cuida cuota Groq) → "Separar
+  vacantes" (Split Out "items") → "Puntuar con IA" (Execute Sub-workflow
+  ai-model-router, mode "Run once for each item") → "Guardar puntaje"
+  (HTTP POST, On Error: Continue). Pendiente menor: en n8n el nodo
+  "Puntuar con IA" no tiene nota (en el JSON del repo sí).
+  Hallazgo de prueba (para el repaso): las 5 primeras sacaron 30 → sospecha
+  de que la IA no diferenciaba. Se creó una vacante de prueba ideal (QA Jr
+  Medellín, sin inglés) → 95; otras 15 y 45 → la IA sí diferencia; las 5
+  eran realmente malas (senior, 4 años, C1). Vacante de prueba borrada
+  (source='prueba'). Groq detectó inglés C1 en Niuro (el pre-filtro por
+  "lang" no lo veía).

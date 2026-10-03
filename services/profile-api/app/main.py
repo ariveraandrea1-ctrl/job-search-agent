@@ -23,6 +23,7 @@ import io
 import json
 import unicodedata
 import uuid
+from datetime import datetime, timezone
 from typing import Literal
 from urllib.parse import urlsplit, urlunsplit
 
@@ -37,6 +38,7 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import Document, InterviewAnswer, Opportunity, Profile
 from app.parsers import elegir_lector, identificar_url, leer_mensaje_vacante, parse_getonbrd
+from app import puntaje as puntaje_ia
 
 app = FastAPI(title="profile-api", version="0.1.0")
 
@@ -648,3 +650,73 @@ def _texto_telegram_radar(fuente: str, nuevas: list[dict], maximo: int = 10) -> 
 
     texto = "\n".join(lineas)
     return texto[:3990] + "\n…" if len(texto) > 4000 else texto
+
+
+# ------------------------------------------------------- Puntaje con IA (S6)
+
+
+@app.get("/opportunities/pending-score")
+def pending_score(telegram_user_id: int, limit: int = 5, db: Session = Depends(get_db)) -> dict:
+    """Vacantes que faltan por puntuar, con la pregunta LISTA para la IA.
+
+    Para cada una devuelve system_prompt y user_text (perfil resumido +
+    vacante), así n8n solo tiene que mandarlas a ai-model-router. Las más
+    nuevas primero. limit evita gastar de más la cuota gratis de la IA.
+    Si el usuario no tiene perfil, devuelve items vacío y lo explica.
+    """
+    resultado = _perfil_vigente(db, telegram_user_id)
+    if resultado is None:
+        return {"count": 0, "items": [], "motivo": "El usuario no tiene perfil todavía."}
+    perfil, preferencias, _ = resultado
+    limit = max(1, min(limit, 20))
+    vacantes = db.scalars(
+        select(Opportunity)
+        .where(Opportunity.telegram_user_id == telegram_user_id,
+               Opportunity.scored_at.is_(None))
+        .order_by(Opportunity.created_at.desc())
+        .limit(limit)
+    ).all()
+    items = []
+    for v in vacantes:
+        datos = {"title": v.title, "tipo": v.tipo, "company": v.company, "location": v.location,
+                 "source": v.source, "description": v.description, "raw": v.raw}
+        items.append({
+            "id": str(v.id),
+            "title": v.title,
+            "system_prompt": puntaje_ia.PROMPT_PUNTAJE,
+            "user_text": puntaje_ia.armar_pregunta(perfil.data, preferencias, datos),
+            "prompt_version": puntaje_ia.PROMPT_VERSION,
+        })
+    return {"count": len(items), "items": items}
+
+
+class ScoreIn(BaseModel):
+    """Lo que n8n manda después de pasar la vacante por ai-model-router."""
+
+    text: str
+    provider: str
+    prompt_version: str
+
+
+@app.post("/opportunities/{opportunity_id}/score")
+def save_score(opportunity_id: uuid.UUID, payload: ScoreIn, db: Session = Depends(get_db)) -> dict:
+    """Valida la respuesta de la IA, aplica las reglas fijas y guarda el puntaje.
+
+    Si la IA devolvió algo inválido responde 422 y NO guarda (la vacante
+    sigue pendiente y se reintenta en la próxima vuelta).
+    """
+    vacante = db.get(Opportunity, opportunity_id)
+    if vacante is None:
+        raise HTTPException(status_code=404, detail="No existe esa vacante.")
+    try:
+        analisis = puntaje_ia.leer_respuesta_puntaje(payload.text)
+    except puntaje_ia.RespuestaInvalida as error:
+        raise HTTPException(status_code=422, detail=str(error))
+    vacante.score = analisis["puntaje"]
+    vacante.analysis = analisis
+    vacante.scored_at = datetime.now(timezone.utc)
+    vacante.score_provider = payload.provider
+    vacante.score_prompt_version = payload.prompt_version
+    db.commit()
+    return {"id": str(vacante.id), "title": vacante.title, "score": vacante.score,
+            "ingles": analisis["ingles"], "reglas_aplicadas": analisis["reglas_aplicadas"]}

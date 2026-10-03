@@ -1,0 +1,193 @@
+{
+  "name": "radar-puntaje",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d43cda0b-d09f-4245-b9f1-0c7e59691bd3",
+      "name": "Reloj: cada hora",
+      "notesInFlow": true,
+      "notes": "Puntaje: cada hora puntúa con IA hasta 5 vacantes que aún no tienen puntaje."
+    },
+    {
+      "parameters": {
+        "url": "http://profile-api:8000/opportunities/pending-score?telegram_user_id=8553351572&limit=5",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "ec524302-43a7-4599-bd85-4962864aefc7",
+      "name": "Pedir vacantes sin puntaje",
+      "notesInFlow": true,
+      "notes": "Puntaje: pide a profile-api hasta 5 vacantes sin puntaje, cada una con la pregunta lista para la IA (system_prompt + user_text con perfil y vacante). Límite de 5 para cuidar la cuota gratis de la IA."
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "items",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        448,
+        0
+      ],
+      "id": "be2c0407-26f8-4442-8642-c98378146de7",
+      "name": "Separar vacantes",
+      "notesInFlow": true,
+      "notes": "Puntaje: separa la lista \"items\" en una vacante por item, para mandarlas a la IA de a una."
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "VALpbW0FR4kckirx",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/VALpbW0FR4kckirx",
+          "cachedResultName": "ai-model-router"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "system_prompt": "={{ $json.system_prompt }}",
+            "user_text": "={{ $json.user_text }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "system_prompt",
+              "displayName": "system_prompt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "user_text",
+              "displayName": "user_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        672,
+        0
+      ],
+      "id": "378894d3-648b-42cd-ba1b-b6a5d2a24111",
+      "name": "Puntuar con IA",
+      "notesInFlow": true,
+      "notes": "Puntaje: manda cada vacante a la central de IA (ai-model-router: Groq y, si falla, Gemini) y recibe el JSON con el puntaje."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://profile-api:8000/opportunities/{{ $('Separar vacantes').item.json.id }}/score",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n       \"text\": {{ JSON.stringify($json.text) }},\n       \"provider\": {{ JSON.stringify($json.provider) }},\n       \"prompt_version\": \"puntaje-v1\"\n     }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        896,
+        0
+      ],
+      "id": "307f7f58-2467-414a-a1b3-227fe99af1cb",
+      "name": "Guardar puntaje",
+      "notesInFlow": true,
+      "onError": "continueRegularOutput",
+      "notes": "Puntaje: manda la respuesta de la IA a profile-api, que la valida, aplica las reglas fijas (topes por inglés, senior o señales de alerta) y guarda el puntaje. Si la respuesta es inválida responde 422 y la vacante queda pendiente para la próxima vuelta."
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Reloj: cada hora": {
+      "main": [
+        [
+          {
+            "node": "Pedir vacantes sin puntaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pedir vacantes sin puntaje": {
+      "main": [
+        [
+          {
+            "node": "Separar vacantes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Separar vacantes": {
+      "main": [
+        [
+          {
+            "node": "Puntuar con IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Puntuar con IA": {
+      "main": [
+        [
+          {
+            "node": "Guardar puntaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "7231973d-ddd0-4504-bc7d-a85d10802f22",
+  "meta": {
+    "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"
+  },
+  "nodeGroups": [],
+  "id": "LMiKkwr5up6a9o7K",
+  "tags": []
+}
