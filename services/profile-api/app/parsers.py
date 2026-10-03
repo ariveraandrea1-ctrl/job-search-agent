@@ -17,6 +17,7 @@ Formatos soportados (vistos en correos reales, 2026-09-30):
   fecha / URL con jk=<id>".
 """
 import re
+import time
 
 # ---------------------------------------------------------------- LinkedIn
 
@@ -321,18 +322,27 @@ def getonbrd_sirve(atributos: dict) -> bool:
     return remota or "colombia" in paises
 
 
-def parse_getonbrd(respuesta: dict) -> tuple[list[dict], int]:
+GETONBRD_MAX_DIAS = 3  # vacantes publicadas hace más días se ignoran
+
+
+def parse_getonbrd(respuesta: dict, max_dias: int = GETONBRD_MAX_DIAS,
+                   ahora: float | None = None) -> tuple[list[dict], int]:
     """Convierte la respuesta de la API de Get on Board en oportunidades.
 
-    Devuelve (oportunidades, descartadas_por_prefiltro).
+    Ignora las publicadas hace más de max_dias (published_at, segundos Unix).
+    "ahora" se puede pasar en las pruebas para que no dependan del reloj.
+    Devuelve (oportunidades, descartadas_por_prefiltro_o_antiguedad).
     """
+    ahora = time.time() if ahora is None else ahora
     resultados = []
     descartadas = 0
     for job in (respuesta or {}).get("data") or []:
         a = job.get("attributes") or {}
         if not job.get("id") or not a.get("title"):
             continue
-        if not getonbrd_sirve(a):
+        publicada = a.get("published_at")
+        muy_vieja = isinstance(publicada, (int, float)) and ahora - publicada > max_dias * 86400
+        if muy_vieja or not getonbrd_sirve(a):
             descartadas += 1
             continue
         empresa = ((((a.get("company") or {}).get("data") or {}).get("attributes")) or {}).get("name")

@@ -11,7 +11,7 @@ de la conversacion va cada usuario (la usa n8n directamente).
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -139,7 +139,15 @@ class Opportunity(Base):
     raw: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="nueva")
     score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    analysis: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    scored_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    score_provider: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    score_prompt_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
     dedup_key: Mapped[str] = mapped_column(Text, nullable=False)
+    # Número corto para Telegram (#12). Lo pone Postgres (secuencia, migración 0010).
+    numero: Mapped[int] = mapped_column(
+        BigInteger, server_default=text("nextval('opportunities_numero_seq')"), nullable=False
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )

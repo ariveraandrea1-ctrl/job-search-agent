@@ -23,6 +23,7 @@ import io
 import json
 import unicodedata
 import uuid
+from datetime import datetime, timedelta, timezone
 from typing import Literal
 from urllib.parse import urlsplit, urlunsplit
 
@@ -37,6 +38,8 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import Document, InterviewAnswer, Opportunity, Profile
 from app.parsers import elegir_lector, identificar_url, leer_mensaje_vacante, parse_getonbrd
+from app import comandos
+from app import puntaje as puntaje_ia
 
 app = FastAPI(title="profile-api", version="0.1.0")
 
@@ -648,3 +651,163 @@ def _texto_telegram_radar(fuente: str, nuevas: list[dict], maximo: int = 10) -> 
 
     texto = "\n".join(lineas)
     return texto[:3990] + "\n…" if len(texto) > 4000 else texto
+
+
+# ------------------------------------------------------- Puntaje con IA (S6)
+
+
+@app.get("/opportunities/pending-score")
+def pending_score(telegram_user_id: int, limit: int = 5, db: Session = Depends(get_db)) -> dict:
+    """Vacantes que faltan por puntuar, con la pregunta LISTA para la IA.
+
+    Para cada una devuelve system_prompt y user_text (perfil resumido +
+    vacante), así n8n solo tiene que mandarlas a ai-model-router. Las más
+    nuevas primero. limit evita gastar de más la cuota gratis de la IA.
+    Si el usuario no tiene perfil, devuelve items vacío y lo explica.
+    """
+    resultado = _perfil_vigente(db, telegram_user_id)
+    if resultado is None:
+        return {"count": 0, "items": [], "motivo": "El usuario no tiene perfil todavía."}
+    perfil, preferencias, _ = resultado
+    limit = max(1, min(limit, 20))
+    vacantes = db.scalars(
+        select(Opportunity)
+        .where(Opportunity.telegram_user_id == telegram_user_id,
+               Opportunity.scored_at.is_(None))
+        .order_by(Opportunity.created_at.desc())
+        .limit(limit)
+    ).all()
+    items = []
+    for v in vacantes:
+        datos = {"title": v.title, "tipo": v.tipo, "company": v.company, "location": v.location,
+                 "source": v.source, "description": v.description, "raw": v.raw}
+        items.append({
+            "id": str(v.id),
+            "title": v.title,
+            "system_prompt": puntaje_ia.PROMPT_PUNTAJE,
+            "user_text": puntaje_ia.armar_pregunta(perfil.data, preferencias, datos),
+            "prompt_version": puntaje_ia.PROMPT_VERSION,
+        })
+    return {"count": len(items), "items": items}
+
+
+class ScoreIn(BaseModel):
+    """Lo que n8n manda después de pasar la vacante por ai-model-router."""
+
+    text: str
+    provider: str
+    prompt_version: str
+
+
+@app.post("/opportunities/{opportunity_id}/score")
+def save_score(opportunity_id: uuid.UUID, payload: ScoreIn, db: Session = Depends(get_db)) -> dict:
+    """Valida la respuesta de la IA, aplica las reglas fijas y guarda el puntaje.
+
+    Si la IA devolvió algo inválido responde 422 y NO guarda (la vacante
+    sigue pendiente y se reintenta en la próxima vuelta).
+    """
+    vacante = db.get(Opportunity, opportunity_id)
+    if vacante is None:
+        raise HTTPException(status_code=404, detail="No existe esa vacante.")
+    try:
+        analisis = puntaje_ia.leer_respuesta_puntaje(payload.text)
+    except puntaje_ia.RespuestaInvalida as error:
+        raise HTTPException(status_code=422, detail=str(error))
+    vacante.score = analisis["puntaje"]
+    vacante.analysis = analisis
+    vacante.scored_at = datetime.now(timezone.utc)
+    vacante.score_provider = payload.provider
+    vacante.score_prompt_version = payload.prompt_version
+    db.commit()
+    return {"id": str(vacante.id), "title": vacante.title, "score": vacante.score,
+            "ingles": analisis["ingles"], "reglas_aplicadas": analisis["reglas_aplicadas"]}
+
+
+# --------------------------------------------- Comandos del radar (S6)
+
+
+class ComandoIn(BaseModel):
+    """Lo que n8n manda cuando el usuario escribe un comando del radar."""
+
+    telegram_user_id: int
+    text: str
+
+
+def _vacante_dict(v: Opportunity) -> dict:
+    return {"numero": v.numero, "title": v.title, "company": v.company, "location": v.location,
+            "source": v.source, "url": v.url, "status": v.status, "score": v.score,
+            "analysis": v.analysis, "created_at": v.created_at,
+            "published_at": (v.raw or {}).get("published_at")}
+
+
+@app.post("/radar/comando")
+def radar_comando(payload: ComandoIn, db: Session = Depends(get_db)) -> dict:
+    """Responde /mejores, /nuevas, /guardadas, /detalle N, /guardar N, /descartar N.
+
+    Siempre 200 con telegram_text listo para mandar (también si el comando
+    está mal escrito: en ese caso responde la ayuda).
+    """
+    comando, numero = comandos.leer_comando(payload.text)
+    if comando is None:
+        return {"ok": False, "telegram_text": comandos.AYUDA}
+
+    base = select(Opportunity).where(Opportunity.telegram_user_id == payload.telegram_user_id)
+
+    if comando == "mejores":
+        filas = db.scalars(base.where(Opportunity.score.is_not(None),
+                                      Opportunity.status != "descartada")
+                           .order_by(Opportunity.score.desc(), Opportunity.created_at.desc())
+                           .limit(8)).all()
+        texto = comandos.texto_lista("🏆 Tus mejores vacantes (por puntaje):",
+                                     [_vacante_dict(v) for v in filas],
+                                     "Todavía no hay vacantes con puntaje. La IA las va puntuando cada hora.")
+    elif comando == "nuevas":
+        filas = db.scalars(base.where(Opportunity.status == "nueva")
+                           .order_by(Opportunity.created_at.desc()).limit(10)).all()
+        texto = comandos.texto_lista("📥 Vacantes nuevas (las más recientes):",
+                                     [_vacante_dict(v) for v in filas],
+                                     "No hay vacantes nuevas por revisar.")
+    elif comando == "guardadas":
+        filas = db.scalars(base.where(Opportunity.status == "guardada")
+                           .order_by(Opportunity.score.desc().nulls_last()).limit(15)).all()
+        texto = comandos.texto_lista("⭐ Tus vacantes guardadas:",
+                                     [_vacante_dict(v) for v in filas],
+                                     "Aún no has guardado ninguna. Usa /guardar y el número.")
+    else:
+        if numero is None:
+            return {"ok": False, "comando": comando, "telegram_text":
+                    f"Falta el número de la vacante. Ejemplo: /{comando} 12"}
+        vacante = db.scalars(base.where(Opportunity.numero == numero)).first()
+        if vacante is None:
+            return {"ok": False, "comando": comando, "telegram_text":
+                    f"No encontré la vacante #{numero}. Revisa el número en /mejores o /nuevas."}
+        if comando == "detalle":
+            texto = comandos.texto_detalle(_vacante_dict(vacante))
+        else:
+            vacante.status = "guardada" if comando == "guardar" else "descartada"
+            db.commit()
+            texto = (f"⭐ Guardé la #{numero}: {vacante.title}. Míralas con /guardadas."
+                     if comando == "guardar" else
+                     f"🗑 Descarté la #{numero}: {vacante.title}. Ya no aparecerá en /mejores.")
+    return {"ok": True, "comando": comando, "telegram_text": texto}
+
+
+@app.get("/radar/resumen-diario")
+def resumen_diario(telegram_user_id: int, horas: int = 24, db: Session = Depends(get_db)) -> dict:
+    """Resumen de las vacantes que llegaron en las últimas `horas` (mensaje de la mañana).
+
+    Siempre 200 con telegram_text (también si no llegó nada).
+    """
+    horas = max(1, min(horas, 168))
+    desde = datetime.now(timezone.utc) - timedelta(hours=horas)
+    filas = db.scalars(
+        select(Opportunity)
+        .where(Opportunity.telegram_user_id == telegram_user_id,
+               Opportunity.created_at >= desde,
+               Opportunity.status != "descartada")
+        .order_by(Opportunity.created_at.desc())
+    ).all()
+    vacantes = [{**_vacante_dict(v), "tipo": v.tipo} for v in filas]
+    pendientes = sum(1 for v in filas if v.scored_at is None)
+    texto = comandos.texto_resumen_diario(vacantes, pendientes, horas, NOMBRES_FUENTES)
+    return {"count": len(vacantes), "pendientes": pendientes, "telegram_text": texto}

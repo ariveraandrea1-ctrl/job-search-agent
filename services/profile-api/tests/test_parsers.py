@@ -305,6 +305,19 @@ def test_getonbrd_campos():
     assert colombia["url"] == "https://www.getonbrd.com/jobs/analista-qa-empresa-dos"
 
 
+def test_getonbrd_ignora_las_publicadas_hace_mas_de_3_dias():
+    ahora = 1_800_000_000
+    datos = {"data": [
+        {**_job_getonbrd("qa-fresca", "QA Junior", 2, "fully_remote", ["Remote"])},
+        {**_job_getonbrd("qa-vieja", "QA Junior", 2, "fully_remote", ["Remote"])},
+    ]}
+    datos["data"][0]["attributes"]["published_at"] = ahora - 2 * 86400
+    datos["data"][1]["attributes"]["published_at"] = ahora - 10 * 86400
+    vacantes, descartadas = parse_getonbrd(datos, ahora=ahora)
+    assert [v["external_id"] for v in vacantes] == ["qa-fresca"]
+    assert descartadas == 1
+
+
 def test_getonbrd_respuesta_vacia_o_rara_no_falla():
     assert parse_getonbrd({}) == ([], 0)
     assert parse_getonbrd({"data": [{"id": "sin-titulo", "attributes": {}}]}) == ([], 0)
