@@ -62,8 +62,9 @@ Estamos en el Proyecto 1 (perfil + radar).
 
 RETOMAR: Semana 6 en rama `feature/puntaje-ia`. HECHO: puntaje con IA
 (workflow radar-puntaje) y comandos /mejores /nuevas /guardadas /detalle N
-/guardar N /descartar N. SIGUE: resumen diario (Telegram y correo); luego
-merge a develop y Semana 7. (Radar Semana 5 ya
+/guardar N /descartar N, resumen diario 7 am (workflow radar-resumen-diario).
+SIGUE: merge a develop y Semana 7. (Resumen por correo: se dejó solo
+Telegram; decidir en Semana 7 si hace falta.) (Radar Semana 5 ya
 mergeado a develop.) Plan original Semana 6 (normalizar/filtrar por preferencias, scoring IA
 + señales de alerta + detectar inglés exigido en la descripción, /nuevas,
 /mejores, /detalle, /guardar, /descartar, resumen diario).
@@ -448,3 +449,14 @@ pasos de golpe.
   LinkedIn/Indeed por correo no traen fecha de publicación (solo
   "llegó hace"). 51 tests. Pendiente menor: actualizar nota del Switch
   (no menciona vacante ni radar).
+- 2026-10-03 (Semana 6, sesión 3): **resumen diario**. comandos.texto_resumen_diario
+  (cuenta por fuente, freelance ⚡, pendientes de puntaje, top 5 por puntaje
+  SIN las que tienen señales de alerta, alertas aparte). GET
+  /radar/resumen-diario?telegram_user_id&horas=24 (1-168; created_at en la
+  ventana, sin descartadas). n8n workflow NUEVO **radar-resumen-diario**
+  (publicado): "Reloj: 7 am" (diario, GENERIC_TIMEZONE America/Bogota) →
+  "Pedir resumen del día" → "Enviar resumen del día". Pedido de Andrea:
+  las listas ahora traen el link de cada vacante debajo (antes solo en
+  /detalle). radar-puntaje subido a limit=10 por hora (73 pendientes tras
+  el primer día: llegaron ~80 vacantes en 24 h). Textos "5 por hora"
+  cambiados a "cada hora" (no atar el texto al límite). 53 tests.

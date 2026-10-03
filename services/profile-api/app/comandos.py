@@ -82,6 +82,8 @@ def _linea_vacante(v: dict) -> str:
     edad = texto_antiguedad(v)
     if edad:
         linea += f" · {edad}"
+    if v.get("url"):
+        linea += f"\n   {v['url']}"
     return linea
 
 
@@ -107,7 +109,7 @@ def texto_detalle(v: dict) -> str:
     lineas.append(f"Estado: {NOMBRES_ESTADO.get(v.get('status'), v.get('status'))}")
     a = v.get("analysis") or {}
     if v.get("score") is None:
-        lineas += ["", "Puntaje: todavía no la ha revisado la IA (se puntúan 5 por hora)."]
+        lineas += ["", "Puntaje: todavía no la ha revisado la IA (las va puntuando cada hora)."]
     else:
         lineas += ["", f"Puntaje: {v['score']}/100"]
         if a.get("resumen"):
@@ -128,3 +130,40 @@ def texto_detalle(v: dict) -> str:
 
 def _recortar(texto: str) -> str:
     return texto[:3990] + "\n…" if len(texto) > 4000 else texto
+
+
+def texto_resumen_diario(vacantes: list[dict], pendientes: int, horas: int = 24,
+                         nombres_fuentes: dict | None = None, maximo: int = 5) -> str:
+    """Resumen de lo que llegó en las últimas `horas` (para el mensaje de la mañana).
+
+    vacantes: las que llegaron en ese periodo (sin descartadas).
+    pendientes: cuántas de ellas todavía no tienen puntaje.
+    """
+    nombres_fuentes = nombres_fuentes or {}
+    if not vacantes:
+        return (f"☀️ Buenos días. En las últimas {horas} h no llegaron vacantes nuevas.\n"
+                "Puedes revisar /mejores o /guardadas.")
+    conteo: dict[str, int] = {}
+    for v in vacantes:
+        fuente = nombres_fuentes.get(v.get("source"), v.get("source"))
+        conteo[fuente] = conteo.get(fuente, 0) + 1
+    por_fuente = ", ".join(f"{f} {n}" for f, n in sorted(conteo.items(), key=lambda x: -x[1]))
+    lineas = [f"☀️ Buenos días. Resumen del radar (últimas {horas} h):", "",
+              f"Llegaron {len(vacantes)} vacante(s): {por_fuente}."]
+    freelance = [v for v in vacantes if v.get("tipo") == "freelance"]
+    if freelance:
+        lineas.append(f"⚡ {len(freelance)} proyecto(s) freelance (responde rápido).")
+    if pendientes:
+        lineas.append(f"La IA aún no puntúa {pendientes} (las va puntuando cada hora).")
+
+    con_alerta = [v for v in vacantes if (v.get("analysis") or {}).get("senales_alerta")]
+    puntuadas = sorted((v for v in vacantes if v.get("score") is not None and v not in con_alerta),
+                       key=lambda v: v["score"], reverse=True)
+    if puntuadas:
+        lineas += ["", "🏆 Las mejores de hoy:"] + [_linea_vacante(v) for v in puntuadas[:maximo]]
+    if con_alerta:
+        lineas += ["", "⚠️ Con señales de alerta (cuidado):"] + [
+            f"#{v['numero']} · {v['title']}" for v in con_alerta[:maximo]]
+    numero = (puntuadas or vacantes)[0]["numero"]
+    lineas += ["", f"Escribe /detalle {numero} para ver más, o /nuevas para la lista completa."]
+    return _recortar("\n".join(lineas))

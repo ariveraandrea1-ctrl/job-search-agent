@@ -1,0 +1,107 @@
+{
+  "name": "radar-resumen-diario",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "436b516b-78ea-4dcf-b8cb-ac9dda33fdf6",
+      "name": "Reloj: 7 am",
+      "notesInFlow": true,
+      "notes": "Resumen: todos los días a las 7 am (hora de Colombia) manda el resumen del radar."
+    },
+    {
+      "parameters": {
+        "url": "http://profile-api:8000/radar/resumen-diario?telegram_user_id=8553351572",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "d2a5732b-1ee1-4cf7-8a17-e0eb899474a6",
+      "name": "Pedir resumen del día",
+      "notesInFlow": true,
+      "notes": "Resumen: pide a profile-api el resumen de las vacantes de las últimas 24 h (cuántas, de dónde, las mejores y las que tienen señales de alerta)."
+    },
+    {
+      "parameters": {
+        "chatId": "8553351572",
+        "text": "={{ $json.telegram_text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "d7a181a0-2367-4c2c-bda8-695388d60434",
+      "name": "Enviar resumen del día",
+      "webhookId": "af380682-9a7d-4c28-bdc2-9bd2e6422e2b",
+      "notesInFlow": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "aF0RvNa5kJZkarDY",
+          "name": "Telegram account"
+        }
+      },
+      "notes": "Resumen: manda por Telegram el resumen de la mañana."
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Reloj: 7 am": {
+      "main": [
+        [
+          {
+            "node": "Pedir resumen del día",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pedir resumen del día": {
+      "main": [
+        [
+          {
+            "node": "Enviar resumen del día",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "86026949-9e2b-4a22-9b23-6a7c8e89b418",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"
+  },
+  "nodeGroups": [],
+  "id": "s2OV1tvTvpdW7oNW",
+  "tags": []
+}

@@ -3,7 +3,14 @@ import pytest
 
 from datetime import datetime, timedelta, timezone
 
-from app.comandos import AYUDA, leer_comando, texto_antiguedad, texto_detalle, texto_lista
+from app.comandos import (
+    AYUDA,
+    leer_comando,
+    texto_antiguedad,
+    texto_detalle,
+    texto_lista,
+    texto_resumen_diario,
+)
 
 
 @pytest.mark.parametrize("texto, esperado", [
@@ -35,6 +42,7 @@ def test_lista_muestra_numero_puntaje_y_ayuda():
                                                "company": None, "location": None}], "vacío")
     assert "#12 · 30 pts · Analista QA Jr (Empresa Uno — Medellín)" in texto
     assert "#13 · sin puntaje aún · Analista QA Jr" in texto
+    assert "\n   https://ejemplo.com/12" in texto  # cada vacante trae su link
     assert "/detalle 12" in texto
 
 
@@ -74,3 +82,32 @@ def test_antiguedad_sin_fecha_de_publicacion_usa_cuando_llego():
     assert texto_antiguedad({"created_at": AHORA - timedelta(days=1)}, AHORA) == "llegó hace 1 día"
     assert texto_antiguedad({"created_at": AHORA}, AHORA) == "llegó hace un momento"
     assert texto_antiguedad({}, AHORA) == ""
+
+
+
+def _v(numero, score=None, source="linkedin", tipo="empleo", alertas=None):
+    return {"numero": numero, "title": f"Vacante {numero}", "company": None, "location": None,
+            "source": source, "tipo": tipo, "score": score,
+            "analysis": {"senales_alerta": alertas or []}}
+
+
+def test_resumen_sin_vacantes():
+    assert "no llegaron vacantes nuevas" in texto_resumen_diario([], 0)
+
+
+def test_resumen_cuenta_por_fuente_ordena_y_separa_alertas():
+    vacantes = [_v(1, 40), _v(2, 90, source="getonbrd"), _v(3, None),
+                _v(4, 95, alertas=["Pide abrir cuenta bancaria"]),
+                _v(5, 60, source="workana", tipo="freelance")]
+    texto = texto_resumen_diario(vacantes, pendientes=1,
+                                 nombres_fuentes={"linkedin": "LinkedIn", "getonbrd": "Get on Board",
+                                                  "workana": "Workana"})
+    assert "Llegaron 5 vacante(s): LinkedIn 3, Get on Board 1, Workana 1." in texto
+    assert "⚡ 1 proyecto(s) freelance" in texto
+    assert "La IA aún no puntúa 1" in texto
+    mejores = texto.split("🏆 Las mejores de hoy:")[1].split("⚠️")[0]
+    # La #4 tiene alerta: NO va en las mejores aunque tenga 95.
+    assert mejores.index("#2 ·") < mejores.index("#5 ·") < mejores.index("#1 ·")
+    assert "#4" not in mejores
+    assert "⚠️ Con señales de alerta (cuidado):\n#4 · Vacante 4" in texto
+    assert "/detalle 2" in texto

@@ -20,11 +20,11 @@
       "id": "d43cda0b-d09f-4245-b9f1-0c7e59691bd3",
       "name": "Reloj: cada hora",
       "notesInFlow": true,
-      "notes": "Puntaje: cada hora puntúa con IA hasta 5 vacantes que aún no tienen puntaje."
+      "notes": "Puntaje: cada hora puntúa con IA hasta 10 vacantes que aún no tienen puntaje."
     },
     {
       "parameters": {
-        "url": "http://profile-api:8000/opportunities/pending-score?telegram_user_id=8553351572&limit=5",
+        "url": "http://profile-api:8000/opportunities/pending-score?telegram_user_id=8553351572&limit=10",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -36,7 +36,7 @@
       "id": "ec524302-43a7-4599-bd85-4962864aefc7",
       "name": "Pedir vacantes sin puntaje",
       "notesInFlow": true,
-      "notes": "Puntaje: pide a profile-api hasta 5 vacantes sin puntaje, cada una con la pregunta lista para la IA (system_prompt + user_text con perfil y vacante). Límite de 5 para cuidar la cuota gratis de la IA."
+      "notes": "Puntaje: pide a profile-api hasta 10 vacantes sin puntaje, cada una con la pregunta lista para la IA (system_prompt + user_text con perfil y vacante). Límite de 10 para cuidar la cuota gratis de la IA."
     },
     {
       "parameters": {
@@ -183,7 +183,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "7231973d-ddd0-4504-bc7d-a85d10802f22",
+  "versionId": "be33a290-366d-4201-afec-a5852272ca00",
   "meta": {
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"
   },

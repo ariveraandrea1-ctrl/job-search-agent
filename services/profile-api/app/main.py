@@ -23,7 +23,7 @@ import io
 import json
 import unicodedata
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Literal
 from urllib.parse import urlsplit, urlunsplit
 
@@ -760,7 +760,7 @@ def radar_comando(payload: ComandoIn, db: Session = Depends(get_db)) -> dict:
                            .limit(8)).all()
         texto = comandos.texto_lista("🏆 Tus mejores vacantes (por puntaje):",
                                      [_vacante_dict(v) for v in filas],
-                                     "Todavía no hay vacantes con puntaje. La IA puntúa 5 por hora.")
+                                     "Todavía no hay vacantes con puntaje. La IA las va puntuando cada hora.")
     elif comando == "nuevas":
         filas = db.scalars(base.where(Opportunity.status == "nueva")
                            .order_by(Opportunity.created_at.desc()).limit(10)).all()
@@ -790,3 +790,24 @@ def radar_comando(payload: ComandoIn, db: Session = Depends(get_db)) -> dict:
                      if comando == "guardar" else
                      f"🗑 Descarté la #{numero}: {vacante.title}. Ya no aparecerá en /mejores.")
     return {"ok": True, "comando": comando, "telegram_text": texto}
+
+
+@app.get("/radar/resumen-diario")
+def resumen_diario(telegram_user_id: int, horas: int = 24, db: Session = Depends(get_db)) -> dict:
+    """Resumen de las vacantes que llegaron en las últimas `horas` (mensaje de la mañana).
+
+    Siempre 200 con telegram_text (también si no llegó nada).
+    """
+    horas = max(1, min(horas, 168))
+    desde = datetime.now(timezone.utc) - timedelta(hours=horas)
+    filas = db.scalars(
+        select(Opportunity)
+        .where(Opportunity.telegram_user_id == telegram_user_id,
+               Opportunity.created_at >= desde,
+               Opportunity.status != "descartada")
+        .order_by(Opportunity.created_at.desc())
+    ).all()
+    vacantes = [{**_vacante_dict(v), "tipo": v.tipo} for v in filas]
+    pendientes = sum(1 for v in filas if v.scored_at is None)
+    texto = comandos.texto_resumen_diario(vacantes, pendientes, horas, NOMBRES_FUENTES)
+    return {"count": len(vacantes), "pendientes": pendientes, "telegram_text": texto}
