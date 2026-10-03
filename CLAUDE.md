@@ -476,3 +476,11 @@ pasos de golpe.
   prueba-error (Schedule cada minuto + Stop and Error): llegó la alerta
   (2 veces = 2 ejecuciones, no bug); luego archivado y borrado. El Error
   Trigger solo se dispara en ejecuciones automáticas, no manuales.
+  **Respaldos** (rama feature/respaldos): scripts/backup-db.sh (pg_dump -Fc
+  de toda la base, incluye workflows y credenciales de n8n, a
+  database/backups/ + archivo .conteo con filas por tabla; guarda los
+  últimos 14) y scripts/probar-restauracion.sh (restaura en una base
+  aparte, compara filas con el .conteo, borra la base de prueba; nunca
+  toca la real). BUG-17: falso positivo (docker exec se comía el stdin del
+  while) → < /dev/null + control "revisadas == esperadas". Primera prueba:
+  8 de 8 tablas OK (221 vacantes). Por ahora el respaldo es MANUAL.
