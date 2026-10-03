@@ -61,8 +61,9 @@ Estamos en el Proyecto 1 (perfil + radar).
 ## ▶ PRÓXIMA SESIÓN — empezar por aquí (actualizado 2026-10-01 noche)
 
 RETOMAR: Semana 6 en rama `feature/puntaje-ia`. HECHO: puntaje con IA
-(workflow radar-puntaje). SIGUE: comandos Telegram /nuevas, /mejores,
-/detalle, /guardar, /descartar; luego resumen diario. (Radar Semana 5 ya
+(workflow radar-puntaje) y comandos /mejores /nuevas /guardadas /detalle N
+/guardar N /descartar N. SIGUE: resumen diario (Telegram y correo); luego
+merge a develop y Semana 7. (Radar Semana 5 ya
 mergeado a develop.) Plan original Semana 6 (normalizar/filtrar por preferencias, scoring IA
 + señales de alerta + detectar inglés exigido en la descripción, /nuevas,
 /mejores, /detalle, /guardar, /descartar, resumen diario).
@@ -425,3 +426,25 @@ pasos de golpe.
   eran realmente malas (senior, 4 años, C1). Vacante de prueba borrada
   (source='prueba'). Groq detectó inglés C1 en Niuro (el pre-filtro por
   "lang" no lo veía).
+- 2026-10-03 (Semana 6, sesión 2): **comandos del radar en Telegram**.
+  Migración 0010: opportunities.numero (BIGINT, secuencia
+  opportunities_numero_seq, único) = número corto #N para Telegram.
+  `app/comandos.py` (puras): leer_comando (acepta /detalle 12, #12,
+  @bot, mayúsculas), texto_lista, texto_detalle (puntaje, resumen, inglés,
+  nivel, razones, alertas, reglas aplicadas con puntaje_ia), AYUDA,
+  texto_antiguedad ("publicada hace N días" si hay raw.published_at; si no
+  "llegó hace N h" por created_at). POST /radar/comando {telegram_user_id,
+  text}: /mejores (con score, no descartadas, top 8), /nuevas (status nueva,
+  top 10), /guardadas, /detalle N, /guardar N (status guardada),
+  /descartar N (status descartada); siempre 200 con telegram_text.
+  n8n telegram-invitacion: Switch regla 7 `radar` (regex
+  ^/(mejores|nuevas|guardadas|detalle|guardar|descartar)\b) → "Comando del
+  radar" → "Responder comando del radar". Probado en Telegram.
+  Hallazgo de Andrea: llegaban vacantes viejas. Get on Board devolvía
+  vacantes de hace 24-43 días → parse_getonbrd ahora ignora
+  published_at > 3 días (GETONBRD_MAX_DIAS, "ahora" inyectable para
+  tests); radar-getonbrd ahora cada 1 hora. Las viejas ya guardadas se
+  descartaron con UPDATE ... (raw->>'published_at')::bigint < now-3 días.
+  LinkedIn/Indeed por correo no traen fecha de publicación (solo
+  "llegó hace"). 51 tests. Pendiente menor: actualizar nota del Switch
+  (no menciona vacante ni radar).

@@ -38,6 +38,7 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import Document, InterviewAnswer, Opportunity, Profile
 from app.parsers import elegir_lector, identificar_url, leer_mensaje_vacante, parse_getonbrd
+from app import comandos
 from app import puntaje as puntaje_ia
 
 app = FastAPI(title="profile-api", version="0.1.0")
@@ -720,3 +721,72 @@ def save_score(opportunity_id: uuid.UUID, payload: ScoreIn, db: Session = Depend
     db.commit()
     return {"id": str(vacante.id), "title": vacante.title, "score": vacante.score,
             "ingles": analisis["ingles"], "reglas_aplicadas": analisis["reglas_aplicadas"]}
+
+
+# --------------------------------------------- Comandos del radar (S6)
+
+
+class ComandoIn(BaseModel):
+    """Lo que n8n manda cuando el usuario escribe un comando del radar."""
+
+    telegram_user_id: int
+    text: str
+
+
+def _vacante_dict(v: Opportunity) -> dict:
+    return {"numero": v.numero, "title": v.title, "company": v.company, "location": v.location,
+            "source": v.source, "url": v.url, "status": v.status, "score": v.score,
+            "analysis": v.analysis, "created_at": v.created_at,
+            "published_at": (v.raw or {}).get("published_at")}
+
+
+@app.post("/radar/comando")
+def radar_comando(payload: ComandoIn, db: Session = Depends(get_db)) -> dict:
+    """Responde /mejores, /nuevas, /guardadas, /detalle N, /guardar N, /descartar N.
+
+    Siempre 200 con telegram_text listo para mandar (también si el comando
+    está mal escrito: en ese caso responde la ayuda).
+    """
+    comando, numero = comandos.leer_comando(payload.text)
+    if comando is None:
+        return {"ok": False, "telegram_text": comandos.AYUDA}
+
+    base = select(Opportunity).where(Opportunity.telegram_user_id == payload.telegram_user_id)
+
+    if comando == "mejores":
+        filas = db.scalars(base.where(Opportunity.score.is_not(None),
+                                      Opportunity.status != "descartada")
+                           .order_by(Opportunity.score.desc(), Opportunity.created_at.desc())
+                           .limit(8)).all()
+        texto = comandos.texto_lista("🏆 Tus mejores vacantes (por puntaje):",
+                                     [_vacante_dict(v) for v in filas],
+                                     "Todavía no hay vacantes con puntaje. La IA puntúa 5 por hora.")
+    elif comando == "nuevas":
+        filas = db.scalars(base.where(Opportunity.status == "nueva")
+                           .order_by(Opportunity.created_at.desc()).limit(10)).all()
+        texto = comandos.texto_lista("📥 Vacantes nuevas (las más recientes):",
+                                     [_vacante_dict(v) for v in filas],
+                                     "No hay vacantes nuevas por revisar.")
+    elif comando == "guardadas":
+        filas = db.scalars(base.where(Opportunity.status == "guardada")
+                           .order_by(Opportunity.score.desc().nulls_last()).limit(15)).all()
+        texto = comandos.texto_lista("⭐ Tus vacantes guardadas:",
+                                     [_vacante_dict(v) for v in filas],
+                                     "Aún no has guardado ninguna. Usa /guardar y el número.")
+    else:
+        if numero is None:
+            return {"ok": False, "comando": comando, "telegram_text":
+                    f"Falta el número de la vacante. Ejemplo: /{comando} 12"}
+        vacante = db.scalars(base.where(Opportunity.numero == numero)).first()
+        if vacante is None:
+            return {"ok": False, "comando": comando, "telegram_text":
+                    f"No encontré la vacante #{numero}. Revisa el número en /mejores o /nuevas."}
+        if comando == "detalle":
+            texto = comandos.texto_detalle(_vacante_dict(vacante))
+        else:
+            vacante.status = "guardada" if comando == "guardar" else "descartada"
+            db.commit()
+            texto = (f"⭐ Guardé la #{numero}: {vacante.title}. Míralas con /guardadas."
+                     if comando == "guardar" else
+                     f"🗑 Descarté la #{numero}: {vacante.title}. Ya no aparecerá en /mejores.")
+    return {"ok": True, "comando": comando, "telegram_text": texto}
