@@ -60,7 +60,10 @@ Estamos en el Proyecto 1 (perfil + radar).
 
 ## ▶ PRÓXIMA SESIÓN — empezar por aquí (actualizado 2026-10-01 noche)
 
-RETOMAR: workflow radar-getonbrd, ver historial "radar, sesión 5" → QUEDAMOS EN.
+RETOMAR: radar (Semana 5) TERMINADO en `feature/radar-vacantes` (falta merge a
+develop). Siguiente: Semana 6 (normalizar/filtrar por preferencias, scoring IA
++ señales de alerta + detectar inglés exigido en la descripción, /nuevas,
+/mejores, /detalle, /guardar, /descartar, resumen diario).
 
 Arranque: `cd ~/projects/job-search-agent` → `bash scripts/start-local.sh`
 (con Docker Desktop abierto). Si "Publish" falla con "Bad request" en el
@@ -79,7 +82,7 @@ Qué sigue, en orden:
    NO scraping directo de LinkedIn/Indeed/Computrabajo (ToS).
    ESTADO 2026-10-01: (a) hecho para LinkedIn, Indeed, Workana (+aviso
    Telegram); Computrabajo resumen → []. (c) hecho (/vacante). (b) cambiado a
-   Get on Board (API pública), en curso.
+   Get on Board (API pública), HECHO 2026-10-03.
    Diseño freelance: cada oportunidad lleva `tipo` = empleo | freelance;
    freelance → aviso inmediato por Telegram (la velocidad importa);
    palabras clave extra: QA/testing, n8n, automatización, Zapier/Make,
@@ -377,7 +380,10 @@ pasos de golpe.
   "Reloj: cada 4 horas" (Schedule Trigger) → "Consultar Get on Board" (HTTP
   GET) → "Guardar vacantes de Get on Board" (HTTP POST profile-api, body
   {"telegram_user_id": 8553351572, "response": JSON.stringify($json)}).
-  QUEDAMOS EN: fijar (pin) la salida de "Guardar vacantes de Get on Board"
+  2026-10-03: TERMINADO. If "¿Hay vacantes nuevas?" → Telegram "Avisar
+  vacantes nuevas"; probado con pin (llegó el aviso de 4 vacantes), pin
+  quitado, publicado y exportado a n8n/workflows/radar-getonbrd.json.
+  (Histórico) QUEDAMOS EN: fijar (pin) la salida de "Guardar vacantes de Get on Board"
   (tiene created 4) → agregar If "¿Hay vacantes nuevas?" (created > 0) →
   TRUE → Telegram "Avisar vacantes nuevas" (chat 8553351572, text
   $('Guardar vacantes de Get on Board').item.json.telegram_text, sin
