@@ -58,26 +58,59 @@ Estamos en el Proyecto 1 (perfil + radar).
    `docker compose ... build profile-api` + `up -d profile-api` para que
    tome efecto (no alcanza con reiniciar el contenedor).
 
-## ▶ PRÓXIMA SESIÓN — empezar por aquí (actualizado 2026-09-29)
+## ▶ PRÓXIMA SESIÓN — empezar por aquí (actualizado 2026-10-01 noche)
+
+RETOMAR: radar (Semana 5) TERMINADO en `feature/radar-vacantes` (falta merge a
+develop). Siguiente: Semana 6 (normalizar/filtrar por preferencias, scoring IA
++ señales de alerta + detectar inglés exigido en la descripción, /nuevas,
+/mejores, /detalle, /guardar, /descartar, resumen diario).
 
 Arranque: `cd ~/projects/job-search-agent` → `bash scripts/start-local.sh`
 (con Docker Desktop abierto). Si "Publish" falla con "Bad request" en el
 Telegram Trigger, el túnel se cayó: volver a correr el script y recargar n8n.
 
 Qué sigue, en orden:
-1. **Semana 5: radar de vacantes** (3 tipos de fuentes; empezar por
-   alertas de correo LinkedIn/Indeed → Gmail, luego Greenhouse/Lever,
-   luego URL manual). Nueva rama `feature/radar-...`.
+1. **Semana 5: radar de vacantes** (decidido con Andrea 2026-09-30).
+   Nueva rama `feature/radar-...`. 3 tipos de fuentes:
+   a. **Alertas por correo → Gmail → n8n**: LinkedIn, Indeed, Computrabajo
+      y **Workana** (freelance). Un "lector" por formato de correo.
+      Upwork / Freelancer.com después (verificar primero qué avisos por
+      correo ofrecen hoy).
+   b. **APIs públicas Greenhouse / Lever** por empresa (revisar cuáles de
+      las empresas objetivo de Andrea las usan).
+   c. **URL manual** enviada por Telegram.
+   NO scraping directo de LinkedIn/Indeed/Computrabajo (ToS).
+   ESTADO 2026-10-01: (a) hecho para LinkedIn, Indeed, Workana (+aviso
+   Telegram); Computrabajo resumen → []. (c) hecho (/vacante). (b) cambiado a
+   Get on Board (API pública), HECHO 2026-10-03.
+   Diseño freelance: cada oportunidad lleva `tipo` = empleo | freelance;
+   freelance → aviso inmediato por Telegram (la velocidad importa);
+   palabras clave extra: QA/testing, n8n, automatización, Zapier/Make,
+   soporte administrativo. En Semana 6 (scoring) la IA marca señales de
+   alerta (pedir documentos/KYC, probar cuentas financieras, pagos fuera
+   de la plataforma) y criterios distintos para freelance (presupuesto,
+   duración, reputación del cliente, nº de propuestas).
 2. Limpiezas del perfil: duplicados en `habilidades.herramientas`
    ("REST"/"APIs REST"); fechas que no respetan "AAAA-MM"
    (ej. educación "jul. 2026").
 3. Al terminar el Proyecto 1: actualizar el CV de Andrea.
+4. **Al terminar el Proyecto 1 (pedido por Andrea 2026-09-30): sesión de
+   REPASO** de todo lo construido y CÓMO se hizo, con PREGUNTAS DE
+   ENTREVISTA posibles y cómo responderlas con sus palabras (ej.: cómo
+   evitaste duplicados, qué hace la consulta con jsonb_array_elements_text,
+   por qué IMAP y no OAuth, cómo probaste el bot, qué bug encontraste y cómo
+   lo corregiste con test de regresión, por qué IA con respaldo, Gitflow,
+   migraciones a mano). Andrea quiere poder explicar el proyecto en
+   entrevistas. Formato acordado: (a) presentación corta del proyecto
+   (pitch 1–2 min) y versión larga tipo exposición (arquitectura, decisiones,
+   problemas y cómo se resolvieron, pruebas); (b) banco de preguntas de
+   entrevista CON RESPUESTAS que ella pueda dar con sus palabras, incluyendo
+   el manejo que le dio a todo (cómo probó, cómo depuró, decisiones de
+   seguridad/ToS); (c) simulacro: Claude pregunta, Andrea responde, Claude
+   da retroalimentación. Reforzar también: que ella escriba consultas SQL
+   sencillas.
 
 Pequeños arreglos pendientes:
-- En n8n, Switch: la regla 4 (/perfil) tiene Output Name "corregir" y la
-  regla 5 (/corregir) no tiene nombre → poner "perfil" y "corregir".
-  (Funciona igual porque las conexiones van por posición; en el JSON del
-  repo ya está corregido.)
 - Carpeta `Claude outputs/` en la raíz del repo (imágenes de ayuda): no
   versionar; Andrea puede borrarla.
 - Desactivar el traductor de Chrome en localhost:5678 (traduce nombres de
@@ -238,4 +271,125 @@ pasos de golpe.
   invita a /perfil y /corregir (= confirmar o corregir inferencias, cierra
   Semana 4). Append n8n Attribution apagado en TODOS los nodos Telegram.
   Probado: tema válido, tema inválido, sin tema, libreta limpia después.
+- 2026-09-30 (rama `feature/radar-vacantes`): **radar, sesión 1**.
+  Migración `0008` tabla `opportunities` (tipo empleo|freelance, source,
+  external_id, title, company, location, url, description, raw JSONB,
+  status nueva|guardada|descartada, score, dedup_key; UNIQUE
+  (telegram_user_id, dedup_key)). `POST /opportunities`: huella =
+  "source:external_id" o URL normalizada (sin query/#/barra final);
+  si ya existe → created=false (idempotente, también ante carreras con
+  IntegrityError). Probado: nueva, duplicada con otro ?trk=, tipo inválido 422.
+  **Gmail**: verificación en 2 pasos activada; contraseña de aplicación
+  "n8n radar" guardada en n8n como credencial IMAP **"Gmail radar (IMAP)"**
+  (imap.gmail.com:993 SSL). Etiqueta Gmail **"Radar"** + 2 filtros:
+  from:(jobs-noreply@linkedin.com OR jobalerts-noreply@linkedin.com) y
+  from:(donotreply@jobalert.indeed.com OR notification@notifications.workana.com
+  OR empleos_co@computrabajo.com). n8n debe leer SOLO la carpeta/etiqueta
+  Radar. Formatos vistos: LinkedIn "Alertas de empleo" (jobalerts: "X busca
+  personal para el puesto de Y") + jobs-noreply (recomendaciones "solicita
+  ya…" y AVISOS DE POSTULACIÓN "se ha enviado tu solicitud"/"ha visto tu
+  solicitud" → ignorar en el radar, útiles en Proyecto 2); Indeed "Cargo en
+  Empresa. N empleos más en …"; Computrabajo "Equipo de Computrabajo" y
+  "Tu lista de empleos" (muchas son de Bogotá/senior → Andrea podría ajustar
+  sus alertas a Medellín/QA Jr); Workana "Nuevos proyectos de Soporte
+  Administrativo" (solo esa categoría → agregar QA/testing y automatización
+  en las notificaciones de Workana). Lección: al crear etiqueta nueva desde
+  el filtro quedó llamada "crear"; se renombró a "Radar".
+  SIGUIENTE: nodo Email Trigger (IMAP) leyendo "Radar" → lector LinkedIn.
+- 2026-09-30 (radar, sesión 2): workflow n8n nuevo **radar-correo**:
+  "Timbre: correo en Radar" (Email Trigger IMAP, credencial Gmail radar,
+  Mailbox "Radar", Action Nothing, Format Resolved; al probar trae los NO
+  leídos de Radar) → "Leer vacantes del correo" (HTTP POST
+  profile-api /radar/email con telegram_user_id fijo 8553351572 —cambiar al
+  ser multiusuario—, from_address = $json.from.value[0].address, subject,
+  text). profile-api: `app/parsers.py` (lectores puros: parse_linkedin —
+  bloques hasta "Ver anuncio de empleo: URL", toma las ÚLTIMAS 3 líneas no
+  ruido = título/empresa/ubicación, external_id = id de /jobs/view/;
+  parse_workana — "Título / ---- / desc / Leer más: URL", tipo freelance;
+  parse_computrabajo → [] porque los correos resumen no listan vacantes;
+  Indeed pendiente sin muestra) + `elegir_lector(remitente)`.
+  `_guardar_oportunidad()` compartida por POST /opportunities y
+  POST /radar/email (responde found/created/duplicates/new_items).
+  Tests: `services/profile-api/tests/test_parsers.py` (pytest, textos
+  inventados sin datos personales; correr: cd services/profile-api &&
+  python3 -m pytest tests -v). Bug encontrado y corregido con test de
+  regresión: línea "N personas estudiaron en la misma institución…"
+  corría los campos. Probado con 13 correos reales: 26 vacantes LinkedIn +
+  2 Workana guardadas; re-ejecutar → todo duplicates (idempotente).
+  SIGUIENTE: aviso por Telegram de las nuevas (freelance inmediato),
+  lector Indeed (falta un correo de ejemplo), publicar el workflow.
+- 2026-10-01 (radar, sesión 3): **aviso por Telegram + lector Indeed**.
+  profile-api: POST /radar/email devuelve `telegram_text` (None si no hay
+  nuevas; freelance primero con ⚡; tope 10 líneas / 4000 caracteres).
+  n8n radar-correo: "¿Hay vacantes nuevas?" (If `created` > 0) → TRUE →
+  "Avisar vacantes nuevas" (Telegram, chat fijo 8553351572, sin atribución,
+  sin vista previa de links). Publicado y exportado. `parse_indeed`:
+  bloques separados por línea en blanco "Título / Empresa - Ubicación /
+  (salario, etiquetas) / descripción / fecha / URL con jk=<id>";
+  external_id = jk; url limpia https://co.indeed.com/viewjob?jk=<id>;
+  "Desde casa" → "Remoto"; empresa/ubicación cortadas en el ÚLTIMO " - ".
+  4 tests nuevos (12 en total). Probado con correo real: 8/8 vacantes.
+  Lecciones de prueba (para el repaso): (1) el Email Trigger solo se
+  dispara con correos que LLEGAN nuevos; marcar como no leído uno viejo no
+  lo dispara. (2) "Execute step" en n8n reutiliza resultados anteriores de
+  los nodos padres → resultados confusos (duplicates / created 0). Solución:
+  fijar (pin) la salida de "Leer vacantes del correo" con created > 0,
+  ejecutar el nodo de Telegram, y luego QUITAR el pin. (3) SQL desde la
+  terminal: `docker compose --env-file .env -f
+  compose/docker-compose.local.yml exec postgres psql -U job_search_agent
+  -d job_search_agent -c "<consulta>;"` (pegar SQL suelto en zsh falla).
+  Nota: la alerta de Indeed de Andrea era "business analyst" → llegan
+  vacantes fuera de QA; sugerido ajustar alertas en origen. El filtro por
+  preferencias + scoring IA es Semana 6.
+  SIGUIENTE: Greenhouse/Lever, URL manual por Telegram; luego Semana 6.
+- 2026-10-01 (radar, sesión 4): **/vacante <link> [título]** en Telegram.
+  profile-api POST /radar/url {telegram_user_id, text}: `leer_mensaje_vacante`
+  saca link + título; `identificar_url` reconoce LinkedIn (/jobs/view/<id>,
+  slug-<id>, currentJobId), Indeed (jk/vjk), Workana (/job/<slug>,
+  freelance), Greenhouse y Lever (id "empresa/id"), Computrabajo (sin id) y
+  "manual" para el resto. El id es EL MISMO que sacan los lectores de correo
+  → una vacante mandada a mano que ya llegó por alerta NO se duplica
+  (probado con la de Rappi). NO abre el link (sin scraping). Sin título →
+  "Vacante de X (sin título)". 16 tests. n8n telegram-invitacion: Switch
+  regla 6 `vacante` (startsWith "/vacante") → "Guardar vacante manual" →
+  "Responder vacante guardada". Regresión atrapada al revisar el JSON
+  exportado: reglas 4/5 del Switch habían perdido la "/" (se escribió el
+  nombre en la caja del valor) → corregido: /perfil→perfil, /corregir→corregir.
+  Pendiente menor: actualizar la nota del Switch para mencionar `vacante`.
+  SIGUIENTE: Greenhouse/Lever por empresa (lista de empresas objetivo);
+  luego Semana 6.
+- 2026-10-01 (radar, sesión 5): **Get on Board en vez de Greenhouse/Lever**
+  (decidido con Andrea). Investigado: las empresas en Greenhouse/Lever con
+  QA en Colombia son internacionales, senior y piden inglés (CI&T, Monks,
+  Capco sin vacantes CO). Get on Board = portal tech LATAM en español con
+  API pública oficial sin clave (sin scraping):
+  GET https://www.getonbrd.com/api/v0/categories/sysadmin-devops-qa/jobs?per_page=50&expand=%5B%22company%22%5D
+  (seniority id: 1 Sin experiencia, 2 Junior, 3 Semi Senior, 4 Senior,
+  5 Expert; campos attributes.title/lang/remote_modality/countries/
+  seniority/company, links.public_url). profile-api: `parse_getonbrd` +
+  `getonbrd_sirve` (pre-filtro: título de QA/test/calidad/monitoreo/
+  validación, lang != "en", remota o Colombia, nivel <= 3) y POST
+  /radar/getonbrd {telegram_user_id, response} → found/skipped/created/
+  duplicates/new_items/telegram_text. `_guardar_lote` compartido con
+  /radar/email. `identificar_url` reconoce links de Get on Board (mismo id
+  que la API). 20 tests. Probado con datos reales: 50 → 46 descartadas →
+  4 guardadas. Nota: remote_modality "remote_local" puede estar limitada a
+  un país (location_tenants) y "lang" no detecta inglés exigido dentro del
+  texto (ej. Niuro pide C1) → lo resuelve el scoring IA de la Semana 6.
+  n8n workflow NUEVO **radar-getonbrd** (AÚN NO publicado ni exportado):
+  "Reloj: cada 4 horas" (Schedule Trigger) → "Consultar Get on Board" (HTTP
+  GET) → "Guardar vacantes de Get on Board" (HTTP POST profile-api, body
+  {"telegram_user_id": 8553351572, "response": JSON.stringify($json)}).
+  2026-10-03: TERMINADO. If "¿Hay vacantes nuevas?" → Telegram "Avisar
+  vacantes nuevas"; probado con pin (llegó el aviso de 4 vacantes), pin
+  quitado, publicado y exportado a n8n/workflows/radar-getonbrd.json.
+  (Histórico) QUEDAMOS EN: fijar (pin) la salida de "Guardar vacantes de Get on Board"
+  (tiene created 4) → agregar If "¿Hay vacantes nuevas?" (created > 0) →
+  TRUE → Telegram "Avisar vacantes nuevas" (chat 8553351572, text
+  $('Guardar vacantes de Get on Board').item.json.telegram_text, sin
+  atribución, sin vista previa) → Execute step en Telegram → QUITAR pin →
+  publicar (verde) → exportar radar-getonbrd.json → commit. Si el pin no
+  quedó y created ya es 0: borrar con
+  `delete from opportunities where source = 'getonbrd';` y re-ejecutar.
+  Luego: Semana 6.
 

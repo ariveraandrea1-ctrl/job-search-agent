@@ -6,11 +6,12 @@ pregunta de entrevista posterior al CV. "InterviewQuestion": la lista de
 preguntas de la entrevista. "ConversationState": en que paso
 de la conversacion va cada usuario (la usa n8n directamente).
 "Profile": el perfil que la IA arma a partir del CV (JSON completo).
+"Opportunity": una vacante o proyecto freelance encontrado por el radar.
 """
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -106,6 +107,39 @@ class Profile(Base):
     data: Mapped[dict] = mapped_column(JSONB, nullable=False)
     provider: Mapped[str] = mapped_column(String(50), nullable=False)
     prompt_version: Mapped[str] = mapped_column(String(20), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+
+
+class Opportunity(Base):
+    """Una vacante (empleo) o proyecto (freelance) que encontró el radar.
+
+    "dedup_key" es la huella de la vacante: con ella la misma oportunidad
+    nunca se guarda dos veces para el mismo usuario.
+    """
+
+    __tablename__ = "opportunities"
+    __table_args__ = (
+        UniqueConstraint("telegram_user_id", "dedup_key", name="uq_opportunities_user_dedup"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    telegram_user_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    tipo: Mapped[str] = mapped_column(String(20), nullable=False)
+    source: Mapped[str] = mapped_column(String(50), nullable=False)
+    external_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    company: Mapped[str | None] = mapped_column(Text, nullable=True)
+    location: Mapped[str | None] = mapped_column(Text, nullable=True)
+    url: Mapped[str] = mapped_column(Text, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    raw: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="nueva")
+    score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    dedup_key: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )

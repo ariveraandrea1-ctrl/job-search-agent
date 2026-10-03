@@ -12,6 +12,10 @@ manda justo después de confirmar la recepción del CV) y la guarda en
 PostgreSQL, igual que se hace con el texto del CV.
 Semana 6: endpoint de perfil (/profiles) — recibe el JSON que la IA armó
 a partir del CV, revisa que sea JSON válido y lo guarda en PostgreSQL.
+Radar: correos (POST /radar/email) — lee un correo de alertas (LinkedIn,
+Workana...), saca las vacantes con app/parsers.py y las guarda sin duplicados.
+Radar: oportunidades (POST /opportunities) — guarda una vacante o proyecto
+freelance sin duplicados (huella = link normalizado o fuente:id).
 Semana 7: perfil vigente (GET /profiles/{telegram_user_id}/current) — junta
 el último perfil del CV con las respuestas de la entrevista (preferencias).
 """
@@ -19,16 +23,20 @@ import io
 import json
 import unicodedata
 import uuid
+from typing import Literal
+from urllib.parse import urlsplit, urlunsplit
 
 from fastapi import Depends, FastAPI, HTTPException, UploadFile
 from pydantic import BaseModel
 from pypdf import PdfReader
 from docx import Document as DocxDocument
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import Document, InterviewAnswer, Profile
+from app.models import Document, InterviewAnswer, Opportunity, Profile
+from app.parsers import elegir_lector, identificar_url, leer_mensaje_vacante, parse_getonbrd
 
 app = FastAPI(title="profile-api", version="0.1.0")
 
@@ -366,3 +374,277 @@ def get_profile_summary(telegram_user_id: int, db: Session = Depends(get_db)) ->
     if len(texto) > 4000:
         texto = texto[:3990] + "\n…"
     return {"has_profile": True, "text": texto}
+
+
+def _normalizar_url(url: str) -> str:
+    """Deja el link "limpio" para comparar vacantes.
+
+    Quita los parámetros de seguimiento (?utm=..., &trk=...), el #ancla, la
+    barra final y pasa el dominio a minúsculas. Así el mismo aviso que llega
+    con links distintos (uno por cada correo de alerta) da la misma huella.
+    """
+    partes = urlsplit(url.strip())
+    ruta = partes.path.rstrip("/")
+    return urlunsplit((partes.scheme.lower(), partes.netloc.lower(), ruta, "", ""))
+
+
+class OpportunityIn(BaseModel):
+    """Lo que n8n manda por cada vacante encontrada por el radar."""
+
+    telegram_user_id: int
+    tipo: Literal["empleo", "freelance"]
+    source: str
+    title: str
+    url: str
+    external_id: str | None = None
+    company: str | None = None
+    location: str | None = None
+    description: str | None = None
+    raw: dict | None = None
+
+
+def _guardar_oportunidad(db: Session, telegram_user_id: int, datos: dict):
+    """Guarda una oportunidad SIN duplicados. Devuelve (creada, oportunidad).
+
+    La huella (dedup_key) es "fuente:id" si la fuente trae un id propio, o el
+    link normalizado si no. Si ya existe una con la misma huella para este
+    usuario, no se guarda otra vez (creada = False).
+    """
+    source = datos["source"].strip().lower()
+    if datos.get("external_id"):
+        huella = f"{source}:{str(datos['external_id']).strip()}"
+    else:
+        huella = _normalizar_url(datos["url"])
+
+    def buscar():
+        return db.scalars(
+            select(Opportunity).where(
+                Opportunity.telegram_user_id == telegram_user_id,
+                Opportunity.dedup_key == huella,
+            )
+        ).first()
+
+    existente = buscar()
+    if existente is not None:
+        return False, existente
+
+    oportunidad = Opportunity(
+        telegram_user_id=telegram_user_id,
+        tipo=datos["tipo"],
+        source=source,
+        external_id=datos.get("external_id"),
+        title=datos["title"].strip(),
+        company=datos.get("company"),
+        location=datos.get("location"),
+        url=datos["url"].strip(),
+        description=datos.get("description"),
+        raw=datos.get("raw"),
+        dedup_key=huella,
+    )
+    db.add(oportunidad)
+    try:
+        db.commit()
+    except IntegrityError:
+        # Dos pedidos iguales llegaron casi al mismo tiempo: el otro ganó.
+        db.rollback()
+        return False, buscar()
+    db.refresh(oportunidad)
+    return True, oportunidad
+
+
+@app.post("/opportunities")
+def save_opportunity(payload: OpportunityIn, db: Session = Depends(get_db)) -> dict:
+    """Guarda una oportunidad del radar, SIN duplicados.
+
+    Responde created = false (y el id de la que ya estaba) si ya existía, así
+    n8n puede reintentar sin miedo.
+    """
+    creada, oportunidad = _guardar_oportunidad(
+        db, payload.telegram_user_id, payload.model_dump()
+    )
+    return {"created": creada, "id": str(oportunidad.id), "dedup_key": oportunidad.dedup_key}
+
+
+def _guardar_lote(db: Session, telegram_user_id: int, ofertas: list[dict]):
+    """Guarda varias oportunidades sin duplicados. Devuelve (nuevas, duplicadas)."""
+    nuevas = []
+    duplicadas = 0
+    for oferta in ofertas:
+        creada, oportunidad = _guardar_oportunidad(db, telegram_user_id, oferta)
+        if creada:
+            nuevas.append(
+                {
+                    "id": str(oportunidad.id),
+                    "tipo": oportunidad.tipo,
+                    "title": oportunidad.title,
+                    "company": oportunidad.company,
+                    "location": oportunidad.location,
+                    "url": oportunidad.url,
+                }
+            )
+        else:
+            duplicadas += 1
+    return nuevas, duplicadas
+
+
+class RadarEmailIn(BaseModel):
+    """Lo que n8n manda por cada correo que llega a la etiqueta Radar."""
+
+    telegram_user_id: int
+    from_address: str
+    subject: str | None = None
+    text: str | None = None
+
+
+@app.post("/radar/email")
+def radar_email(payload: RadarEmailIn, db: Session = Depends(get_db)) -> dict:
+    """Lee un correo de alertas, saca sus vacantes y guarda las nuevas.
+
+    Elige el lector según el remitente (app/parsers.py). Responde cuántas
+    vacantes encontró, cuántas eran nuevas y cuántas ya estaban, más la lista
+    de las NUEVAS (para que n8n avise por Telegram solo de esas).
+    Si el remitente no tiene lector, responde parser = null y no guarda nada.
+    """
+    fuente, lector = elegir_lector(payload.from_address)
+    if lector is None:
+        return {"source": None, "parser": None, "found": 0, "created": 0,
+                "duplicates": 0, "new_items": []}
+
+    ofertas = lector(payload.text or "")
+    for oferta in ofertas:
+        oferta["raw"] = {"email_subject": payload.subject}
+    nuevas, duplicadas = _guardar_lote(db, payload.telegram_user_id, ofertas)
+
+    return {
+        "source": fuente,
+        "parser": lector.__name__,
+        "found": len(ofertas),
+        "created": len(nuevas),
+        "duplicates": duplicadas,
+        "new_items": nuevas,
+        "telegram_text": _texto_telegram_radar(fuente, nuevas),
+    }
+
+
+NOMBRES_FUENTES = {
+    "linkedin": "LinkedIn",
+    "workana": "Workana",
+    "computrabajo": "Computrabajo",
+    "indeed": "Indeed",
+    "greenhouse": "Greenhouse",
+    "lever": "Lever",
+    "manual": "otro sitio",
+    "getonbrd": "Get on Board",
+}
+
+
+class RadarGetonbrdIn(BaseModel):
+    """Lo que n8n manda: la respuesta COMPLETA de la API de Get on Board."""
+
+    telegram_user_id: int
+    response: dict
+
+
+@app.post("/radar/getonbrd")
+def radar_getonbrd(payload: RadarGetonbrdIn, db: Session = Depends(get_db)) -> dict:
+    """Guarda las vacantes nuevas de Get on Board (API pública, sin scraping).
+
+    Aplica un pre-filtro básico (remota o Colombia, hasta Semi Senior) y
+    guarda sin duplicados. Misma respuesta que /radar/email + "skipped"
+    (cuántas descartó el pre-filtro).
+    """
+    ofertas, descartadas = parse_getonbrd(payload.response)
+    nuevas, duplicadas = _guardar_lote(db, payload.telegram_user_id, ofertas)
+    return {
+        "source": "getonbrd",
+        "found": len(ofertas) + descartadas,
+        "skipped": descartadas,
+        "created": len(nuevas),
+        "duplicates": duplicadas,
+        "new_items": nuevas,
+        "telegram_text": _texto_telegram_radar("getonbrd", nuevas),
+    }
+
+AYUDA_VACANTE = (
+    "Para guardar una vacante, mándame:\n"
+    "/vacante <link>\n"
+    "o con un título para reconocerla:\n"
+    "/vacante <link> QA Jr en Empresa X"
+)
+
+
+class RadarUrlIn(BaseModel):
+    """Lo que n8n manda cuando escribes /vacante <link> en Telegram."""
+
+    telegram_user_id: int
+    text: str
+
+
+@app.post("/radar/url")
+def radar_url(payload: RadarUrlIn, db: Session = Depends(get_db)) -> dict:
+    """Guarda una vacante que el usuario mandó a mano (link), SIN duplicados.
+
+    No abre el link (nada de scraping): reconoce el portal y el id por el
+    texto del link. Si la misma vacante ya había llegado por una alerta de
+    correo, la reconoce (misma huella) y no la duplica. Siempre responde
+    200 con telegram_text listo para mandar.
+    """
+    link, titulo = leer_mensaje_vacante(payload.text)
+    if link is None:
+        return {"ok": False, "created": False, "telegram_text":
+                "No encontré ningún link en tu mensaje.\n\n" + AYUDA_VACANTE}
+
+    datos = identificar_url(link)
+    nombre = NOMBRES_FUENTES.get(datos["source"], datos["source"])
+    datos["title"] = titulo or f"Vacante de {nombre} (sin título)"
+    datos["raw"] = {"origen": "telegram", "mensaje": payload.text}
+    creada, oportunidad = _guardar_oportunidad(db, payload.telegram_user_id, datos)
+
+    if creada:
+        texto = (f"✅ Guardé la vacante ({nombre}).\n"
+                 f"• {oportunidad.title}\n   {oportunidad.url}")
+        if not titulo:
+            texto += "\n\nTip: puedes agregar un título después del link."
+    else:
+        texto = (f"👌 Esa vacante ya la tenías guardada ({nombre}).\n"
+                 f"• {oportunidad.title}\n   {oportunidad.url}")
+    return {
+        "ok": True,
+        "created": creada,
+        "id": str(oportunidad.id),
+        "source": datos["source"],
+        "title": oportunidad.title,
+        "url": oportunidad.url,
+        "telegram_text": texto,
+    }
+
+
+def _texto_telegram_radar(fuente: str, nuevas: list[dict], maximo: int = 10) -> str | None:
+    """Arma el aviso de Telegram con las oportunidades NUEVAS de un correo.
+
+    Devuelve None si no hay nuevas (así n8n no manda nada). Texto plano, sin
+    Markdown. Las freelance van primero y marcadas con ⚡ porque en freelance
+    gana quien propone primero.
+    """
+    if not nuevas:
+        return None
+    nombre = NOMBRES_FUENTES.get(fuente, fuente)
+    ordenadas = sorted(nuevas, key=lambda o: o["tipo"] != "freelance")
+    freelance = sum(1 for o in nuevas if o["tipo"] == "freelance")
+
+    if freelance == len(nuevas):
+        titulo = f"⚡ {len(nuevas)} proyecto(s) freelance nuevo(s) en {nombre}"
+    else:
+        titulo = f"📥 {len(nuevas)} oportunidad(es) nueva(s) de {nombre}"
+    lineas = [titulo, ""]
+
+    for o in ordenadas[:maximo]:
+        marca = "⚡ " if o["tipo"] == "freelance" else "• "
+        detalle = " — ".join(x for x in [o.get("company"), o.get("location")] if x)
+        lineas.append(f"{marca}{o['title']}" + (f" ({detalle})" if detalle else ""))
+        lineas.append(f"   {o['url']}")
+    if len(nuevas) > maximo:
+        lineas.append(f"… y {len(nuevas) - maximo} más.")
+
+    texto = "\n".join(lineas)
+    return texto[:3990] + "\n…" if len(texto) > 4000 else texto
