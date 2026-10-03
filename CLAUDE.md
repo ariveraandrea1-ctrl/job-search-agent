@@ -60,6 +60,29 @@ Estamos en el Proyecto 1 (perfil + radar).
 
 ## ▶ PRÓXIMA SESIÓN — empezar por aquí (actualizado 2026-10-01 noche)
 
+**DECISIÓN 2026-10-03 (Andrea): el Proyecto 1 se cierra cumpliendo TODA la
+"Definición de terminado" de la especificación (sección 10.1), sin recortes.**
+Pendiente, en este orden: (1) multiusuario: registro por invitación desde
+Telegram, tabla de usuarios, quitar chat_id fijo 8553351572 de
+verificar-acceso y de los radares/resumen, todo por usuario + tenant_id,
+prueba de aislamiento con 5 usuarios; (2) MinIO: guardar el CV original
+(tenants/{tenant}/users/{user}/cv/original/) + incluirlo en el respaldo;
+(3) resumen diario también por correo (SMTP; Mailpit en local);
+(4) telemetría de IA (proveedor, latencia, tokens, errores por llamada);
+(5) idempotencia/fallos recuperables sin duplicados; (6) reconstrucción
+desde repo + .env.example; (7) plan de pruebas E2E, métricas, README y
+demo. Alcance acordado 2026-10-03: cumplir la sección 10.1 AL PIE DE LA
+LETRA ("5 usuarios" = el sistema lo soporta y se prueba con 5; "1 local,
+preparado para 5"). Telemetría IA según sección 8: proveedor, alias,
+prompt, tokens, latencia, costo y fallback. AGREGAR también los comandos
+de la spec que faltan: /subir_cv, /completar_perfil, /preferencias,
+/buscar, /resumen, /pausar. NO hacer embeddings ni renombrar workflows:
+documentarlos como decisiones de diseño en docs/decisions/ (junto con
+Greenhouse/Lever → Get on Board, NIM → Groq + Gemini).
+Orden acordado con Andrea: terminar TODO el Proyecto 1 → actualizar hoja de
+vida y LinkedIn (no antes; decisión de Andrea) → sesión de REPASO →
+Proyecto 2 → Proyecto 3.
+
 RETOMAR: Semana 6 en rama `feature/puntaje-ia`. HECHO: puntaje con IA
 (workflow radar-puntaje) y comandos /mejores /nuevas /guardadas /detalle N
 /guardar N /descartar N, resumen diario 7 am (workflow radar-resumen-diario).
