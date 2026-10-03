@@ -82,6 +82,10 @@ Greenhouse/Lever → Get on Board, NIM → Groq + Gemini).
 Orden acordado con Andrea: terminar TODO el Proyecto 1 → actualizar hoja de
 vida y LinkedIn (no antes; decisión de Andrea) → sesión de REPASO →
 Proyecto 2 → Proyecto 3.
+PRIMERO mañana (antes del multiusuario): revisar Executions de
+radar-resumen-diario (¿corrió a las 7 am con el Mac en reposo?) y BUG-18:
+regla fija de ubicación para fuentes de correo (otro país y no remota →
+descartada al guardar; con test). Andrea ya ajustó sus alertas de LinkedIn.
 
 RETOMAR: Semana 6 en rama `feature/puntaje-ia`. HECHO: puntaje con IA
 (workflow radar-puntaje) y comandos /mejores /nuevas /guardadas /detalle N

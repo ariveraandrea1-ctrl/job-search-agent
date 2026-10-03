@@ -34,6 +34,7 @@ datos reales · error en uso normal
 | BUG-15 | 2026-10-03 | 🐞 | Texto "5 por hora" quedó desactualizado al cambiar el límite | Corregido |
 | BUG-16 | 2026-10-01 / 10-03 | 🧭 | Archivo .git/index.lock bloqueaba los commits | Corregido (proceso) |
 | BUG-17 | 2026-10-03 | 🐞 | Prueba de restauración daba PASO revisando solo 1 de 8 tablas (falso positivo) | Corregido + control |
+| BUG-18 | 2026-10-03 | 🔍 | Llegaban vacantes de México por LinkedIn: no hay filtro de ubicación para fuentes de correo | Abierto |
 
 ---
 
@@ -149,6 +150,12 @@ datos reales · error en uso normal
 - **Corrección:** `< /dev/null` en el comando de docker para que no lea la entrada del ciclo. Además, un control nuevo: si las tablas revisadas no son todas las del conteo, la prueba FALLA.
 - **Lección:** una prueba que pasa también hay que revisarla; un PASO sin verificar cuánto se probó puede esconder el bug.
 - **Cómo se detectó:** revisión de la salida de la prueba (Andrea la pegó y la tabla estaba incompleta).
+
+### BUG-18 · Vacantes de otros países (México) en Telegram
+- **Síntoma:** en /nuevas y en los avisos aparecían vacantes ubicadas en México.
+- **Causa raíz:** el filtro de ubicación (remota o Colombia) solo existe para Get on Board. Lo que llega por correo (LinkedIn, Indeed, Workana) se guarda tal cual; depende de cómo esté configurada la alerta en cada portal. La IA baja el puntaje por ubicación pero no excluye.
+- **Corrección:** (1) Andrea revisa la configuración de sus alertas de LinkedIn; (2) pendiente: regla fija en código como red de seguridad (otro país y no remota → descartada automáticamente).
+- **Cómo se detectó:** observación de Andrea al revisar Telegram + consulta SQL por `location`.
 
 ---
 
