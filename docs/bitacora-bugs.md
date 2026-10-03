@@ -151,3 +151,4 @@ datos reales · error en uso normal
 - **LinkedIn por correo no trae descripción ni fecha** → el puntaje de esas vacantes es menos preciso.
 - **`remote_local` de Get on Board** puede estar limitado a un país (no se lee `location_tenants`).
 - **chat_id fijo (8553351572)** en varios workflows → decidir multiusuario en Semana 7.
+- **Si falla n8n entero o Telegram, la alerta tampoco llega** (alertas-errores usa el mismo n8n y el mismo bot). Detecta fallas de un flujo, no caídas del sistema completo.

@@ -1,0 +1,71 @@
+{
+  "name": "alertas-errores",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "156c5b9d-6c9f-47b5-9f55-872ab509ed48",
+      "name": "Cuando un flujo falla",
+      "notesInFlow": true,
+      "notes": "Alertas: se activa automáticamente cuando cualquier flujo que tenga este como \"Error workflow\" falla."
+    },
+    {
+      "parameters": {
+        "chatId": "8553351572",
+        "text": "=⚠️ Falló el flujo \"{{ $json.workflow.name }}\"\n  Nodo: {{ $json.execution.lastNodeExecuted }}\n  Error: {{ $json.execution.error.message }}\n  Hora: {{ $now.setZone('America/Bogota').toFormat('dd/MM HH:mm') }}\n\n  Revisa la pestaña Executions de ese flujo en n8n.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "94ed0517-5f39-470d-aeb4-ba54182c4d26",
+      "name": "Avisar falla por Telegram",
+      "webhookId": "23773dce-dc17-41ef-9b7e-9a8ca2240500",
+      "notesInFlow": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "aF0RvNa5kJZkarDY",
+          "name": "Telegram account"
+        }
+      },
+      "notes": "Alertas: manda a Telegram qué flujo falló, en qué nodo, el error y la hora."
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Cuando un flujo falla": {
+      "main": [
+        [
+          {
+            "node": "Avisar falla por Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "847e3c1c-cfae-4a24-84a5-30e3ee69e49e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"
+  },
+  "nodeGroups": [],
+  "id": "ZKLCX1SGXZuJLnhg",
+  "tags": []
+}
