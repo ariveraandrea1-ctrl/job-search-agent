@@ -476,7 +476,8 @@ def save_opportunity(payload: OpportunityIn, db: Session = Depends(get_db)) -> d
     creada, oportunidad = _guardar_oportunidad(
         db, payload.telegram_user_id, payload.model_dump()
     )
-    return {"created": creada, "id": str(oportunidad.id), "dedup_key": oportunidad.dedup_key}
+    return {"created": creada, "id": str(oportunidad.id), "numero": oportunidad.numero,
+            "dedup_key": oportunidad.dedup_key}
 
 
 def _guardar_lote(db: Session, telegram_user_id: int, ofertas: list[dict]):
