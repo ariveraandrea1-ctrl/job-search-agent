@@ -34,7 +34,7 @@ datos reales · error en uso normal
 | BUG-15 | 2026-10-03 | 🐞 | Texto "5 por hora" quedó desactualizado al cambiar el límite | Corregido |
 | BUG-16 | 2026-10-01 / 10-03 | 🧭 | Archivo .git/index.lock bloqueaba los commits | Corregido (proceso) |
 | BUG-17 | 2026-10-03 | 🐞 | Prueba de restauración daba PASO revisando solo 1 de 8 tablas (falso positivo) | Corregido + control |
-| BUG-18 | 2026-10-03 | 🔍 | Llegaban vacantes de México por LinkedIn: no hay filtro de ubicación para fuentes de correo | Abierto |
+| BUG-18 | 2026-10-03 | 🔍 | Llegaban vacantes de México por LinkedIn: no hay filtro de ubicación para fuentes de correo | Corregido + tests |
 | BUG-19 | 2026-10-05 | ⚙️ | Alertas de radar-correo cada ~30 min con "Nodo" y "Error" vacíos | Corregido + probado |
 
 ---
@@ -155,7 +155,8 @@ datos reales · error en uso normal
 ### BUG-18 · Vacantes de otros países (México) en Telegram
 - **Síntoma:** en /nuevas y en los avisos aparecían vacantes ubicadas en México.
 - **Causa raíz:** el filtro de ubicación (remota o Colombia) solo existe para Get on Board. Lo que llega por correo (LinkedIn, Indeed, Workana) se guarda tal cual; depende de cómo esté configurada la alerta en cada portal. La IA baja el puntaje por ubicación pero no excluye.
-- **Corrección:** (1) Andrea revisa la configuración de sus alertas de LinkedIn; (2) pendiente: regla fija en código como red de seguridad (otro país y no remota → descartada automáticamente).
+- **Corrección:** (1) Andrea ajustó sus alertas de LinkedIn; (2) regla fija `ubicacion_sirve()` en `parsers.py`, aplicada en POST /radar/email: si la ubicación nombra otro país (o una ciudad conocida de otro país) NO se guarda, aunque diga "remoto" ("México (En remoto)" casi siempre exige vivir allá). Pasan: Colombia, LATAM/Latinoamérica, "Remoto" sin país y ubicación desconocida (decide la IA). La respuesta trae "skipped". /vacante manual no se filtra (la eligió la usuaria).
+- **Prueba de regresión:** 16 casos parametrizados en `test_parsers.py` (9 que sirven, 7 de otro país). 69 tests en total.
 - **Cómo se detectó:** observación de Andrea al revisar Telegram + consulta SQL por `location`.
 
 ### BUG-19 · Alertas ruidosas y vacías de radar-correo

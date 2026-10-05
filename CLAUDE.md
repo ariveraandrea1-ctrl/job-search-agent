@@ -86,6 +86,12 @@ PRIMERO mañana (antes del multiusuario): revisar Executions de
 radar-resumen-diario (¿corrió a las 7 am con el Mac en reposo?) y BUG-18:
 regla fija de ubicación para fuentes de correo (otro país y no remota →
 descartada al guardar; con test). Andrea ya ajustó sus alertas de LinkedIn.
+2026-10-05: 7 am NUNCA corrió (solo la ejecución manual del 3/10) → Mac en
+reposo. Andrea puso el reloj a las 2 pm para probar; luego elegirá una hora
+de la mañana con el Mac prendido (renombrar el nodo "Reloj: 7 am").
+BUG-19 hecho (alertas ignoran el corte normal de IMAP de Gmail).
+BUG-18 hecho: ubicacion_sirve() en parsers.py + /radar/email devuelve
+"skipped"; 69 tests.
 
 RETOMAR: Semana 6 en rama `feature/puntaje-ia`. HECHO: puntaje con IA
 (workflow radar-puntaje) y comandos /mejores /nuevas /guardadas /detalle N
