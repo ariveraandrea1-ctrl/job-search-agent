@@ -4,6 +4,8 @@ Usan textos de ejemplo INVENTADOS con la misma estructura que los correos
 reales (sin datos personales ni links de seguimiento). Correr desde
 services/profile-api con:  python3 -m pytest tests -v
 """
+import pytest
+
 from app.parsers import (
     elegir_lector,
     identificar_url,
@@ -13,6 +15,7 @@ from app.parsers import (
     parse_indeed,
     parse_linkedin,
     parse_workana,
+    ubicacion_sirve,
 )
 
 LINKEDIN = """Tu alerta de empleo para ("QA Analyst" OR "Software Tester")
@@ -328,3 +331,39 @@ def test_url_getonbrd_da_el_mismo_id_que_la_api():
     b = identificar_url("https://www.getonbrd.com.co/empleos/qa-junior-lemontech-remote?utm=x")
     assert a["source"] == b["source"] == "getonbrd"
     assert a["external_id"] == b["external_id"] == "qa-junior-lemontech-remote"
+
+
+# ------------------------------------------------- Ubicación (BUG-18)
+
+@pytest.mark.parametrize(
+    "ubicacion",
+    [
+        "Medellín",
+        "Bogotá, D.C.",
+        "Envigado, Antioquia, Colombia",
+        "Santiago de Cali",
+        "Colombia (En remoto)",
+        "Remoto",
+        "Latinoamérica (Remoto)",
+        None,
+        "",
+    ],
+)
+def test_ubicacion_sirve_colombia_remoto_o_desconocida(ubicacion):
+    assert ubicacion_sirve(ubicacion) is True
+
+
+@pytest.mark.parametrize(
+    "ubicacion",
+    [
+        "Ciudad de México, México",
+        "México (En remoto)",
+        "CDMX",
+        "Buenos Aires, Argentina",
+        "Lima, Perú",
+        "Madrid, España",
+        "United States (Remote)",
+    ],
+)
+def test_ubicacion_no_sirve_otro_pais(ubicacion):
+    assert ubicacion_sirve(ubicacion) is False

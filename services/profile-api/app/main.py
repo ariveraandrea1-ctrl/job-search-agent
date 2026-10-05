@@ -37,7 +37,13 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models import Document, InterviewAnswer, Opportunity, Profile
-from app.parsers import elegir_lector, identificar_url, leer_mensaje_vacante, parse_getonbrd
+from app.parsers import (
+    elegir_lector,
+    identificar_url,
+    leer_mensaje_vacante,
+    parse_getonbrd,
+    ubicacion_sirve,
+)
 from app import comandos
 from app import puntaje as puntaje_ia
 
@@ -507,13 +513,17 @@ def radar_email(payload: RadarEmailIn, db: Session = Depends(get_db)) -> dict:
     vacantes encontró, cuántas eran nuevas y cuántas ya estaban, más la lista
     de las NUEVAS (para que n8n avise por Telegram solo de esas).
     Si el remitente no tiene lector, responde parser = null y no guarda nada.
+    Las vacantes de otro país (regla fija de ubicación) no se guardan y se
+    cuentan en "skipped".
     """
     fuente, lector = elegir_lector(payload.from_address)
     if lector is None:
-        return {"source": None, "parser": None, "found": 0, "created": 0,
-                "duplicates": 0, "new_items": []}
+        return {"source": None, "parser": None, "found": 0, "skipped": 0,
+                "created": 0, "duplicates": 0, "new_items": []}
 
-    ofertas = lector(payload.text or "")
+    encontradas = lector(payload.text or "")
+    # Regla fija de ubicación (BUG-18): otro país → no se guarda.
+    ofertas = [o for o in encontradas if ubicacion_sirve(o.get("location"))]
     for oferta in ofertas:
         oferta["raw"] = {"email_subject": payload.subject}
     nuevas, duplicadas = _guardar_lote(db, payload.telegram_user_id, ofertas)
@@ -521,7 +531,8 @@ def radar_email(payload: RadarEmailIn, db: Session = Depends(get_db)) -> dict:
     return {
         "source": fuente,
         "parser": lector.__name__,
-        "found": len(ofertas),
+        "found": len(encontradas),
+        "skipped": len(encontradas) - len(ofertas),
         "created": len(nuevas),
         "duplicates": duplicadas,
         "new_items": nuevas,

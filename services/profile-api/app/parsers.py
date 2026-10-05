@@ -19,6 +19,38 @@ Formatos soportados (vistos en correos reales, 2026-09-30):
 import re
 import time
 
+# ------------------------------------------------------------- Ubicación
+# Regla fija (BUG-18): las fuentes de correo guardaban vacantes de cualquier
+# país. Solo sirven las de Colombia o remotas abiertas a Latinoamérica.
+# Si la ubicación nombra OTRO país (o una ciudad conocida de otro país) se
+# descarta, aunque diga "remoto": "México (En remoto)" casi siempre exige
+# vivir en México. Si la ubicación no se conoce, se deja pasar (decide la IA).
+
+_UBICACION_SIRVE = re.compile(
+    r"colombia|latam|latinoam[eé]rica|am[eé]rica latina|anywhere|cualquier lugar",
+    re.IGNORECASE,
+)
+_UBICACION_OTRO_PAIS = re.compile(
+    r"\b(?:m[eé]xico|cdmx|guadalajara|monterrey|argentina|buenos aires|"
+    r"chile|santiago de chile|per[uú]|lima|ecuador|quito|guayaquil|"
+    r"venezuela|caracas|bolivia|paraguay|uruguay|montevideo|brasil|brazil|"
+    r"s[aã]o paulo|costa rica|panam[aá]|guatemala|honduras|el salvador|"
+    r"nicaragua|rep[uú]blica dominicana|espa[ñn]a|spain|madrid|barcelona|"
+    r"estados unidos|united states|usa|canad[aá]|reino unido|"
+    r"united kingdom|portugal|alemania|germany|francia|france|india)\b",
+    re.IGNORECASE,
+)
+
+
+def ubicacion_sirve(ubicacion: str | None) -> bool:
+    """True si la vacante es de Colombia, remota para LATAM o sin ubicación."""
+    if not ubicacion or not ubicacion.strip():
+        return True
+    if _UBICACION_SIRVE.search(ubicacion):
+        return True
+    return not _UBICACION_OTRO_PAIS.search(ubicacion)
+
+
 # ---------------------------------------------------------------- LinkedIn
 
 _LINKEDIN_VER = re.compile(
