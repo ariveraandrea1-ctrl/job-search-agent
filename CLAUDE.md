@@ -98,6 +98,21 @@ el filtro + Force Reconnect 20 min en el Timbre de radar-correo.
 BUG-21: 7 am no corrió por reposo; prueba a las 2 pm OK. Andrea elegirá
 hora de la mañana. Andrea practicó SQL: SELECT + UPDATE con AND
 (descartó 14 vacantes de México, la #207 guardada se respetó).
+MULTIUSUARIO (rama feature/multiusuario), parte 1 HECHA 2026-10-05:
+migración 0011 (tenants con TENANT_PRINCIPAL fijo, users rol/estado,
+invitations código 1 uso / 7 días, tenant_id en documents,
+interview_answers, conversation_state, profiles, opportunities; único de
+opportunities = tenant+usuario+huella). Admin desde ADMIN_TELEGRAM_USER_ID
+(.env, agregado). app/usuarios.py (puro) + tests/test_usuarios.py; 85 tests.
+POST /usuarios/acceso (portero: registrado → permitido; /start CODIGO
+válido → registra, permitido=false + bienvenida; si no, motivo + texto) y
+POST /usuarios/invitaciones (solo admin). FOR UPDATE contra doble uso.
+Probado con curl 8 casos (A-H) con ids 9000000xx y limpiado. BUG-22.
+SIGUE (parte 2): n8n — verificar-acceso llama a /usuarios/acceso (quitar
+chat_id fijo; si permitido=false responde telegram_text y corta); Switch:
+/invitar → /usuarios/invitaciones. Parte 3: radares para todos los
+usuarios activos (getonbrd, puntaje, resumen), correo = admin, /pausar
+/reanudar. Parte 4: script de prueba de aislamiento con 5 usuarios.
 
 RETOMAR: Semana 6 en rama `feature/puntaje-ia`. HECHO: puntaje con IA
 (workflow radar-puntaje) y comandos /mejores /nuevas /guardadas /detalle N

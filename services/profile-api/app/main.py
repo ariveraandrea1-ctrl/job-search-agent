@@ -18,6 +18,9 @@ Radar: oportunidades (POST /opportunities) — guarda una vacante o proyecto
 freelance sin duplicados (huella = link normalizado o fuente:id).
 Semana 7: perfil vigente (GET /profiles/{telegram_user_id}/current) — junta
 el último perfil del CV con las respuestas de la entrevista (preferencias).
+Multiusuario: POST /usuarios/acceso (el "portero": deja pasar a los
+registrados y registra a quien trae una invitación válida) y
+POST /usuarios/invitaciones (/invitar, solo admin).
 """
 import io
 import json
@@ -36,7 +39,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import Document, InterviewAnswer, Opportunity, Profile
+from app.models import Document, Invitation, InterviewAnswer, Opportunity, Profile, User
 from app.parsers import (
     elegir_lector,
     identificar_url,
@@ -45,6 +48,7 @@ from app.parsers import (
     ubicacion_sirve,
 )
 from app import comandos
+from app import usuarios
 from app import puntaje as puntaje_ia
 
 app = FastAPI(title="profile-api", version="0.1.0")
@@ -822,3 +826,81 @@ def resumen_diario(telegram_user_id: int, horas: int = 24, db: Session = Depends
     pendientes = sum(1 for v in filas if v.scored_at is None)
     texto = comandos.texto_resumen_diario(vacantes, pendientes, horas, NOMBRES_FUENTES)
     return {"count": len(vacantes), "pendientes": pendientes, "telegram_text": texto}
+
+
+# ------------------------------------------------------------ Multiusuario
+
+
+class AccesoIn(BaseModel):
+    """Lo que n8n manda por CADA mensaje antes de procesarlo (verificar-acceso)."""
+
+    telegram_user_id: int
+    text: str | None = None
+    nombre: str | None = None
+
+
+@app.post("/usuarios/acceso")
+def usuarios_acceso(payload: AccesoIn, db: Session = Depends(get_db)) -> dict:
+    """El portero del bot.
+
+    - Registrado → permitido = true (n8n sigue con el mensaje).
+    - No registrado que escribe /start CODIGO con una invitación válida →
+      se registra; permitido = false porque el mensaje ya quedó atendido:
+      n8n solo responde telegram_text (bienvenida).
+    - Cualquier otro caso → permitido = false + telegram_text con el motivo.
+    Siempre 200.
+    """
+    user = db.scalars(select(User).where(User.telegram_user_id == payload.telegram_user_id)).first()
+    if user is not None:
+        return {"permitido": True, "rol": user.rol, "estado": user.estado}
+
+    codigo = usuarios.leer_codigo_start(payload.text)
+    if codigo is None:
+        return {"permitido": False, "motivo": "sin_codigo",
+                "telegram_text": usuarios.TEXTOS_RECHAZO["sin_codigo"]}
+
+    # FOR UPDATE: si dos personas usan el mismo código a la vez, solo una entra.
+    inv = db.scalars(select(Invitation).where(Invitation.code == codigo).with_for_update()).first()
+    datos = None if inv is None else {"used_by": inv.used_by, "expires_at": inv.expires_at}
+    motivo = usuarios.revisar_invitacion(datos, datetime.now(timezone.utc))
+    if motivo is not None:
+        db.rollback()
+        return {"permitido": False, "motivo": motivo,
+                "telegram_text": usuarios.TEXTOS_RECHAZO[motivo]}
+
+    nuevo = User(telegram_user_id=payload.telegram_user_id, nombre=payload.nombre,
+                 rol="usuario", estado="activo", invited_by=inv.created_by,
+                 tenant_id=inv.tenant_id)
+    inv.used_by = payload.telegram_user_id
+    inv.used_at = datetime.now(timezone.utc)
+    db.add(nuevo)
+    db.commit()
+    return {"permitido": False, "motivo": "registrado",
+            "telegram_text": usuarios.TEXTO_BIENVENIDA}
+
+
+class InvitacionIn(BaseModel):
+    """Quién pide la invitación (debe ser admin)."""
+
+    telegram_user_id: int
+
+
+@app.post("/usuarios/invitaciones")
+def crear_invitacion(payload: InvitacionIn, db: Session = Depends(get_db)) -> dict:
+    """/invitar: crea un código de un solo uso. Solo admin (si no, ok = false)."""
+    admin = db.scalars(select(User).where(User.telegram_user_id == payload.telegram_user_id,
+                                          User.rol == "admin")).first()
+    if admin is None:
+        return {"ok": False, "telegram_text": usuarios.TEXTO_NO_ADMIN}
+
+    ahora = datetime.now(timezone.utc)
+    for _ in range(5):  # reintenta si (muy improbable) el código ya existe
+        codigo = usuarios.generar_codigo()
+        if db.get(Invitation, codigo) is None:
+            break
+    inv = Invitation(code=codigo, tenant_id=admin.tenant_id, created_by=admin.telegram_user_id,
+                     created_at=ahora, expires_at=usuarios.vence(ahora))
+    db.add(inv)
+    db.commit()
+    return {"ok": True, "code": codigo, "expires_at": inv.expires_at.isoformat(),
+            "telegram_text": usuarios.texto_invitacion(codigo, inv.expires_at)}

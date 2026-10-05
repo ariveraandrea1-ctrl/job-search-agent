@@ -38,6 +38,7 @@ datos reales · error en uso normal
 | BUG-19 | 2026-10-05 | ⚙️ | Alertas de radar-correo cada ~30 min con "Nodo" y "Error" vacíos | Corregido + probado |
 | BUG-20 | 2026-10-05 | ⚙️ | Alerta salió vacía (hasta el nombre del flujo) y Gmail cortaba con otro texto de error | Corregido + probado |
 | BUG-21 | 2026-10-05 | 🔍 | El resumen de las 7 am nunca corrió: el Mac estaba en reposo | Causa confirmada (pendiente servidor) |
+| BUG-22 | 2026-10-05 | 🔍 | Datos de prueba (usuario 123) mezclados con datos reales | Limpiado (proceso) |
 
 ---
 
@@ -183,6 +184,13 @@ datos reales · error en uso normal
 - **Prueba:** se movió el reloj a las 2 pm con el Mac despierto → el resumen llegó. El reloj funciona; la causa es el reposo.
 - **Corrección temporal:** hora de la mañana con el Mac prendido (Andrea la elige). De fondo: servidor (riesgo ya anotado).
 - **Cómo se detectó:** observación de Andrea + pestaña Executions.
+
+### BUG-22 · Datos de prueba mezclados con los reales
+- **Síntoma:** al crear la tabla users (migración 0011) apareció un usuario "123" que no es una persona.
+- **Causa raíz:** en semanas anteriores se probaron endpoints con curl usando telegram_user_id = 123 y ese documento quedó en la base real; la migración registra como usuario a todo el que tenga datos.
+- **Corrección:** conteo por tabla con `UNION ALL` (solo 1 fila en documents) y `DELETE` del documento y del usuario.
+- **Prevención:** las pruebas con curl usan ids claramente falsos (900000001, 900000002…) y se borran al terminar; la prueba de aislamiento limpia lo que crea.
+- **Cómo se detectó:** verificación de la migración con SQL (Andrea).
 
 ---
 
