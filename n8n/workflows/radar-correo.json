@@ -6,7 +6,9 @@
         "mailbox": "Radar",
         "postProcessAction": "nothing",
         "format": "resolved",
-        "options": {}
+        "options": {
+          "forceReconnect": 20
+        }
       },
       "type": "n8n-nodes-base.emailReadImap",
       "typeVersion": 2.2,
@@ -23,7 +25,7 @@
           "name": "Gmail radar (IMAP)"
         }
       },
-      "notes": "Radar: se activa con cada correo nuevo que llega a la etiqueta \"Radar\" de Gmail (alertas de LinkedIn, Indeed, Computrabajo, Workana). No marca los correos como leídos."
+      "notes": "Radar: se activa con cada correo nuevo que llega a la etiqueta \"Radar\" de Gmail (alertas de LinkedIn, Indeed, Computrabajo, Workana). No marca los correos como leídos. Force Reconnect 20 min: Gmail corta la conexión cada 30-40 min; así n8n se reconecta antes (BUG-20)."
     },
     {
       "parameters": {
@@ -43,7 +45,7 @@
       "id": "ab909a03-3d04-42c0-8a58-72f4ad7fb174",
       "name": "Leer vacantes del correo",
       "notesInFlow": true,
-      "notes": "Radar: manda el correo a profile-api (POST /radar/email), que elige el lector según el remitente, saca las vacantes y guarda solo las nuevas (sin duplicados). Responde found / created / duplicates / new_items."
+      "notes": "Radar: manda el correo a profile-api (POST /radar/email), que elige el lector según el remitente, saca las vacantes, descarta las de otro país (regla de ubicación, BUG-18) y guarda solo las nuevas (sin duplicados). Responde found / skipped / created / duplicates / new_items."
     },
     {
       "parameters": {
@@ -153,7 +155,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "f0af2753-610d-400f-8f10-d6ae7fc0f3d5",
+  "versionId": "bc46113a-9e20-4476-a17c-f35a694e5768",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"
