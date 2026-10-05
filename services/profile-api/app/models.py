@@ -7,15 +7,74 @@ preguntas de la entrevista. "ConversationState": en que paso
 de la conversacion va cada usuario (la usa n8n directamente).
 "Profile": el perfil que la IA arma a partir del CV (JSON completo).
 "Opportunity": una vacante o proyecto freelance encontrado por el radar.
+"Tenant", "User", "Invitation": multiusuario (migración 0011). Todas las
+tablas funcionales llevan tenant_id (por ahora un solo tenant, el principal).
 """
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, text
+from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
+
+TENANT_PRINCIPAL = uuid.UUID("00000000-0000-0000-0000-000000000001")
+
+
+def _tenant_id():
+    """Columna tenant_id: la pone Postgres (tenant principal por defecto)."""
+    return mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False,
+        server_default=text(f"'{TENANT_PRINCIPAL}'::uuid"),
+    )
+
+
+class Tenant(Base):
+    """Organización/espacio. En el Proyecto 1 hay uno solo ("principal")."""
+
+    __tablename__ = "tenants"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    nombre: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
+
+
+class User(Base):
+    """Quién puede usar el bot. rol: admin | usuario. estado: activo | pausado."""
+
+    __tablename__ = "users"
+    __table_args__ = (
+        CheckConstraint("rol IN ('admin', 'usuario')", name="ck_users_rol"),
+        CheckConstraint("estado IN ('activo', 'pausado')", name="ck_users_estado"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = _tenant_id()
+    telegram_user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, unique=True)
+    nombre: Mapped[str | None] = mapped_column(Text, nullable=True)
+    rol: Mapped[str] = mapped_column(String(20), nullable=False, default="usuario")
+    estado: Mapped[str] = mapped_column(String(20), nullable=False, default="activo")
+    invited_by: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+
+
+class Invitation(Base):
+    """Código de invitación de un solo uso (lo crea la admin con /invitar)."""
+
+    __tablename__ = "invitations"
+
+    code: Mapped[str] = mapped_column(String(20), primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = _tenant_id()
+    created_by: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    used_by: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class Document(Base):
@@ -26,6 +85,7 @@ class Document(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
+    tenant_id: Mapped[uuid.UUID] = _tenant_id()
     telegram_user_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
     char_count: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -43,6 +103,7 @@ class InterviewAnswer(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
+    tenant_id: Mapped[uuid.UUID] = _tenant_id()
     telegram_user_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     question: Mapped[str] = mapped_column(Text, nullable=False)
     answer: Mapped[str] = mapped_column(Text, nullable=False)
@@ -63,6 +124,7 @@ class ConversationState(Base):
 
     __tablename__ = "conversation_state"
 
+    tenant_id: Mapped[uuid.UUID] = _tenant_id()
     telegram_user_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     step: Mapped[str] = mapped_column(Text, nullable=False)
     # En que pregunta de interview_questions va (None si no esta en entrevista).
@@ -100,6 +162,7 @@ class Profile(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
+    tenant_id: Mapped[uuid.UUID] = _tenant_id()
     telegram_user_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     document_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("documents.id"), nullable=True
@@ -121,12 +184,13 @@ class Opportunity(Base):
 
     __tablename__ = "opportunities"
     __table_args__ = (
-        UniqueConstraint("telegram_user_id", "dedup_key", name="uq_opportunities_user_dedup"),
+        UniqueConstraint("tenant_id", "telegram_user_id", "dedup_key", name="uq_opportunities_tenant_user_dedup"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
+    tenant_id: Mapped[uuid.UUID] = _tenant_id()
     telegram_user_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     tipo: Mapped[str] = mapped_column(String(20), nullable=False)
     source: Mapped[str] = mapped_column(String(50), nullable=False)

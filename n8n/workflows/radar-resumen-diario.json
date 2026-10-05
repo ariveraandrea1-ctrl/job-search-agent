@@ -3,28 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "rule": {
-          "interval": [
-            {
-              "triggerAtHour": 7
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.4,
-      "position": [
-        0,
-        0
-      ],
-      "id": "436b516b-78ea-4dcf-b8cb-ac9dda33fdf6",
-      "name": "Reloj: 7 am",
-      "notesInFlow": true,
-      "notes": "Resumen: todos los días a las 7 am (hora de Colombia) manda el resumen del radar."
-    },
-    {
-      "parameters": {
-        "url": "http://profile-api:8000/radar/resumen-diario?telegram_user_id=8553351572",
+        "url": "http://profile-api:8000/radar/resumenes",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -36,11 +15,11 @@
       "id": "d2a5732b-1ee1-4cf7-8a17-e0eb899474a6",
       "name": "Pedir resumen del día",
       "notesInFlow": true,
-      "notes": "Resumen: pide a profile-api el resumen de las vacantes de las últimas 24 h (cuántas, de dónde, las mejores y las que tienen señales de alerta)."
+      "notes": "Resumen: pide a profile-api (GET /radar/resumenes) el resumen de las últimas 24 h de CADA usuario activo (los pausados no)."
     },
     {
       "parameters": {
-        "chatId": "8553351572",
+        "chatId": "={{ $json.telegram_user_id }}",
         "text": "={{ $json.telegram_text }}",
         "additionalFields": {
           "appendAttribution": false,
@@ -50,7 +29,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        448,
+        672,
         0
       ],
       "id": "d7a181a0-2367-4c2c-bda8-695388d60434",
@@ -63,12 +42,60 @@
           "name": "Telegram account"
         }
       },
-      "notes": "Resumen: manda por Telegram el resumen de la mañana."
+      "notes": "Resumen: manda a cada usuario su resumen de la mañana."
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 11
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "436b516b-78ea-4dcf-b8cb-ac9dda33fdf6",
+      "name": "Reloj: 11 am",
+      "notesInFlow": true,
+      "notes": "Resumen: todos los días a las 11 am (hora de Colombia) manda el resumen del radar a cada usuario activo."
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "items",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        448,
+        0
+      ],
+      "id": "ac8caf2c-f881-48c7-9d53-ba5cf5028dfe",
+      "name": "Separar por usuario",
+      "notesInFlow": true,
+      "notes": "Resumen: separa la lista en un item por usuario, para mandarle a cada uno su propio resumen."
     }
   ],
   "pinData": {},
   "connections": {
-    "Reloj: 7 am": {
+    "Pedir resumen del día": {
+      "main": [
+        [
+          {
+            "node": "Separar por usuario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reloj: 11 am": {
       "main": [
         [
           {
@@ -79,7 +106,7 @@
         ]
       ]
     },
-    "Pedir resumen del día": {
+    "Separar por usuario": {
       "main": [
         [
           {
@@ -100,7 +127,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "86026949-9e2b-4a22-9b23-6a7c8e89b418",
+  "versionId": "c1864fd3-7532-40aa-94d5-a2d7a3506aac",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"

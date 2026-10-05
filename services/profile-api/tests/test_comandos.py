@@ -3,6 +3,7 @@ import pytest
 
 from datetime import datetime, timedelta, timezone
 
+from app import comandos
 from app.comandos import (
     AYUDA,
     leer_comando,
@@ -111,3 +112,20 @@ def test_resumen_cuenta_por_fuente_ordena_y_separa_alertas():
     assert "#4" not in mejores
     assert "⚠️ Con señales de alerta (cuidado):\n#4 · Vacante 4" in texto
     assert "/detalle 2" in texto
+
+
+# ---------------------------------------------- /pausar y /reanudar (multiusuario)
+
+def test_pausar_y_reanudar_son_comandos_sin_numero():
+    assert comandos.leer_comando("/pausar") == ("pausar", None)
+    assert comandos.leer_comando("/reanudar") == ("reanudar", None)
+    assert comandos.leer_comando("/PAUSAR") == ("pausar", None)
+
+
+def test_ayuda_menciona_pausar_y_reanudar():
+    assert "/pausar" in comandos.AYUDA and "/reanudar" in comandos.AYUDA
+
+
+def test_textos_de_estado_explican_como_volver():
+    assert "/reanudar" in comandos.TEXTOS_ESTADO_USUARIO["pausado"]
+    assert set(comandos.TEXTOS_ESTADO_USUARIO) == {"pausado", "activo"}

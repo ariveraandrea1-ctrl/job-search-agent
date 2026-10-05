@@ -98,6 +98,45 @@ el filtro + Force Reconnect 20 min en el Timbre de radar-correo.
 BUG-21: 7 am no corrió por reposo; prueba a las 2 pm OK. Andrea elegirá
 hora de la mañana. Andrea practicó SQL: SELECT + UPDATE con AND
 (descartó 14 vacantes de México, la #207 guardada se respetó).
+MULTIUSUARIO (rama feature/multiusuario), parte 1 HECHA 2026-10-05:
+migración 0011 (tenants con TENANT_PRINCIPAL fijo, users rol/estado,
+invitations código 1 uso / 7 días, tenant_id en documents,
+interview_answers, conversation_state, profiles, opportunities; único de
+opportunities = tenant+usuario+huella). Admin desde ADMIN_TELEGRAM_USER_ID
+(.env, agregado). app/usuarios.py (puro) + tests/test_usuarios.py; 85 tests.
+POST /usuarios/acceso (portero: registrado → permitido; /start CODIGO
+válido → registra, permitido=false + bienvenida; si no, motivo + texto) y
+POST /usuarios/invitaciones (solo admin). FOR UPDATE contra doble uso.
+Probado con curl 8 casos (A-H) con ids 9000000xx y limpiado. BUG-22.
+Parte 2 HECHA 2026-10-05: verificar-acceso = "Preguntar al portero"
+(POST /usuarios/acceso) → "Mensaje + acceso" (Set raw: mensaje original +
+acceso). telegram-invitacion: If "¿Tiene acceso?" antes del Switch (false →
+"Responder: sin acceso"); regla 8 del Switch /invitar → "Crear invitación"
+→ "Enviar invitación". Probado con 2 personas reales (Carolina, Ludwing):
+sin código / con código / CV / entrevista / /mejores aislado. BUG-23
+(/start respondía apellido → "Saludo: ya registrado") y BUG-24 (CV
+escaneado 0 caracteres → If "¿Se pudo leer el CV?" >= 200). Renombres:
+Extraer texto del CV, Guardar CV, Confirmar CV recibido. Datos de las 2
+personas borrados (transacción, 7 tablas).
+Parte 3 HECHA 2026-10-05: radar para todos los usuarios ACTIVOS (pausados
+no). /radar/getonbrd sin usuario → guarda para cada activo y devuelve
+"avisos" [{telegram_user_id, created, telegram_text}] (n8n: Split Out
+"Separar avisos por usuario", sin If). /opportunities/pending-score sin
+usuario → todos los activos con perfil (item trae telegram_user_id).
+GET /radar/resumenes (nuevo) → items por usuario (n8n: Split Out
+"Separar por usuario"). /radar/email sin usuario → admin; responde
+telegram_user_id (chatId del aviso sale de ahí). /pausar y /reanudar
+(users.estado; regex del Switch actualizada). Reloj del resumen: 11 am.
+88 tests. Probado: resumen OK, getonbrd avisos [] (50 skipped), /pausar
+/reanudar OK.
+SIGUE Parte 4 (decidido con Andrea, está en la spec: "Configurar roles…"
+y /preferencias): búsqueda POR USUARIO — palabras clave por usuario
+(inicial desde rol_buscado), /preferencias para verlas/cambiarlas,
+categorías de Get on Board por usuario (n8n recorre solo las categorías
+que alguien usa), filtro de título por las palabras de cada uno en vez
+de _GETONBRD_TITULO_QA fijo. Reglas comunes siguen (no inglés, remota o
+Colombia, <= 3 días). Correo = solo admin (documentar). Después: Parte 5
+= script de prueba de aislamiento con 5 usuarios.
 
 RETOMAR: Semana 6 en rama `feature/puntaje-ia`. HECHO: puntaje con IA
 (workflow radar-puntaje) y comandos /mejores /nuevas /guardadas /detalle N

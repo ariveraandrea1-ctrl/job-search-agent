@@ -33,7 +33,7 @@
         "url": "http://profile-api:8000/radar/email",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"telegram_user_id\": 8553351572,\n  \"from_address\": {{ JSON.stringify($json.from.value[0].address) }},\n  \"subject\": {{ JSON.stringify($json.subject) }},\n  \"text\": {{ JSON.stringify($json.text) }}\n}",
+        "jsonBody": "={\n     \"from_address\": {{ JSON.stringify($json.from.value[0].address) }},\n     \"subject\": {{ JSON.stringify($json.subject) }},\n     \"text\": {{ JSON.stringify($json.text) }}\n   }",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -84,7 +84,7 @@
     },
     {
       "parameters": {
-        "chatId": "8553351572",
+        "chatId": "={{ $('Leer vacantes del correo').item.json.telegram_user_id }}",
         "text": "={{ $('Leer vacantes del correo').item.json.telegram_text }}",
         "additionalFields": {
           "appendAttribution": false,
@@ -155,7 +155,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "bc46113a-9e20-4476-a17c-f35a694e5768",
+  "versionId": "794cb9ae-09ed-47ba-a461-75d8062a2248",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"

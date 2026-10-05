@@ -6,7 +6,7 @@
 import re
 from datetime import datetime, timezone
 
-COMANDOS = ("mejores", "nuevas", "guardadas", "detalle", "guardar", "descartar")
+COMANDOS = ("mejores", "nuevas", "guardadas", "detalle", "guardar", "descartar", "pausar", "reanudar")
 CON_NUMERO = ("detalle", "guardar", "descartar")
 
 AYUDA = (
@@ -16,8 +16,16 @@ AYUDA = (
     "/guardadas — las que guardaste\n"
     "/detalle 12 — todo sobre la vacante #12\n"
     "/guardar 12 — guardar la #12\n"
-    "/descartar 12 — descartar la #12"
+    "/descartar 12 — descartar la #12\n"
+    "/pausar — dejar de recibir vacantes por un tiempo\n"
+    "/reanudar — volver a recibirlas"
 )
+
+TEXTOS_ESTADO_USUARIO = {
+    "pausado": ("⏸ Listo, pausé tu radar: no te llegarán vacantes nuevas ni el resumen "
+                "de la mañana. Cuando quieras volver, escribe /reanudar."),
+    "activo": "▶️ ¡Bienvenida/o de vuelta! Tu radar está activo otra vez.",
+}
 
 NOMBRES_INGLES = {
     "no_requerido": "no requerido",
