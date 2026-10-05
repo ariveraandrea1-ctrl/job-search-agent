@@ -35,6 +35,7 @@ datos reales · error en uso normal
 | BUG-16 | 2026-10-01 / 10-03 | 🧭 | Archivo .git/index.lock bloqueaba los commits | Corregido (proceso) |
 | BUG-17 | 2026-10-03 | 🐞 | Prueba de restauración daba PASO revisando solo 1 de 8 tablas (falso positivo) | Corregido + control |
 | BUG-18 | 2026-10-03 | 🔍 | Llegaban vacantes de México por LinkedIn: no hay filtro de ubicación para fuentes de correo | Abierto |
+| BUG-19 | 2026-10-05 | ⚙️ | Alertas de radar-correo cada ~30 min con "Nodo" y "Error" vacíos | Corregido + probado |
 
 ---
 
@@ -156,6 +157,14 @@ datos reales · error en uso normal
 - **Causa raíz:** el filtro de ubicación (remota o Colombia) solo existe para Get on Board. Lo que llega por correo (LinkedIn, Indeed, Workana) se guarda tal cual; depende de cómo esté configurada la alerta en cada portal. La IA baja el puntaje por ubicación pero no excluye.
 - **Corrección:** (1) Andrea revisa la configuración de sus alertas de LinkedIn; (2) pendiente: regla fija en código como red de seguridad (otro país y no remota → descartada automáticamente).
 - **Cómo se detectó:** observación de Andrea al revisar Telegram + consulta SQL por `location`.
+
+### BUG-19 · Alertas ruidosas y vacías de radar-correo
+- **Síntoma:** cada 30-40 minutos llegaba "⚠️ Falló el flujo radar-correo" con Nodo y Error vacíos; aun así las vacantes seguían llegando.
+- **Causa raíz (2):** (1) Gmail cierra la conexión IMAP cada cierto tiempo ("This socket has been ended by the other party"); n8n desactiva el flujo y lo reactiva solo, es transitorio. (2) Cuando falla el **disparador**, el Error Trigger trae los datos en `trigger.error`, no en `execution`, y el mensaje solo leía `execution`.
+- **Corrección:** If "¿Es corte normal de Gmail?" en alertas-errores (si la descripción contiene "socket has been ended" no avisa) y el texto ahora lee `execution` o, si no existe, `trigger.error`.
+- **Prueba:** datos fijados (pin) en el Error Trigger: (1) con el error real de Gmail → rama true, no avisa; (2) con un error de disparador inventado → rama false, llega el aviso con nodo y error.
+- **Lección:** una alarma que avisa de cosas que se arreglan solas genera "fatiga de alertas"; hay que filtrar el ruido sin esconder los errores reales.
+- **Cómo se detectó:** observación de Andrea en Telegram + JSON de la ejecución de alertas-errores.
 
 ---
 
