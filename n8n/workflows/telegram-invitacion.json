@@ -12,7 +12,7 @@
       "typeVersion": 1.5,
       "position": [
         0,
-        1200
+        1312
       ],
       "id": "2cf3dc7e-377a-4fb8-81c1-e12852adb021",
       "name": "Telegram Trigger",
@@ -220,6 +220,30 @@
               },
               "renameOutput": true,
               "outputKey": "invitar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "e87f1ad1-3599-41c3-af92-81f8e7ff6349",
+                    "leftValue": "={{ $json.message.text || '' }}",
+                    "rightValue": "/preferencias",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "preferencias"
             }
           ]
         },
@@ -230,12 +254,12 @@
       "typeVersion": 3.4,
       "position": [
         672,
-        960
+        1040
       ],
       "id": "d89a4433-e329-4059-b272-50e6d40eb013",
       "name": "Switch",
       "notesInFlow": true,
-      "notes": "Reparte: start = /start, cv = llegó archivo, respuesta = texto normal (respuesta a una pregunta), perfil = /perfil, corregir = /corregir <tema>, vacante = /vacante <link>, radar = /mejores /nuevas /guardadas /detalle /guardar /descartar /pausar /reanudar, invitar = /invitar (solo admin)."
+      "notes": "Reparte: start = /start, cv = llegó archivo, respuesta = texto normal (respuesta a una pregunta), perfil = /perfil, corregir = /corregir <tema>, vacante = /vacante <link>, radar = /mejores /nuevas /guardadas /detalle /guardar /descartar /pausar /reanudar, invitar = /invitar (solo admin), preferencias = /preferencias."
     },
     {
       "parameters": {
@@ -330,7 +354,7 @@
       "typeVersion": 1.3,
       "position": [
         224,
-        1200
+        1312
       ],
       "id": "0b3912dc-d588-4b3d-82f2-66ef31420277",
       "name": "Call 'verificar-acceso'",
@@ -1209,7 +1233,7 @@
       "typeVersion": 2.3,
       "position": [
         448,
-        1200
+        1312
       ],
       "id": "6a3da8ff-eb48-4e17-910e-b033aa716641",
       "name": "¿Tiene acceso?",
@@ -1228,7 +1252,7 @@
       "typeVersion": 1.2,
       "position": [
         672,
-        1344
+        1456
       ],
       "id": "27fa5901-d479-443f-9128-63270d911ca9",
       "name": "Responder: sin acceso",
@@ -1255,7 +1279,7 @@
       "typeVersion": 4.5,
       "position": [
         896,
-        1728
+        1920
       ],
       "id": "d4826ac0-35a5-41a5-a105-0599101d8310",
       "name": "Crear invitación",
@@ -1274,7 +1298,7 @@
       "typeVersion": 1.2,
       "position": [
         1120,
-        1728
+        1920
       ],
       "id": "b056f510-6731-4bee-8f48-cdef9b2a9a96",
       "name": "Enviar invitación",
@@ -1448,6 +1472,52 @@
       "name": "¿Se pudo leer el CV?",
       "notesInFlow": true,
       "notes": "Decide: si el CV tiene al menos 200 caracteres de texto → sigue. Si no (PDF escaneado o imagen) → avisa y no guarda nada (BUG-24)."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://profile-api:8000/usuarios/preferencias",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n       \"telegram_user_id\": {{ $('Telegram Trigger').item.json.message.from.id }},\n       \"text\": {{ JSON.stringify($('Telegram Trigger').item.json.message.text) }}\n     }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        896,
+        1728
+      ],
+      "id": "b7f9a95c-b718-4857-ab00-a679c026523d",
+      "name": "Preferencias de búsqueda",
+      "notesInFlow": true,
+      "notes": "Búsqueda: /preferencias muestra las palabras clave y categorías del usuario; /preferencias a, b, c las cambia (POST /usuarios/preferencias)."
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.telegram_text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1120,
+        1728
+      ],
+      "id": "2ecb5750-b9d6-4d38-9f81-6e200998842f",
+      "name": "Responder preferencias",
+      "webhookId": "f121ba40-50e6-45c7-a6a2-b4d9803f926f",
+      "notesInFlow": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "aF0RvNa5kJZkarDY",
+          "name": "Telegram account"
+        }
+      },
+      "notes": "Búsqueda: responde la búsqueda actual (o confirma el cambio)."
     }
   ],
   "pinData": {},
@@ -1517,6 +1587,13 @@
         [
           {
             "node": "Crear invitación",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preferencias de búsqueda",
             "type": "main",
             "index": 0
           }
@@ -1890,6 +1967,17 @@
           }
         ]
       ]
+    },
+    "Preferencias de búsqueda": {
+      "main": [
+        [
+          {
+            "node": "Responder preferencias",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -1901,7 +1989,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "9c7db51a-70c8-4e51-886b-bf2e343a815a",
+  "versionId": "f972a868-b3c8-4e5e-af6c-bee8201c52d6",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"
