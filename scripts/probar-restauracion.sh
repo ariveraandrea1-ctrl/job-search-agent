@@ -5,6 +5,8 @@
 # (job_search_agent_prueba_restauracion), cuenta las filas de cada tabla y
 # las compara con las que tenia la base cuando se saco el respaldo
 # (archivo .conteo). Al final borra esa base de prueba.
+# Si el respaldo trae MinIO (.minio.tar), lo restaura en un bucket aparte y
+# compara cantidad de archivos + huella (SHA-256) con el archivo .minio.
 #
 # NUNCA toca la base real.
 #
@@ -43,19 +45,22 @@ psql_en postgres "create database $PRUEBA"
 echo "==> Restaurando..."
 $COMPOSE exec -T postgres sh -c "pg_restore -U \"\$POSTGRES_USER\" -d $PRUEBA --no-owner --exit-on-error" < "$ARCHIVO"
 
-echo "==> Comparando filas (esperado = al sacar el respaldo, obtenido = restaurado):"
+echo "==> Comparando filas (esperado = conteo antes-después del respaldo, obtenido = restaurado):"
 FALLAS=0
 REVISADAS=0
 ESPERADAS=$(wc -l < "$CONTEO" | tr -d ' ')
-printf "  %-22s %10s %10s\n" "tabla" "esperado" "obtenido"
-while read -r tabla esperado; do
+printf "  %-22s %15s %10s\n" "tabla" "esperado" "obtenido"
+while read -r tabla antes despues; do
+  despues=${despues:-$antes}   # respaldos viejos solo traen un número
   obtenido=$(psql_en "$PRUEBA" "select count(*) from $tabla")
   marca="OK"
-  if [ "$obtenido" != "$esperado" ]; then
+  # BUG-27: válido si queda entre el conteo de antes y el de después.
+  if [ "$obtenido" -lt "$antes" ] || [ "$obtenido" -gt "$despues" ]; then
     marca="DIFERENTE"
     FALLAS=$((FALLAS + 1))
   fi
-  printf "  %-22s %10s %10s  %s\n" "$tabla" "$esperado" "$obtenido" "$marca"
+  if [ "$antes" = "$despues" ]; then rango="$antes"; else rango="$antes-$despues"; fi
+  printf "  %-22s %15s %10s  %s\n" "$tabla" "$rango" "$obtenido" "$marca"
   REVISADAS=$((REVISADAS + 1))
 done < "$CONTEO"
 
@@ -67,11 +72,36 @@ fi
 echo "==> Borrando base de prueba..."
 psql_en postgres "drop database $PRUEBA"
 
+MINIO_TAR="${ARCHIVO%.dump}.minio.tar"
+MINIO_RES="${ARCHIVO%.dump}.minio"
+BUCKET_PRUEBA="prueba-restauracion-minio"
+api() {  # < /dev/null por la misma razón que en psql_en (BUG-17)
+  $COMPOSE exec -T profile-api python -m app.respaldo_minio "$@" < /dev/null
+}
+if [ -f "$MINIO_TAR" ] && [ -f "$MINIO_RES" ]; then
+  echo "==> Restaurando MinIO en un bucket aparte ($BUCKET_PRUEBA)..."
+  api borrar "$BUCKET_PRUEBA"
+  $COMPOSE exec -T profile-api python -m app.respaldo_minio importar "$BUCKET_PRUEBA" < "$MINIO_TAR" > /dev/null
+  OBTENIDO=$(api resumen "$BUCKET_PRUEBA")
+  ESPERADO=$(cat "$MINIO_RES")
+  echo "  MinIO esperado:  $(echo "$ESPERADO" | tr '\n' ' ')"
+  echo "  MinIO obtenido:  $(echo "$OBTENIDO" | tr '\n' ' ')"
+  if [ "$OBTENIDO" = "$ESPERADO" ]; then
+    echo "  MinIO OK (mismos archivos, mismo contenido)"
+  else
+    echo "  MinIO DIFERENTE"
+    FALLAS=$((FALLAS + 1))
+  fi
+  api borrar "$BUCKET_PRUEBA"
+else
+  echo "  (Este respaldo no trae MinIO: es anterior a la versión con CVs originales.)"
+fi
+
 echo ""
 if [ "$FALLAS" -eq 0 ]; then
-  echo "PASO: el respaldo se restaura completo ($REVISADAS de $ESPERADAS tablas)."
+  echo "PASO: el respaldo se restaura completo ($REVISADAS de $ESPERADAS tablas + MinIO)."
 else
-  echo "FALLO: $FALLAS tabla(s) no coinciden. Puede pasar si n8n guardo algo justo"
+  echo "FALLO: $FALLAS comprobacion(es) no coinciden. Puede pasar si n8n guardo algo justo"
   echo "mientras se sacaba el respaldo; saca otro y vuelve a probar."
   exit 1
 fi

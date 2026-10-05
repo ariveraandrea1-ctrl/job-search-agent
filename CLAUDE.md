@@ -159,7 +159,18 @@ resúmenes; limpia antes y después). 42/42 casos. BUG-25 (esperar /health).
 POST /opportunities ahora devuelve "numero". DoD "5 usuarios aislados" ✅.
 Idea para el plan de pruebas: prueba de mutación (romper el filtro a
 propósito y ver que el script falle).
-SIGUE: MinIO,
+MinIO HECHO 2026-10-05 (rama feature/minio): app/almacen.py (huella
+SHA-256, nombre_seguro, clave_cv → tenants/{tenant}/users/{tg}/cv/original/
+{sha16}-{nombre}; guardar con cliente minio==7.2.9). /extract-text con
+Form telegram_user_id guarda el original y devuelve storage_key/sha256/
+size_bytes (503 si MinIO falla). Migración 0013: documents.storage_key,
+sha256, size_bytes. app/respaldo_minio.py (exportar/importar/resumen/
+borrar); backup-db.sh guarda .minio.tar + .minio; probar-restauracion.sh
+restaura en bucket "prueba-restauracion-minio" y compara objetos + huella.
+BUG-26 (entrevista repetía preguntas: excluir temas ya respondidos) y
+BUG-27 (conteo antes/después del respaldo). Prueba: PASO 8/8 + MinIO.
+112 tests. DoD "respaldo restaurable PG y MinIO" ✅.
+SIGUE:
 correo, telemetría, idempotencia, reconstrucción, E2E/README/demo, y los
 comandos /subir_cv /completar_perfil /buscar /resumen de la spec.
 
