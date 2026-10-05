@@ -92,6 +92,12 @@ de la mañana con el Mac prendido (renombrar el nodo "Reloj: 7 am").
 BUG-19 hecho (alertas ignoran el corte normal de IMAP de Gmail).
 BUG-18 hecho: ubicacion_sirve() en parsers.py + /radar/email devuelve
 "skipped"; 69 tests.
+BUG-20: alerta vacía en real ($('nodo').item no resolvía; ahora $json) +
+Gmail corta también con "IMAP connection closed unexpectedly" → regex en
+el filtro + Force Reconnect 20 min en el Timbre de radar-correo.
+BUG-21: 7 am no corrió por reposo; prueba a las 2 pm OK. Andrea elegirá
+hora de la mañana. Andrea practicó SQL: SELECT + UPDATE con AND
+(descartó 14 vacantes de México, la #207 guardada se respetó).
 
 RETOMAR: Semana 6 en rama `feature/puntaje-ia`. HECHO: puntaje con IA
 (workflow radar-puntaje) y comandos /mejores /nuevas /guardadas /detalle N

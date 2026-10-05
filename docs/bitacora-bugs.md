@@ -36,6 +36,8 @@ datos reales · error en uso normal
 | BUG-17 | 2026-10-03 | 🐞 | Prueba de restauración daba PASO revisando solo 1 de 8 tablas (falso positivo) | Corregido + control |
 | BUG-18 | 2026-10-03 | 🔍 | Llegaban vacantes de México por LinkedIn: no hay filtro de ubicación para fuentes de correo | Corregido + tests |
 | BUG-19 | 2026-10-05 | ⚙️ | Alertas de radar-correo cada ~30 min con "Nodo" y "Error" vacíos | Corregido + probado |
+| BUG-20 | 2026-10-05 | ⚙️ | Alerta salió vacía (hasta el nombre del flujo) y Gmail cortaba con otro texto de error | Corregido + probado |
+| BUG-21 | 2026-10-05 | 🔍 | El resumen de las 7 am nunca corrió: el Mac estaba en reposo | Causa confirmada (pendiente servidor) |
 
 ---
 
@@ -166,6 +168,21 @@ datos reales · error en uso normal
 - **Prueba:** datos fijados (pin) en el Error Trigger: (1) con el error real de Gmail → rama true, no avisa; (2) con un error de disparador inventado → rama false, llega el aviso con nodo y error.
 - **Lección:** una alarma que avisa de cosas que se arreglan solas genera "fatiga de alertas"; hay que filtrar el ruido sin esconder los errores reales.
 - **Cómo se detectó:** observación de Andrea en Telegram + JSON de la ejecución de alertas-errores.
+
+### BUG-20 · Alerta vacía en producción + otra variante del corte de Gmail
+- **Síntoma:** a las 14:02 llegó "Falló el flujo \"\"" con Nodo y Error vacíos, aunque el arreglo del BUG-19 se había probado con éxito.
+- **Causa raíz (2):** (1) el texto usaba `$('Cuando un flujo falla').item...`; con datos fijados (pin) funcionó, pero en la ejecución real no resolvió el item y devolvió vacío. **La prueba con pin no representaba el caso real.** (2) Gmail también corta con "IMAP connection closed unexpectedly", texto que el filtro no reconocía.
+- **Corrección:** texto con `$json` (lee igual con pin y en real); filtro con regex `socket has been ended|closed unexpectedly|automatically retry` sobre descripción + causa; y la solución de raíz que sugiere el propio n8n: **Force Reconnect = 20 min** en el Timbre de radar-correo (los cortes eran cada 30-40 min).
+- **Prueba:** pin con el JSON REAL de la ejecución de las 14:02 → true (no avisa); mismo JSON con un error inventado → false y el mensaje llega con flujo, nodo y error llenos. ("Copy to editor" de una ejecución real requiere plan pago.)
+- **Lección:** los datos de prueba deben copiarse de un caso real, y una prueba que pasa con datos simulados no garantiza el comportamiento en producción.
+- **Cómo se detectó:** alerta vacía en Telegram + JSON de la ejecución.
+
+### BUG-21 · El resumen de las 7 am nunca se envió
+- **Síntoma:** no llegó el resumen ni el 4 ni el 5 de octubre.
+- **Causa raíz:** en Executions de radar-resumen-diario solo existía la ejecución manual del 3/10: a las 7 am el Mac estaba en reposo y n8n no recupera los horarios perdidos.
+- **Prueba:** se movió el reloj a las 2 pm con el Mac despierto → el resumen llegó. El reloj funciona; la causa es el reposo.
+- **Corrección temporal:** hora de la mañana con el Mac prendido (Andrea la elige). De fondo: servidor (riesgo ya anotado).
+- **Cómo se detectó:** observación de Andrea + pestaña Executions.
 
 ---
 
