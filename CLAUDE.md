@@ -117,9 +117,26 @@ sin código / con código / CV / entrevista / /mejores aislado. BUG-23
 (/start respondía apellido → "Saludo: ya registrado") y BUG-24 (CV
 escaneado 0 caracteres → If "¿Se pudo leer el CV?" >= 200). Renombres:
 Extraer texto del CV, Guardar CV, Confirmar CV recibido. Datos de las 2
-personas borrados (transacción, 7 tablas). Parte 3: radares para todos los
-usuarios activos (getonbrd, puntaje, resumen), correo = admin, /pausar
-/reanudar. Parte 4: script de prueba de aislamiento con 5 usuarios.
+personas borrados (transacción, 7 tablas).
+Parte 3 HECHA 2026-10-05: radar para todos los usuarios ACTIVOS (pausados
+no). /radar/getonbrd sin usuario → guarda para cada activo y devuelve
+"avisos" [{telegram_user_id, created, telegram_text}] (n8n: Split Out
+"Separar avisos por usuario", sin If). /opportunities/pending-score sin
+usuario → todos los activos con perfil (item trae telegram_user_id).
+GET /radar/resumenes (nuevo) → items por usuario (n8n: Split Out
+"Separar por usuario"). /radar/email sin usuario → admin; responde
+telegram_user_id (chatId del aviso sale de ahí). /pausar y /reanudar
+(users.estado; regex del Switch actualizada). Reloj del resumen: 11 am.
+88 tests. Probado: resumen OK, getonbrd avisos [] (50 skipped), /pausar
+/reanudar OK.
+SIGUE Parte 4 (decidido con Andrea, está en la spec: "Configurar roles…"
+y /preferencias): búsqueda POR USUARIO — palabras clave por usuario
+(inicial desde rol_buscado), /preferencias para verlas/cambiarlas,
+categorías de Get on Board por usuario (n8n recorre solo las categorías
+que alguien usa), filtro de título por las palabras de cada uno en vez
+de _GETONBRD_TITULO_QA fijo. Reglas comunes siguen (no inglés, remota o
+Colombia, <= 3 días). Correo = solo admin (documentar). Después: Parte 5
+= script de prueba de aislamiento con 5 usuarios.
 
 RETOMAR: Semana 6 en rama `feature/puntaje-ia`. HECHO: puntaje con IA
 (workflow radar-puntaje) y comandos /mejores /nuevas /guardadas /detalle N

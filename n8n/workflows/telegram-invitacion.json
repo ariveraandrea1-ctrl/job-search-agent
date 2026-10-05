@@ -185,7 +185,7 @@
                   {
                     "id": "cd5d1d6d-a877-447f-b5f1-f3f3ee765217",
                     "leftValue": "={{ $json.message.text || '' }}",
-                    "rightValue": "^/(mejores|nuevas|guardadas|detalle|guardar|descartar)\\b",
+                    "rightValue": "^/(mejores|nuevas|guardadas|detalle|guardar|descartar|pausar|reanudar)\\b",
                     "operator": {
                       "type": "string",
                       "operation": "regex"
@@ -235,7 +235,7 @@
       "id": "d89a4433-e329-4059-b272-50e6d40eb013",
       "name": "Switch",
       "notesInFlow": true,
-      "notes": "Reparte: start = /start, cv = llegó archivo, respuesta = texto normal (respuesta a una pregunta), perfil = /perfil, corregir = /corregir <tema>, vacante = /vacante <link>, radar = /mejores /nuevas /guardadas /detalle /guardar /descartar, invitar = /invitar (solo admin)."
+      "notes": "Reparte: start = /start, cv = llegó archivo, respuesta = texto normal (respuesta a una pregunta), perfil = /perfil, corregir = /corregir <tema>, vacante = /vacante <link>, radar = /mejores /nuevas /guardadas /detalle /guardar /descartar /pausar /reanudar, invitar = /invitar (solo admin)."
     },
     {
       "parameters": {
@@ -1151,7 +1151,7 @@
       "id": "1710c665-9f1a-4949-95cb-8fe31b5bff2f",
       "name": "Comando del radar",
       "notesInFlow": true,
-      "notes": "Radar: manda el comando (/mejores, /nuevas, /guardadas, /detalle N, /guardar N, /descartar N) a profile-api (POST /radar/comando), que responde el texto listo para Telegram."
+      "notes": "Radar: manda el comando (/mejores, /nuevas, /guardadas, /detalle N, /guardar N, /descartar N, /pausar, /reanudar) a profile-api (POST /radar/comando), que responde el texto listo para Telegram."
     },
     {
       "parameters": {
@@ -1316,41 +1316,6 @@
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "5f87cabd-e9c6-45c1-8dba-334a6d13459c",
-              "leftValue": "={{ $json.char_count }}",
-              "rightValue": 200,
-              "operator": {
-                "type": "number",
-                "operation": "gte"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        1344,
-        576
-      ],
-      "id": "53b034cb-dad0-4aa5-b215-cec710883b1a",
-      "name": "¿Se pudo leer el CV?",
-      "notesInFlow": true,
-      "notes": "Decide: si el CV tiene al menos 200 caracteres de texto → sigue. Si no (PDF escaneado o imagen) → avisa y no guarda nada (BUG-24)."
-    },
-    {
-      "parameters": {
         "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
         "text": "😕 No pude leer texto en tu archivo. Parece una imagen o un PDF escaneado. Envíame tu hoja de vida en Word o en un PDF donde se pueda seleccionar el texto (por ejemplo, exportado desde Word o Google Docs).",
         "additionalFields": {
@@ -1448,6 +1413,41 @@
         }
       },
       "notes": "Confirma CV: avisa cuántos caracteres se extrajeron del archivo."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5f87cabd-e9c6-45c1-8dba-334a6d13459c",
+              "leftValue": "={{ $json.char_count }}",
+              "rightValue": 200,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1344,
+        576
+      ],
+      "id": "53b034cb-dad0-4aa5-b215-cec710883b1a",
+      "name": "¿Se pudo leer el CV?",
+      "notesInFlow": true,
+      "notes": "Decide: si el CV tiene al menos 200 caracteres de texto → sigue. Si no (PDF escaneado o imagen) → avisa y no guarda nada (BUG-24)."
     }
   ],
   "pinData": {},
@@ -1901,7 +1901,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "740322c7-60b1-4446-828a-af7a2f2b4341",
+  "versionId": "9c7db51a-70c8-4e51-886b-bf2e343a815a",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"

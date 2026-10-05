@@ -23,7 +23,7 @@
         "url": "http://profile-api:8000/radar/getonbrd",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n       \"telegram_user_id\": 8553351572,\n       \"response\": {{ JSON.stringify($json) }}\n     }",
+        "jsonBody": "={\n     \"response\": {{ JSON.stringify($json) }}\n   }",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -35,47 +35,12 @@
       "id": "0390041b-9794-4a59-b77c-d24a754be8f2",
       "name": "Guardar vacantes de Get on Board",
       "notesInFlow": true,
-      "notes": "Radar: manda la respuesta de Get on Board a profile-api (POST /radar/getonbrd). Allí se filtra (solo QA, no en inglés, remota o Colombia, hasta Semi Senior) y se guardan solo las nuevas. Responde found / skipped / created / duplicates."
+      "notes": "Radar: manda la respuesta de Get on Board a profile-api (POST /radar/getonbrd). Allí se filtra (solo QA, no en inglés, remota o Colombia, hasta Semi Senior) y se guardan las nuevas para CADA usuario activo. Responde found / skipped / avisos (uno por usuario con vacantes nuevas)."
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "de3812df-bbe8-48a7-8644-e66e4e2ff8cc",
-              "leftValue": "={{ $json.created }}",
-              "rightValue": 0,
-              "operator": {
-                "type": "number",
-                "operation": "gt"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        672,
-        0
-      ],
-      "id": "f45c4009-1fca-48af-96f3-fd706037df47",
-      "name": "¿Hay vacantes nuevas?",
-      "notesInFlow": true,
-      "notes": "Decide: si llegó al menos una vacante nueva (created > 0) → true (avisa por Telegram). Si no → false (no hace nada)."
-    },
-    {
-      "parameters": {
-        "chatId": "8553351572",
-        "text": "={{ $('Guardar vacantes de Get on Board').item.json.telegram_text }}",
+        "chatId": "={{ $json.telegram_user_id }}",
+        "text": "={{ $json.telegram_text }}",
         "additionalFields": {
           "appendAttribution": false,
           "disable_web_page_preview": true
@@ -97,7 +62,7 @@
           "name": "Telegram account"
         }
       },
-      "notes": "Radar: envía por Telegram las vacantes nuevas de Get on Board (texto armado por profile-api)."
+      "notes": "Radar: avisa a cada usuario sus vacantes nuevas de Get on Board."
     },
     {
       "parameters": {
@@ -118,7 +83,23 @@
       "id": "9d01ad91-3469-4315-a2ce-d605f3929915",
       "name": "Reloj: cada hora",
       "notesInFlow": true,
-      "notes": "Radar: cada hora revisa las vacantes nuevas de QA en Get on Board"
+      "notes": "Radar: cada hora revisa las vacantes nuevas de Get on Board para todos los usuarios activos."
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "avisos",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        672,
+        0
+      ],
+      "id": "13955233-2470-454a-af70-6adb12c01276",
+      "name": "Separar avisos por usuario",
+      "notesInFlow": true,
+      "notes": "Radar: separa los avisos (uno por usuario que tiene vacantes nuevas). Si nadie tiene nuevas, la lista viene vacía y el flujo termina aquí solo."
     }
   ],
   "pinData": {},
@@ -138,18 +119,7 @@
       "main": [
         [
           {
-            "node": "¿Hay vacantes nuevas?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "¿Hay vacantes nuevas?": {
-      "main": [
-        [
-          {
-            "node": "Avisar vacantes nuevas",
+            "node": "Separar avisos por usuario",
             "type": "main",
             "index": 0
           }
@@ -166,6 +136,17 @@
           }
         ]
       ]
+    },
+    "Separar avisos por usuario": {
+      "main": [
+        [
+          {
+            "node": "Avisar vacantes nuevas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -177,7 +158,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "6b0c3c60-4f67-413a-af7a-8e7022c48a51",
+  "versionId": "5f855b7c-4252-45b0-8df3-7a879ea4b135",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"
