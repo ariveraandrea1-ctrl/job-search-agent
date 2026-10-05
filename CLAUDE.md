@@ -151,7 +151,15 @@ radar-getonbrd = Reloj → Pedir categorías → Separar categorías →
 Consultar Get on Board ({{ $json.categoria }}) → Guardar → Separar avisos →
 Avisar; telegram-invitacion regla 9 /preferencias → "Preferencias de
 búsqueda" → "Responder preferencias". 107 tests. Probado en Telegram.
-SIGUE: Parte 5 (script de aislamiento con 5 usuarios), luego MinIO,
+Parte 5 HECHA 2026-10-05 (rama feature/prueba-aislamiento):
+scripts/probar-aislamiento.py (solo stdlib; usuarios 900000101..105;
+registro, vacantes propias + compartida, /nuevas, /detalle /guardar
+/descartar ajenos, estados independientes, /preferencias, /pausar,
+resúmenes; limpia antes y después). 42/42 casos. BUG-25 (esperar /health).
+POST /opportunities ahora devuelve "numero". DoD "5 usuarios aislados" ✅.
+Idea para el plan de pruebas: prueba de mutación (romper el filtro a
+propósito y ver que el script falle).
+SIGUE: MinIO,
 correo, telemetría, idempotencia, reconstrucción, E2E/README/demo, y los
 comandos /subir_cv /completar_perfil /buscar /resumen de la spec.
 

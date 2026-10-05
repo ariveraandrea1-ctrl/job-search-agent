@@ -41,6 +41,7 @@ datos reales · error en uso normal
 | BUG-22 | 2026-10-05 | 🔍 | Datos de prueba (usuario 123) mezclados con datos reales | Limpiado (proceso) |
 | BUG-23 | 2026-10-05 | 🐞 | /start de alguien ya registrado respondía su apellido (o texto vacío → error) | Corregido |
 | BUG-24 | 2026-10-05 | 🐞 | CV escaneado (0 caracteres) seguía el flujo y creaba un perfil vacío | Corregido |
+| BUG-25 | 2026-10-05 | 🔍 | Prueba de aislamiento fallaba con "Connection reset" justo después de reiniciar profile-api | Corregido |
 
 ---
 
@@ -205,6 +206,13 @@ datos reales · error en uso normal
 - **Causa raíz:** su PDF era una imagen: el extractor sacó 0 caracteres y el flujo siguió igual (guardó el documento, llamó a la IA con texto vacío y guardó un perfil vacío). Nunca se había probado con un archivo sin texto.
 - **Corrección:** If "¿Se pudo leer el CV?" después de extraer el texto: menos de 200 caracteres → avisa cómo enviar el archivo y no guarda nada. (Leer escaneados con OCR queda para el Proyecto 2.)
 - **Cómo se detectó:** prueba con un usuario real + `SELECT filename, char_count FROM documents` → 0.
+
+### BUG-25 · La prueba automática arrancaba antes que la API
+- **Síntoma:** `probar-aislamiento.py` se caía en el primer llamado con `ConnectionResetError` (no era un fallo de aislamiento).
+- **Causa raíz:** se corrió justo después de recrear el contenedor; profile-api aún aplicaba migraciones y arrancaba. La prueba no esperaba a que el sistema estuviera listo (prueba "inestable" por tiempos).
+- **Corrección:** el script espera a que `/health` responda (hasta 60 s) antes de empezar.
+- **Resultado:** 42 de 42 casos pasan (5 usuarios aislados).
+- **Cómo se detectó:** primera corrida del script.
 
 ---
 
