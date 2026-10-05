@@ -17,7 +17,7 @@
     {
       "parameters": {
         "chatId": "8553351572",
-        "text": "=⚠️ Falló el flujo \"{{ $json.workflow.name }}\"\n  Nodo: {{ $json.execution.lastNodeExecuted }}\n  Error: {{ $json.execution.error.message }}\n  Hora: {{ $now.setZone('America/Bogota').toFormat('dd/MM HH:mm') }}\n\n  Revisa la pestaña Executions de ese flujo en n8n.",
+        "text": "=⚠️ Falló el flujo \"{{ $('Cuando un flujo falla').item.json.workflow.name }}\"\nNodo: {{ $('Cuando un flujo falla').item.json.execution?.lastNodeExecuted ?? 'el disparador (trigger)' }}\nError: {{ $('Cuando un flujo falla').item.json.execution?.error?.message ?? $('Cuando un flujo falla').item.json.trigger?.error?.description ?? $('Cuando un flujo falla').item.json.trigger?.error?.message }}\nHora: {{ $now.setZone('America/Bogota').toFormat('dd/MM HH:mm') }}\n\nRevisa la pestaña Executions de ese flujo en n8n.",
         "additionalFields": {
           "appendAttribution": false
         }
@@ -25,7 +25,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        224,
+        448,
         0
       ],
       "id": "94ed0517-5f39-470d-aeb4-ba54182c4d26",
@@ -39,12 +39,59 @@
         }
       },
       "notes": "Alertas: manda a Telegram qué flujo falló, en qué nodo, el error y la hora."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c8916a94-a966-4f1c-8bcb-c67d0d14fe75",
+              "leftValue": "={{ $json.trigger?.error?.description || '' }}",
+              "rightValue": "socket has been ended",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        224,
+        0
+      ],
+      "id": "904e8603-9f3b-4381-ad87-728ada3a93b0",
+      "name": "¿Es corte normal de Gmail?",
+      "notesInFlow": true,
+      "notes": "Filtro: si es el corte normal de Gmail (IMAP cierra la conexión y n8n reactiva el flujo solo) → true, no avisa. Cualquier otro error → false, avisa por Telegram."
     }
   ],
   "pinData": {},
   "connections": {
     "Cuando un flujo falla": {
       "main": [
+        [
+          {
+            "node": "¿Es corte normal de Gmail?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Es corte normal de Gmail?": {
+      "main": [
+        [],
         [
           {
             "node": "Avisar falla por Telegram",
@@ -60,7 +107,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "847e3c1c-cfae-4a24-84a5-30e3ee69e49e",
+  "versionId": "fe9cefab-5864-4dcc-987b-7a2c8fd330c9",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"
