@@ -95,6 +95,10 @@ class Document(Base):
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
     char_count: Mapped[int] = mapped_column(Integer, nullable=False)
     extracted_text: Mapped[str] = mapped_column(Text, nullable=False)
+    # Archivo original en MinIO (migración 0013); nulo en CV antiguos.
+    storage_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    size_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )

@@ -512,7 +512,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT position, question FROM interview_questions\nWHERE topic IN (\n  SELECT jsonb_array_elements_text(p.data->'faltantes')\n  FROM (\n    SELECT data FROM profiles\n    WHERE telegram_user_id = $1\n    ORDER BY created_at DESC\n    LIMIT 1\n  ) p\n)\nORDER BY position\nLIMIT 1;",
+        "query": "SELECT position, question FROM interview_questions\n   WHERE topic IN (\n     SELECT jsonb_array_elements_text(p.data->'faltantes')\n     FROM (\n       SELECT data FROM profiles\n       WHERE telegram_user_id = $1\n       ORDER BY created_at DESC\n       LIMIT 1\n     ) p\n   )\n   AND topic NOT IN (\n     SELECT topic FROM interview_answers\n     WHERE telegram_user_id = $1 AND topic IS NOT NULL\n   )\n   ORDER BY position\n   LIMIT 1;",
         "options": {
           "queryReplacement": "={{ $('Telegram Trigger').item.json.message.chat.id }}"
         }
@@ -533,12 +533,12 @@
           "name": "Postgres account"
         }
       },
-      "notes": "Lista: trae la primera pregunta cuyo tema (topic) está en los faltantes del último perfil del usuario (tabla profiles). \"Always Output Data\" activado para seguir aunque no haya ninguna."
+      "notes": "Lista: trae la primera pregunta cuyo tema está en los faltantes del último perfil Y que la persona todavía no ha respondido (BUG-26). \"Always Output Data\" activado para seguir aunque no haya ninguna."
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT position, question FROM interview_questions\nWHERE position > $1\nAND topic IN (\n  SELECT jsonb_array_elements_text(p.data->'faltantes')\n  FROM (\n    SELECT data FROM profiles\n    WHERE telegram_user_id = $2\n    ORDER BY created_at DESC\n    LIMIT 1\n  ) p\n)\nORDER BY position\nLIMIT 1;",
+        "query": "SELECT position, question FROM interview_questions\n   WHERE position > $1\n   AND topic IN (\n     SELECT jsonb_array_elements_text(p.data->'faltantes')\n     FROM (\n       SELECT data FROM profiles\n       WHERE telegram_user_id = $2\n       ORDER BY created_at DESC\n       LIMIT 1\n     ) p\n   )\n   AND topic NOT IN (\n     SELECT topic FROM interview_answers\n     WHERE telegram_user_id = $2 AND topic IS NOT NULL\n   )\n   ORDER BY position\n   LIMIT 1;",
         "options": {
           "queryReplacement": "={{ $('Leer anotación').item.json.question_position }},{{ $('Telegram Trigger').item.json.message.chat.id }}"
         }
@@ -559,7 +559,7 @@
           "name": "Postgres account"
         }
       },
-      "notes": "Lista: trae la siguiente pregunta (position mayor a la actual) cuyo tema está en los faltantes del último perfil. Si no hay más, sale vacío (\"Always Output Data\" activado)."
+      "notes": "Lista: trae la siguiente pregunta (position mayor a la actual) cuyo tema está en los faltantes del último perfil y aún no fue respondido (BUG-26). Si no hay más, sale vacío (\"Always Output Data\" activado)."
     },
     {
       "parameters": {
@@ -1376,6 +1376,10 @@
               "parameterType": "formBinaryData",
               "name": "file",
               "inputDataFieldName": "data"
+            },
+            {
+              "name": "telegram_user_id",
+              "value": "={{ $('Telegram Trigger').item.json.message.chat.id }}"
             }
           ]
         },
@@ -1390,7 +1394,7 @@
       "id": "11ff53cc-173d-416d-8f5a-82d7494cde62",
       "name": "Extraer texto del CV",
       "notesInFlow": true,
-      "notes": "Extrae texto: manda el CV a profile-api y recibe el texto que contiene."
+      "notes": "Extrae texto: manda el CV a profile-api, que devuelve el texto y además guarda el archivo ORIGINAL en MinIO (storage_key, sha256, size_bytes)."
     },
     {
       "parameters": {
@@ -1398,7 +1402,7 @@
         "url": "http://profile-api:8000/documents",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"telegram_user_id\": {{ $('Telegram Trigger').item.json.message.chat.id }},\n  \"filename\": {{ JSON.stringify($json.filename) }},\n  \"char_count\": {{ $json.char_count }},\n  \"text\": {{ JSON.stringify($json.text) }}\n}",
+        "jsonBody": "={\n     \"telegram_user_id\": {{ $('Telegram Trigger').item.json.message.chat.id }},\n     \"filename\": {{ JSON.stringify($json.filename) }},\n     \"char_count\": {{ $json.char_count }},\n     \"text\": {{ JSON.stringify($json.text) }},\n     \"storage_key\": {{ JSON.stringify($json.storage_key) }},\n     \"sha256\": {{ JSON.stringify($json.sha256) }},\n     \"size_bytes\": {{ $json.size_bytes }}\n   }",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -1410,7 +1414,7 @@
       "id": "435a5f15-f44e-46a4-8d16-31f78a7e1566",
       "name": "Guardar CV",
       "notesInFlow": true,
-      "notes": "Guarda CV: envía el texto del CV a profile-api para guardarlo en la base de datos."
+      "notes": "Guarda CV: envía a profile-api el texto del CV y la referencia al archivo original en MinIO (ruta, huella y tamaño)."
     },
     {
       "parameters": {
@@ -1989,7 +1993,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "f972a868-b3c8-4e5e-af6c-bee8201c52d6",
+  "versionId": "ec9fd512-c73e-4ffb-a7bd-7cae16896a32",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"

@@ -30,7 +30,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Literal
 from urllib.parse import urlsplit, urlunsplit
 
-from fastapi import Depends, FastAPI, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 from pypdf import PdfReader
 from docx import Document as DocxDocument
@@ -39,7 +39,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import Document, Invitation, InterviewAnswer, Opportunity, Profile, User
+from app.models import TENANT_PRINCIPAL, Document, Invitation, InterviewAnswer, Opportunity, Profile, User
 from app.parsers import (
     elegir_lector,
     identificar_url,
@@ -50,6 +50,7 @@ from app.parsers import (
 from app import comandos
 from app import usuarios
 from app import busqueda
+from app import almacen
 from app import puntaje as puntaje_ia
 
 app = FastAPI(title="profile-api", version="0.1.0")
@@ -80,12 +81,18 @@ def _extraer_texto_docx(contenido: bytes) -> str:
 
 
 @app.post("/extract-text")
-async def extract_text(file: UploadFile) -> dict:
+async def extract_text(file: UploadFile, telegram_user_id: int | None = Form(None),
+                       db: Session = Depends(get_db)) -> dict:
     """Recibe un archivo (PDF o DOCX) y devuelve su texto plano.
 
     n8n manda el archivo como 'multipart/form-data' con el campo
     llamado 'file'. Respondemos con JSON: nombre del archivo, cuántos
     caracteres tiene el texto extraído, y el texto en sí.
+
+    Si además viene telegram_user_id (campo del formulario), guarda el
+    archivo ORIGINAL en MinIO y responde storage_key, sha256 y size_bytes
+    (n8n se los pasa a /documents). Si MinIO falla, responde 503: es mejor
+    que el flujo falle y avise a que el CV se pierda en silencio.
     """
     nombre = file.filename or ""
     contenido = await file.read()
@@ -100,11 +107,22 @@ async def extract_text(file: UploadFile) -> dict:
             detail="Formato no soportado. Solo se aceptan archivos .pdf o .docx.",
         )
 
-    return {
+    respuesta = {
         "filename": nombre,
         "char_count": len(texto),
         "text": texto,
     }
+    if telegram_user_id is not None:
+        user = db.scalars(select(User).where(User.telegram_user_id == telegram_user_id)).first()
+        tenant = user.tenant_id if user else TENANT_PRINCIPAL
+        sha = almacen.huella(contenido)
+        clave = almacen.clave_cv(tenant, telegram_user_id, nombre, sha)
+        try:
+            almacen.guardar(clave, contenido, nombre)
+        except Exception as error:  # noqa: BLE001 — cualquier fallo de MinIO
+            raise HTTPException(status_code=503, detail=f"No se pudo guardar el archivo en MinIO: {error}")
+        respuesta.update({"storage_key": clave, "sha256": sha, "size_bytes": len(contenido)})
+    return respuesta
 
 
 class DocumentIn(BaseModel):
@@ -114,6 +132,10 @@ class DocumentIn(BaseModel):
     filename: str
     char_count: int
     text: str
+    # Archivo original en MinIO (lo devuelve /extract-text). Opcionales.
+    storage_key: str | None = None
+    sha256: str | None = None
+    size_bytes: int | None = None
 
 
 @app.post("/documents")
@@ -129,6 +151,9 @@ def save_document(payload: DocumentIn, db: Session = Depends(get_db)) -> dict:
         filename=payload.filename,
         char_count=payload.char_count,
         extracted_text=payload.text,
+        storage_key=payload.storage_key,
+        sha256=payload.sha256,
+        size_bytes=payload.size_bytes,
     )
     db.add(documento)
     db.commit()

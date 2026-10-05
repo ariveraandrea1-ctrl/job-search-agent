@@ -42,6 +42,8 @@ datos reales · error en uso normal
 | BUG-23 | 2026-10-05 | 🐞 | /start de alguien ya registrado respondía su apellido (o texto vacío → error) | Corregido |
 | BUG-24 | 2026-10-05 | 🐞 | CV escaneado (0 caracteres) seguía el flujo y creaba un perfil vacío | Corregido |
 | BUG-25 | 2026-10-05 | 🔍 | Prueba de aislamiento fallaba con "Connection reset" justo después de reiniciar profile-api | Corregido |
+| BUG-26 | 2026-10-05 | 🐞 | Al reenviar el CV, la entrevista volvía a hacer las preguntas ya respondidas | Corregido |
+| BUG-27 | 2026-10-05 | 🔍 | Prueba de restauración marcaba DIFERENTE porque el radar guardó vacantes durante el respaldo | Corregido |
 
 ---
 
@@ -213,6 +215,20 @@ datos reales · error en uso normal
 - **Corrección:** el script espera a que `/health` responda (hasta 60 s) antes de empezar.
 - **Resultado:** 42 de 42 casos pasan (5 usuarios aislados).
 - **Cómo se detectó:** primera corrida del script.
+
+### BUG-26 · La entrevista repetía preguntas ya respondidas
+- **Síntoma:** al reenviar el CV (prueba de MinIO), el bot volvió a hacer las 8 preguntas de siempre.
+- **Causa raíz:** "Buscar primera/siguiente pregunta" solo miraban los `faltantes` del perfil NUEVO (lo que el CV no dice), sin revisar las respuestas que la persona ya había dado en `interview_answers`. Existía desde la Semana 4; no se notaba porque casi nunca se reenvía el CV.
+- **Corrección:** ambas consultas excluyen los temas ya respondidos (`AND topic NOT IN (SELECT topic FROM interview_answers WHERE telegram_user_id = … )`). Para cambiar un dato ya respondido está /corregir.
+- **Lección:** probar también el "segundo uso" de un flujo (reenviar, repetir), no solo el primero.
+- **Cómo se detectó:** observación de Andrea al probar MinIO.
+
+### BUG-27 · Falso negativo en la prueba de restauración
+- **Síntoma:** `opportunities` esperado 281, restaurado 283 → "FALLO", aunque el respaldo estaba bien (MinIO OK).
+- **Causa raíz:** el script contaba las filas y DESPUÉS sacaba el respaldo; entre los dos momentos el radar de n8n guardó 2 vacantes. Se comparaban dos fotos tomadas en momentos distintos (condición de carrera en el diseño de la prueba).
+- **Corrección:** se cuenta antes Y después del respaldo; es válido si lo restaurado queda entre los dos números (archivo .conteo: "tabla antes despues"). Compatible con respaldos viejos (un solo número).
+- **Lección:** con BUG-17 (falso positivo) son las dos caras: una prueba debe fallar cuando hay error real y NO fallar cuando el sistema está bien.
+- **Cómo se detectó:** primera prueba de restauración con el radar multiusuario corriendo.
 
 ---
 
