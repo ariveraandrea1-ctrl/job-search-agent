@@ -108,9 +108,16 @@ POST /usuarios/acceso (portero: registrado → permitido; /start CODIGO
 válido → registra, permitido=false + bienvenida; si no, motivo + texto) y
 POST /usuarios/invitaciones (solo admin). FOR UPDATE contra doble uso.
 Probado con curl 8 casos (A-H) con ids 9000000xx y limpiado. BUG-22.
-SIGUE (parte 2): n8n — verificar-acceso llama a /usuarios/acceso (quitar
-chat_id fijo; si permitido=false responde telegram_text y corta); Switch:
-/invitar → /usuarios/invitaciones. Parte 3: radares para todos los
+Parte 2 HECHA 2026-10-05: verificar-acceso = "Preguntar al portero"
+(POST /usuarios/acceso) → "Mensaje + acceso" (Set raw: mensaje original +
+acceso). telegram-invitacion: If "¿Tiene acceso?" antes del Switch (false →
+"Responder: sin acceso"); regla 8 del Switch /invitar → "Crear invitación"
+→ "Enviar invitación". Probado con 2 personas reales (Carolina, Ludwing):
+sin código / con código / CV / entrevista / /mejores aislado. BUG-23
+(/start respondía apellido → "Saludo: ya registrado") y BUG-24 (CV
+escaneado 0 caracteres → If "¿Se pudo leer el CV?" >= 200). Renombres:
+Extraer texto del CV, Guardar CV, Confirmar CV recibido. Datos de las 2
+personas borrados (transacción, 7 tablas). Parte 3: radares para todos los
 usuarios activos (getonbrd, puntaje, resumen), correo = admin, /pausar
 /reanudar. Parte 4: script de prueba de aislamiento con 5 usuarios.
 

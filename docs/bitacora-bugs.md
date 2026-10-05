@@ -39,6 +39,8 @@ datos reales · error en uso normal
 | BUG-20 | 2026-10-05 | ⚙️ | Alerta salió vacía (hasta el nombre del flujo) y Gmail cortaba con otro texto de error | Corregido + probado |
 | BUG-21 | 2026-10-05 | 🔍 | El resumen de las 7 am nunca corrió: el Mac estaba en reposo | Causa confirmada (pendiente servidor) |
 | BUG-22 | 2026-10-05 | 🔍 | Datos de prueba (usuario 123) mezclados con datos reales | Limpiado (proceso) |
+| BUG-23 | 2026-10-05 | 🐞 | /start de alguien ya registrado respondía su apellido (o texto vacío → error) | Corregido |
+| BUG-24 | 2026-10-05 | 🐞 | CV escaneado (0 caracteres) seguía el flujo y creaba un perfil vacío | Corregido |
 
 ---
 
@@ -191,6 +193,18 @@ datos reales · error en uso normal
 - **Corrección:** conteo por tabla con `UNION ALL` (solo 1 fila en documents) y `DELETE` del documento y del usuario.
 - **Prevención:** las pruebas con curl usan ids claramente falsos (900000001, 900000002…) y se borran al terminar; la prueba de aislamiento limpia lo que crea.
 - **Cómo se detectó:** verificación de la migración con SQL (Andrea).
+
+### BUG-23 · /start de un usuario ya registrado respondía su apellido
+- **Síntoma:** al revisar el flujo para multiusuario, el nodo de la salida "start" del Switch enviaba `message.chat.last_name`.
+- **Causa raíz:** quedó de las primeras pruebas de la Semana 2 y nunca se cambió. Si la persona no tiene apellido en Telegram, el texto queda vacío, Telegram lo rechaza y salta la alarma.
+- **Corrección:** nodo "Saludo: ya registrado" con un texto fijo de ayuda.
+- **Cómo se detectó:** revisión del JSON exportado. (Al corregirlo, la nota de otro nodo quedó pegada en el campo Text por error; se vio al probar /start y se corrigió.)
+
+### BUG-24 · CV sin texto (PDF escaneado) creaba un perfil vacío
+- **Síntoma:** el perfil de un usuario de prueba (Ludwing) mostraba nombre, experiencia y habilidades vacíos; solo las preferencias de la entrevista.
+- **Causa raíz:** su PDF era una imagen: el extractor sacó 0 caracteres y el flujo siguió igual (guardó el documento, llamó a la IA con texto vacío y guardó un perfil vacío). Nunca se había probado con un archivo sin texto.
+- **Corrección:** If "¿Se pudo leer el CV?" después de extraer el texto: menos de 200 caracteres → avisa cómo enviar el archivo y no guarda nada. (Leer escaneados con OCR queda para el Proyecto 2.)
+- **Cómo se detectó:** prueba con un usuario real + `SELECT filename, char_count FROM documents` → 0.
 
 ---
 

@@ -12,7 +12,7 @@
       "typeVersion": 1.5,
       "position": [
         0,
-        864
+        1200
       ],
       "id": "2cf3dc7e-377a-4fb8-81c1-e12852adb021",
       "name": "Telegram Trigger",
@@ -23,32 +23,6 @@
           "name": "Telegram account"
         }
       }
-    },
-    {
-      "parameters": {
-        "chatId": "={{ $json.message.chat.id }}",
-        "text": "={{ $json.message.chat.last_name }}",
-        "additionalFields": {
-          "appendAttribution": false
-        }
-      },
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
-      "position": [
-        672,
-        96
-      ],
-      "id": "df877e31-a3e9-479b-b3cb-9aca7301e948",
-      "name": "Send a text message",
-      "webhookId": "d5bf1499-d9ca-474f-9a0b-afcf7c5a3a1b",
-      "notesInFlow": true,
-      "credentials": {
-        "telegramApi": {
-          "id": "aF0RvNa5kJZkarDY",
-          "name": "Telegram account"
-        }
-      },
-      "notes": "Saludo: responde cuando escribo /start."
     },
     {
       "parameters": {
@@ -222,6 +196,30 @@
               },
               "renameOutput": true,
               "outputKey": "radar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "132ab42d-d690-4e0b-bfed-513634608546",
+                    "leftValue": "={{ $json.message.text || '' }}",
+                    "rightValue": "/invitar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "invitar"
             }
           ]
         },
@@ -231,13 +229,13 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.4,
       "position": [
-        448,
-        784
+        672,
+        960
       ],
       "id": "d89a4433-e329-4059-b272-50e6d40eb013",
       "name": "Switch",
       "notesInFlow": true,
-      "notes": "Reparte: start = /start, cv = llegó archivo, respuesta = texto normal (respuesta a una pregunta), perfil = /perfil (muestra el perfil), corregir = /corregir <tema> (corrige un dato)."
+      "notes": "Reparte: start = /start, cv = llegó archivo, respuesta = texto normal (respuesta a una pregunta), perfil = /perfil, corregir = /corregir <tema>, vacante = /vacante <link>, radar = /mejores /nuevas /guardadas /detalle /guardar /descartar, invitar = /invitar (solo admin)."
     },
     {
       "parameters": {
@@ -248,7 +246,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        672,
+        896,
         576
       ],
       "id": "48b723c1-ed2f-42bf-bcfe-702e05c773f3",
@@ -266,80 +264,6 @@
     {
       "parameters": {
         "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
-        "text": "=¡Recibí tu archivo y extraje {{ $('HTTP Request').item.json.char_count }} caracteres de texto! Pronto lo voy a analizar.",
-        "additionalFields": {
-          "appendAttribution": false
-        }
-      },
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
-      "position": [
-        1344,
-        576
-      ],
-      "id": "6064ff84-8e86-4315-9997-8300f71b5a4d",
-      "name": "Send a text message1",
-      "webhookId": "a344c422-5eb2-42fd-8d3c-9025c6c3d9ee",
-      "notesInFlow": true,
-      "credentials": {
-        "telegramApi": {
-          "id": "aF0RvNa5kJZkarDY",
-          "name": "Telegram account"
-        }
-      },
-      "notes": "Confirma CV: avisa cuántos caracteres se extrajeron del archivo."
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "http://profile-api:8000/extract-text",
-        "sendBody": true,
-        "contentType": "multipart-form-data",
-        "bodyParameters": {
-          "parameters": [
-            {
-              "parameterType": "formBinaryData",
-              "name": "file",
-              "inputDataFieldName": "data"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.5,
-      "position": [
-        896,
-        576
-      ],
-      "id": "11ff53cc-173d-416d-8f5a-82d7494cde62",
-      "name": "HTTP Request",
-      "notesInFlow": true,
-      "notes": "Extrae texto: manda el CV a profile-api y recibe el texto que contiene."
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "http://profile-api:8000/documents",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"telegram_user_id\": {{ $('Telegram Trigger').item.json.message.chat.id }},\n  \"filename\": {{ JSON.stringify($json.filename) }},\n  \"char_count\": {{ $json.char_count }},\n  \"text\": {{ JSON.stringify($json.text) }}\n}",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.5,
-      "position": [
-        1120,
-        576
-      ],
-      "id": "435a5f15-f44e-46a4-8d16-31f78a7e1566",
-      "name": "HTTP Request1",
-      "notesInFlow": true,
-      "notes": "Guarda CV: envía el texto del CV a profile-api para guardarlo en la base de datos."
-    },
-    {
-      "parameters": {
-        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
         "text": "={{ $json.question }}",
         "additionalFields": {
           "appendAttribution": false
@@ -348,8 +272,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        2688,
-        480
+        3136,
+        384
       ],
       "id": "ca3bbc8a-d22f-4e79-adde-06df444a0ae8",
       "name": "Enviar pregunta de entrevista",
@@ -375,7 +299,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
-        1120,
+        1344,
         192
       ],
       "id": "b4c281dc-659b-4f5c-b5c0-ab539f7d2942",
@@ -406,12 +330,12 @@
       "typeVersion": 1.3,
       "position": [
         224,
-        864
+        1200
       ],
       "id": "0b3912dc-d588-4b3d-82f2-66ef31420277",
       "name": "Call 'verificar-acceso'",
       "notesInFlow": true,
-      "notes": "Portero: revisa que quien escribe esté autorizado (mi chat_id) antes de dejar seguir el mensaje."
+      "notes": "Portero: llama a verificar-acceso, que pregunta a profile-api si quien escribe tiene acceso (o lo registra si trae /start CÓDIGO). Devuelve el mensaje + \"acceso\"."
     },
     {
       "parameters": {
@@ -424,8 +348,8 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.7,
       "position": [
-        2912,
-        480
+        3360,
+        384
       ],
       "id": "a5ea0da8-c5df-4e86-aa85-fc3df3d291f2",
       "name": "Anotar: esperando respuesta",
@@ -449,7 +373,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.7,
       "position": [
-        2016,
+        2240,
         0
       ],
       "id": "1a84276c-cf2c-47bc-824a-dbefcb58d670",
@@ -474,8 +398,8 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.7,
       "position": [
-        672,
-        288
+        896,
+        192
       ],
       "id": "c36d8617-98a9-4cae-80ab-86f13f235ecb",
       "name": "Leer anotación",
@@ -527,8 +451,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        896,
-        288
+        1120,
+        192
       ],
       "id": "25af712d-ff17-44f4-bdf4-8fc8365a9104",
       "name": "¿Esperaba respuesta?",
@@ -546,7 +470,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        1120,
+        1344,
         384
       ],
       "id": "c746c21b-8105-4f02-8bf1-44bb6a488f82",
@@ -572,8 +496,8 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.7,
       "position": [
-        2240,
-        576
+        2688,
+        480
       ],
       "id": "bda6b98f-aa68-4a2f-be7e-8d1e54316d59",
       "name": "Buscar primera pregunta",
@@ -598,7 +522,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.7,
       "position": [
-        1568,
+        1792,
         96
       ],
       "id": "693fd242-972c-41a3-a309-e2b0d3d1c166",
@@ -642,7 +566,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        1792,
+        2016,
         96
       ],
       "id": "b91cd287-7341-4a9e-9be0-16f6d6c08d1a",
@@ -661,7 +585,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        2016,
+        2240,
         192
       ],
       "id": "d9d295fd-c8a4-4dc4-b255-7923aad85c7e",
@@ -687,7 +611,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.7,
       "position": [
-        2240,
+        2464,
         192
       ],
       "id": "bf0a6909-f954-4bf1-b6a7-83fc3b75ae45",
@@ -712,7 +636,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        2240,
+        2464,
         0
       ],
       "id": "4efa2efe-bb76-4a9c-9d55-95c4ab0f9b44",
@@ -740,7 +664,7 @@
             {
               "id": "6f04dc49-07a8-4e07-837c-898496125160",
               "name": "user_text",
-              "value": "={{ $('HTTP Request').item.json.text }}",
+              "value": "={{ $('Extraer texto del CV').item.json.text }}",
               "type": "string"
             }
           ]
@@ -750,8 +674,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.5,
       "position": [
-        1568,
-        576
+        2016,
+        480
       ],
       "id": "503aef32-6e23-4361-9632-fd34395a97bd",
       "name": "Instrucciones: extraer CV",
@@ -804,8 +728,8 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        1792,
-        576
+        2240,
+        480
       ],
       "id": "03f61865-7700-4127-8b6a-dc1cea9e8e2c",
       "name": "Analizar CV con IA",
@@ -818,19 +742,19 @@
         "url": "http://profile-api:8000/profiles",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"telegram_user_id\": {{ $('Telegram Trigger').item.json.message.chat.id }},\n  \"document_id\": {{ JSON.stringify($('HTTP Request1').item.json.id) }},\n  \"text\": {{ JSON.stringify($json.text) }},\n  \"provider\": {{ JSON.stringify($json.provider) }},\n  \"prompt_version\": \"v4\"\n}",
+        "jsonBody": "={\n  \"telegram_user_id\": {{ $('Telegram Trigger').item.json.message.chat.id }},\n  \"document_id\": {{ JSON.stringify($('Guardar CV').item.json.id) }},\n  \"text\": {{ JSON.stringify($json.text) }},\n  \"provider\": {{ JSON.stringify($json.provider) }},\n  \"prompt_version\": \"v4\"\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
-        2016,
-        576
+        2464,
+        480
       ],
       "id": "49a57758-cc7f-45a7-aea5-38133fec46e9",
       "name": "Guardar perfil",
       "notesInFlow": true,
-      "notes": "Guarda en la tabla profiles (POST /profiles) el perfil que armó la IA a partir del CV: usuario de Telegram, id del CV (de HTTP Request1), JSON del perfil, proveedor (groq o gemini) y versión del prompt (v4). Si la IA devolvió un JSON roto, profile-api responde 422 y no guarda nada."
+      "notes": "Guarda en la tabla profiles (POST /profiles) el perfil que armó la IA a partir del CV: usuario de Telegram, id del CV (de Guardar CV), JSON del perfil, proveedor (groq o gemini) y versión del prompt (v4). Si la IA devolvió un JSON roto, profile-api responde 422 y no guarda nada."
     },
     {
       "parameters": {
@@ -860,8 +784,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        2464,
-        576
+        2912,
+        480
       ],
       "id": "775bab59-abad-466e-83ea-b0c842d68191",
       "name": "¿Hay preguntas?",
@@ -879,8 +803,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        2688,
-        672
+        3136,
+        576
       ],
       "id": "aa6847ba-99ef-4ab6-94bf-7fb7e9e71c94",
       "name": "Avisar: perfil completo",
@@ -902,8 +826,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
-        672,
-        1056
+        896,
+        1152
       ],
       "id": "20d0c382-086d-4482-8e1c-208f7910e368",
       "name": "Pedir resumen del perfil",
@@ -921,8 +845,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        896,
-        1056
+        1120,
+        1152
       ],
       "id": "2e8c11a6-b8dd-4415-9d36-0fa27d83e439",
       "name": "Enviar resumen del perfil",
@@ -947,8 +871,8 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.7,
       "position": [
-        672,
-        864
+        896,
+        960
       ],
       "id": "31bc6996-0f3b-49f0-95bb-4a2b70aa8d64",
       "name": "Buscar pregunta a corregir",
@@ -990,8 +914,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        896,
-        864
+        1120,
+        960
       ],
       "id": "bc5a060b-76a6-4669-aee4-1dc11c681f42",
       "name": "¿Tema válido?",
@@ -1009,8 +933,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        1120,
-        960
+        1344,
+        1056
       ],
       "id": "9917f62f-3ecf-4f84-9369-eeb96660bd26",
       "name": "Explicar /corregir",
@@ -1035,8 +959,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        1120,
-        768
+        1344,
+        864
       ],
       "id": "02c43796-8390-456e-a222-994cc4c341e0",
       "name": "Enviar pregunta a corregir",
@@ -1061,8 +985,8 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.7,
       "position": [
-        1344,
-        768
+        1568,
+        864
       ],
       "id": "65a1be73-891a-4951-b483-54c6a40d95f7",
       "name": "Anotar: corrigiendo",
@@ -1103,7 +1027,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        1344,
+        1568,
         192
       ],
       "id": "615d401f-cd1c-48cc-9a36-d49024faf375",
@@ -1122,7 +1046,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.7,
       "position": [
-        1568,
+        1792,
         288
       ],
       "id": "462801d3-6e16-40da-88e9-a6f54398ed67",
@@ -1147,7 +1071,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        1792,
+        2016,
         288
       ],
       "id": "2976f955-6358-4c0b-9124-8ed3e498fa35",
@@ -1174,8 +1098,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        896,
-        1248
+        1120,
+        1344
       ],
       "id": "f2fb0625-41c3-4bb2-b9bd-6f7076418fb6",
       "name": "Responder vacante guardada",
@@ -1201,8 +1125,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
-        672,
-        1248
+        896,
+        1344
       ],
       "id": "d218e4c2-dcd6-46ee-a895-1350c8bc514f",
       "name": "Guardar vacante manual",
@@ -1221,8 +1145,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
-        672,
-        1440
+        896,
+        1536
       ],
       "id": "1710c665-9f1a-4949-95cb-8fe31b5bff2f",
       "name": "Comando del radar",
@@ -1241,8 +1165,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        896,
-        1440
+        1120,
+        1536
       ],
       "id": "170b4c3a-e5c7-4ad4-837d-cfc19d348304",
       "name": "Responder comando del radar",
@@ -1255,6 +1179,275 @@
         }
       },
       "notes": "Radar: responde en Telegram el resultado del comando."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "92bfd6ad-a35e-4a88-9424-10696f6a1eac",
+              "leftValue": "={{ $json.acceso.permitido }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        448,
+        1200
+      ],
+      "id": "6a3da8ff-eb48-4e17-910e-b033aa716641",
+      "name": "¿Tiene acceso?",
+      "notesInFlow": true,
+      "notes": "Decide: si el portero dijo permitido = true → sigue al Switch. Si no (no registrado, código inválido, o recién registrado) → le responde el texto del portero y termina."
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "={{ $json.acceso.telegram_text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        672,
+        1344
+      ],
+      "id": "27fa5901-d479-443f-9128-63270d911ca9",
+      "name": "Responder: sin acceso",
+      "webhookId": "d97ade64-377e-4f4b-bf9b-df8954ae9d8a",
+      "notesInFlow": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "aF0RvNa5kJZkarDY",
+          "name": "Telegram account"
+        }
+      },
+      "notes": "Portero: responde a quien no tiene acceso (pide invitación, código usado/vencido/inexistente) o da la bienvenida a quien se acaba de registrar."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://profile-api:8000/usuarios/invitaciones",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n       \"telegram_user_id\": {{ $('Telegram Trigger').item.json.message.from.id }}\n     }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        896,
+        1728
+      ],
+      "id": "d4826ac0-35a5-41a5-a105-0599101d8310",
+      "name": "Crear invitación",
+      "notesInFlow": true,
+      "notes": "Invitar: pide a profile-api un código de invitación de un solo uso (POST /usuarios/invitaciones). Solo funciona para la admin; a otros les responde que no pueden."
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.telegram_text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1120,
+        1728
+      ],
+      "id": "b056f510-6731-4bee-8f48-cdef9b2a9a96",
+      "name": "Enviar invitación",
+      "webhookId": "d03a0239-957a-424c-a3e7-f3f80eb3db35",
+      "notesInFlow": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "aF0RvNa5kJZkarDY",
+          "name": "Telegram account"
+        }
+      },
+      "notes": "Invitar: envía el código (o el aviso de que solo la admin puede invitar)."
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "👋 Ya tienes acceso. Escribe /perfil para ver tu perfil, /mejores para ver tus vacantes o envíame tu CV en PDF o Word.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        896,
+        0
+      ],
+      "id": "df877e31-a3e9-479b-b3cb-9aca7301e948",
+      "name": "Saludo: ya registrado",
+      "webhookId": "d5bf1499-d9ca-474f-9a0b-afcf7c5a3a1b",
+      "notesInFlow": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "aF0RvNa5kJZkarDY",
+          "name": "Telegram account"
+        }
+      },
+      "notes": "Saludo: responde a quien ya está registrado y escribe /start (sin código)."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5f87cabd-e9c6-45c1-8dba-334a6d13459c",
+              "leftValue": "={{ $json.char_count }}",
+              "rightValue": 200,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1344,
+        576
+      ],
+      "id": "53b034cb-dad0-4aa5-b215-cec710883b1a",
+      "name": "¿Se pudo leer el CV?",
+      "notesInFlow": true,
+      "notes": "Decide: si el CV tiene al menos 200 caracteres de texto → sigue. Si no (PDF escaneado o imagen) → avisa y no guarda nada (BUG-24)."
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "😕 No pude leer texto en tu archivo. Parece una imagen o un PDF escaneado. Envíame tu hoja de vida en Word o en un PDF donde se pueda seleccionar el texto (por ejemplo, exportado desde Word o Google Docs).",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1568,
+        672
+      ],
+      "id": "ab4a3e99-8872-433b-81a5-6b5f483f9161",
+      "name": "Avisar: CV sin texto",
+      "webhookId": "2db353bd-3b4d-45ce-8693-5237dfd09049",
+      "notesInFlow": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "aF0RvNa5kJZkarDY",
+          "name": "Telegram account"
+        }
+      },
+      "notes": "CV: avisa que el archivo no tiene texto legible y cómo enviarlo bien."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://profile-api:8000/extract-text",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1120,
+        576
+      ],
+      "id": "11ff53cc-173d-416d-8f5a-82d7494cde62",
+      "name": "Extraer texto del CV",
+      "notesInFlow": true,
+      "notes": "Extrae texto: manda el CV a profile-api y recibe el texto que contiene."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://profile-api:8000/documents",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"telegram_user_id\": {{ $('Telegram Trigger').item.json.message.chat.id }},\n  \"filename\": {{ JSON.stringify($json.filename) }},\n  \"char_count\": {{ $json.char_count }},\n  \"text\": {{ JSON.stringify($json.text) }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1568,
+        480
+      ],
+      "id": "435a5f15-f44e-46a4-8d16-31f78a7e1566",
+      "name": "Guardar CV",
+      "notesInFlow": true,
+      "notes": "Guarda CV: envía el texto del CV a profile-api para guardarlo en la base de datos."
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "=¡Recibí tu archivo y extraje {{ $('Extraer texto del CV').item.json.char_count }} caracteres de texto! Pronto lo voy a analizar.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1792,
+        480
+      ],
+      "id": "6064ff84-8e86-4315-9997-8300f71b5a4d",
+      "name": "Confirmar CV recibido",
+      "webhookId": "a344c422-5eb2-42fd-8d3c-9025c6c3d9ee",
+      "notesInFlow": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "aF0RvNa5kJZkarDY",
+          "name": "Telegram account"
+        }
+      },
+      "notes": "Confirma CV: avisa cuántos caracteres se extrajeron del archivo."
     }
   ],
   "pinData": {},
@@ -1274,7 +1467,7 @@
       "main": [
         [
           {
-            "node": "Send a text message",
+            "node": "Saludo: ya registrado",
             "type": "main",
             "index": 0
           }
@@ -1320,6 +1513,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Crear invitación",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -1327,40 +1527,7 @@
       "main": [
         [
           {
-            "node": "HTTP Request",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "HTTP Request": {
-      "main": [
-        [
-          {
-            "node": "HTTP Request1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "HTTP Request1": {
-      "main": [
-        [
-          {
-            "node": "Send a text message1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Send a text message1": {
-      "main": [
-        [
-          {
-            "node": "Instrucciones: extraer CV",
+            "node": "Extraer texto del CV",
             "type": "main",
             "index": 0
           }
@@ -1382,7 +1549,7 @@
       "main": [
         [
           {
-            "node": "Switch",
+            "node": "¿Tiene acceso?",
             "type": "main",
             "index": 0
           }
@@ -1643,6 +1810,86 @@
           }
         ]
       ]
+    },
+    "¿Tiene acceso?": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder: sin acceso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear invitación": {
+      "main": [
+        [
+          {
+            "node": "Enviar invitación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer texto del CV": {
+      "main": [
+        [
+          {
+            "node": "¿Se pudo leer el CV?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar CV": {
+      "main": [
+        [
+          {
+            "node": "Confirmar CV recibido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar CV recibido": {
+      "main": [
+        [
+          {
+            "node": "Instrucciones: extraer CV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Se pudo leer el CV?": {
+      "main": [
+        [
+          {
+            "node": "Guardar CV",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Avisar: CV sin texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -1654,7 +1901,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "9aa47da1-a610-4160-acd7-5407cd77567d",
+  "versionId": "740322c7-60b1-4446-828a-af7a2f2b4341",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"

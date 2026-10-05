@@ -16,38 +16,40 @@
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "a82c657b-8689-4570-9f41-49e61be4923f",
-              "leftValue": "={{ $json.message.chat.id }}",
-              "rightValue": "8553351572",
-              "operator": {
-                "type": "string",
-                "operation": "equals",
-                "name": "filter.operator.equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "looseTypeValidation": true,
+        "method": "POST",
+        "url": "http://profile-api:8000/usuarios/acceso",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n       \"telegram_user_id\": {{ $json.message.from.id }},\n       \"text\": {{ JSON.stringify($json.message.text || '') }},\n       \"nombre\": {{ JSON.stringify($json.message.from.first_name || '') }}\n     }",
         "options": {}
       },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
       "position": [
         224,
         0
       ],
-      "id": "2700dd82-5597-4a8e-b683-f5e1258c6890",
-      "name": "If"
+      "id": "59d9e3c8-e7f9-4522-b29a-642d398acba0",
+      "name": "Preguntar al portero",
+      "notesInFlow": true,
+      "notes": "Portero: pregunta a profile-api (POST /usuarios/acceso) si quien escribe está registrado. Si trae /start CÓDIGO válido, lo registra. Responde permitido (true/false) y, si no tiene acceso, el texto para contestarle."
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ { ...$('When Executed by Another Workflow').item.json, acceso: $json } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        448,
+        0
+      ],
+      "id": "0aee3ae2-a9b4-4b53-bfb0-00c1d78cc13f",
+      "name": "Mensaje + acceso",
+      "notesInFlow": true,
+      "notes": "Portero: devuelve al flujo principal el mensaje original de Telegram + \"acceso\" (la respuesta de profile-api)."
     }
   ],
   "pinData": {},
@@ -56,7 +58,18 @@
       "main": [
         [
           {
-            "node": "If",
+            "node": "Preguntar al portero",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preguntar al portero": {
+      "main": [
+        [
+          {
+            "node": "Mensaje + acceso",
             "type": "main",
             "index": 0
           }
@@ -67,9 +80,13 @@
   "active": true,
   "settings": {
     "executionOrder": "v1",
-    "binaryMode": "separate"
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "ZKLCX1SGXZuJLnhg",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
   },
-  "versionId": "96ccea47-e4c5-4788-a92b-7438fa1cc718",
+  "versionId": "a380400b-5f93-4d1b-930c-2be48f4586d2",
   "meta": {
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"
   },
