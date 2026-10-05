@@ -19,6 +19,8 @@ Formatos soportados (vistos en correos reales, 2026-09-30):
 import re
 import time
 
+from app.busqueda import titulo_coincide
+
 # ------------------------------------------------------------- Ubicación
 # Regla fija (BUG-18): las fuentes de correo guardaban vacantes de cualquier
 # país. Solo sirven las de Colombia o remotas abiertas a Latinoamérica.
@@ -333,16 +335,21 @@ _GETONBRD_TITULO_QA = re.compile(
 )
 
 
-def getonbrd_sirve(atributos: dict) -> bool:
+def getonbrd_sirve(atributos: dict, palabras: list[str] | None = None) -> bool:
     """Pre-filtro básico (el filtro fino con IA es la Semana 6).
 
     Se queda solo con vacantes que:
-    - tienen título de QA / pruebas / calidad (la categoría trae DevOps y más),
+    - tienen en el título alguna palabra clave DEL USUARIO (multiusuario,
+      app/busqueda.py); sin palabras → regla vieja: título de QA / pruebas,
     - NO están publicadas en inglés (lang "en" → casi seguro piden inglés),
     - son remotas o en Colombia,
     - son de nivel hasta Semi Senior.
     """
-    if not _GETONBRD_TITULO_QA.search(atributos.get("title") or ""):
+    titulo = atributos.get("title") or ""
+    if palabras is None:
+        if not _GETONBRD_TITULO_QA.search(titulo):
+            return False
+    elif not titulo_coincide(titulo, palabras):
         return False
     if atributos.get("lang") == "en":
         return False
@@ -358,7 +365,8 @@ GETONBRD_MAX_DIAS = 3  # vacantes publicadas hace más días se ignoran
 
 
 def parse_getonbrd(respuesta: dict, max_dias: int = GETONBRD_MAX_DIAS,
-                   ahora: float | None = None) -> tuple[list[dict], int]:
+                   ahora: float | None = None,
+                   palabras: list[str] | None = None) -> tuple[list[dict], int]:
     """Convierte la respuesta de la API de Get on Board en oportunidades.
 
     Ignora las publicadas hace más de max_dias (published_at, segundos Unix).
@@ -374,7 +382,7 @@ def parse_getonbrd(respuesta: dict, max_dias: int = GETONBRD_MAX_DIAS,
             continue
         publicada = a.get("published_at")
         muy_vieja = isinstance(publicada, (int, float)) and ahora - publicada > max_dias * 86400
-        if muy_vieja or not getonbrd_sirve(a):
+        if muy_vieja or not getonbrd_sirve(a, palabras):
             descartadas += 1
             continue
         empresa = ((((a.get("company") or {}).get("data") or {}).get("attributes")) or {}).get("name")

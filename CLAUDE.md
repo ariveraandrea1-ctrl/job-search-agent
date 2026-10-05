@@ -137,6 +137,23 @@ que alguien usa), filtro de título por las palabras de cada uno en vez
 de _GETONBRD_TITULO_QA fijo. Reglas comunes siguen (no inglés, remota o
 Colombia, <= 3 días). Correo = solo admin (documentar). Después: Parte 5
 = script de prueba de aislamiento con 5 usuarios.
+Parte 4 HECHA 2026-10-05 (rama feature/preferencias): app/busqueda.py
+(CATEGORIAS de Get on Board con disparadores, leer_palabras,
+sugerir_palabras desde rol_buscado + cargos, sugerir_categorias,
+titulo_coincide sin tildes; palabras <= 3 letras = palabra completa).
+Migración 0012: users.palabras_clave y users.categorias (JSONB); admin
+arranca con las palabras de QA de la regla vieja. parse_getonbrd(...,
+palabras) / getonbrd_sirve(a, palabras) (sin palabras = regla vieja QA).
+GET /radar/getonbrd/categorias (unión de los activos), POST /radar/getonbrd
+con "categoria" filtra por las palabras de cada usuario que la tiene,
+POST /usuarios/preferencias (/preferencias ver o cambiar). n8n:
+radar-getonbrd = Reloj → Pedir categorías → Separar categorías →
+Consultar Get on Board ({{ $json.categoria }}) → Guardar → Separar avisos →
+Avisar; telegram-invitacion regla 9 /preferencias → "Preferencias de
+búsqueda" → "Responder preferencias". 107 tests. Probado en Telegram.
+SIGUE: Parte 5 (script de aislamiento con 5 usuarios), luego MinIO,
+correo, telemetría, idempotencia, reconstrucción, E2E/README/demo, y los
+comandos /subir_cv /completar_perfil /buscar /resumen de la spec.
 
 RETOMAR: Semana 6 en rama `feature/puntaje-ia`. HECHO: puntaje con IA
 (workflow radar-puntaje) y comandos /mejores /nuevas /guardadas /detalle N

@@ -56,6 +56,11 @@ class User(Base):
     rol: Mapped[str] = mapped_column(String(20), nullable=False, default="usuario")
     estado: Mapped[str] = mapped_column(String(20), nullable=False, default="activo")
     invited_by: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    # Búsqueda por usuario (migración 0012, app/busqueda.py).
+    palabras_clave: Mapped[list] = mapped_column(JSONB, nullable=False, default=list,
+                                                 server_default=text("'[]'::jsonb"))
+    categorias: Mapped[list] = mapped_column(JSONB, nullable=False, default=list,
+                                             server_default=text("'[]'::jsonb"))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )

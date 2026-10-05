@@ -17,6 +17,7 @@ AYUDA = (
     "/detalle 12 — todo sobre la vacante #12\n"
     "/guardar 12 — guardar la #12\n"
     "/descartar 12 — descartar la #12\n"
+    "/preferencias — ver o cambiar las palabras de tu búsqueda\n"
     "/pausar — dejar de recibir vacantes por un tiempo\n"
     "/reanudar — volver a recibirlas"
 )

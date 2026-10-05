@@ -49,6 +49,7 @@ from app.parsers import (
 )
 from app import comandos
 from app import usuarios
+from app import busqueda
 from app import puntaje as puntaje_ia
 
 app = FastAPI(title="profile-api", version="0.1.0")
@@ -572,6 +573,9 @@ class RadarGetonbrdIn(BaseModel):
 
     telegram_user_id: int | None = None  # None → para todos los usuarios activos
     response: dict
+    # Categoría consultada (multiusuario, parte 4): solo se guarda para los
+    # usuarios que tienen esa categoría. None → todos los activos.
+    categoria: str | None = None
 
 
 @app.post("/radar/getonbrd")
@@ -582,18 +586,23 @@ def radar_getonbrd(payload: RadarGetonbrdIn, db: Session = Depends(get_db)) -> d
     guarda sin duplicados. Misma respuesta que /radar/email + "skipped"
     (cuántas descartó el pre-filtro).
     """
-    ofertas, descartadas = parse_getonbrd(payload.response)
     if payload.telegram_user_id is None:
-        # Multiusuario: las mismas vacantes se guardan para cada usuario activo
-        # (cada uno tiene su copia, su número, su estado y su puntaje).
+        # Multiusuario: cada usuario activo recibe su copia filtrada con SUS
+        # palabras clave (cada uno tiene su número, estado y puntaje).
+        total = len((payload.response or {}).get("data") or [])
         avisos = []
-        for uid in _usuarios_activos(db):
-            nuevas_u, _ = _guardar_lote(db, uid, [dict(o) for o in ofertas])
+        for user in _usuarios_activos_obj(db):
+            palabras, categorias = _busqueda_de(db, user)
+            if not palabras or (payload.categoria and payload.categoria not in categorias):
+                continue
+            ofertas_u, _ = parse_getonbrd(payload.response, palabras=palabras)
+            nuevas_u, _ = _guardar_lote(db, user.telegram_user_id, ofertas_u)
             if nuevas_u:
-                avisos.append({"telegram_user_id": uid, "created": len(nuevas_u),
+                avisos.append({"telegram_user_id": user.telegram_user_id, "created": len(nuevas_u),
                                "telegram_text": _texto_telegram_radar("getonbrd", nuevas_u)})
-        return {"source": "getonbrd", "found": len(ofertas) + descartadas,
-                "skipped": descartadas, "avisos": avisos}
+        return {"source": "getonbrd", "categoria": payload.categoria, "found": total,
+                "avisos": avisos}
+    ofertas, descartadas = parse_getonbrd(payload.response)
     nuevas, duplicadas = _guardar_lote(db, payload.telegram_user_id, ofertas)
     return {
         "source": "getonbrd",
@@ -965,3 +974,69 @@ def _usuarios_activos(db: Session) -> list[int]:
 def _admin(db: Session) -> int | None:
     return db.scalars(select(User.telegram_user_id).where(User.rol == "admin")
                       .order_by(User.created_at).limit(1)).first()
+
+
+
+def _usuarios_activos_obj(db: Session) -> list[User]:
+    return list(db.scalars(select(User).where(User.estado == "activo").order_by(User.created_at)).all())
+
+
+def _busqueda_de(db: Session, user: User) -> tuple[list[str], list[str]]:
+    """Palabras clave y categorías del usuario.
+
+    Si todavía no tiene, se sugieren desde el rol buscado (entrevista) y los
+    cargos del CV, y se guardan (el usuario las cambia con /preferencias).
+    """
+    if user.palabras_clave:
+        return list(user.palabras_clave), list(user.categorias or [])
+    resultado = _perfil_vigente(db, user.telegram_user_id)
+    if resultado is None:
+        return [], []
+    perfil, preferencias, _ = resultado
+    cargos = ((perfil.data or {}).get("perfil") or {}).get("cargos") or []
+    palabras = busqueda.sugerir_palabras(preferencias.get("rol_buscado"), cargos)
+    if palabras:
+        user.palabras_clave = palabras
+        user.categorias = busqueda.sugerir_categorias(palabras)
+        db.commit()
+    return palabras, list(user.categorias or [])
+
+
+@app.get("/radar/getonbrd/categorias")
+def getonbrd_categorias(db: Session = Depends(get_db)) -> dict:
+    """Categorías de Get on Board que necesita AL MENOS un usuario activo.
+
+    n8n consulta solo esas (una llamada por categoría) y manda cada respuesta
+    a POST /radar/getonbrd con su "categoria".
+    """
+    categorias: list[str] = []
+    for user in _usuarios_activos_obj(db):
+        for c in _busqueda_de(db, user)[1]:
+            if c in busqueda.CATEGORIAS and c not in categorias:
+                categorias.append(c)
+    return {"count": len(categorias), "items": [{"categoria": c} for c in categorias]}
+
+
+class PreferenciasIn(BaseModel):
+    """/preferencias (ver) o /preferencias palabra1, palabra2 (cambiar)."""
+
+    telegram_user_id: int
+    text: str | None = None
+
+
+@app.post("/usuarios/preferencias")
+def preferencias(payload: PreferenciasIn, db: Session = Depends(get_db)) -> dict:
+    """Muestra o cambia las palabras clave de búsqueda del usuario. Siempre 200."""
+    user = db.scalars(select(User).where(User.telegram_user_id == payload.telegram_user_id)).first()
+    if user is None:
+        return {"ok": False, "telegram_text": usuarios.TEXTOS_RECHAZO["sin_codigo"]}
+    nuevas = busqueda.leer_comando_preferencias(payload.text)
+    if nuevas:
+        user.palabras_clave = nuevas
+        user.categorias = busqueda.sugerir_categorias(nuevas)
+        db.commit()
+        return {"ok": True, "palabras": nuevas, "categorias": user.categorias,
+                "telegram_text": busqueda.texto_preferencias(nuevas, user.categorias, cambiadas=True)}
+    palabras, categorias = _busqueda_de(db, user)
+    return {"ok": True, "palabras": palabras, "categorias": categorias,
+            "telegram_text": busqueda.texto_preferencias(palabras, categorias)}
