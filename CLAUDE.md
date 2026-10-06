@@ -210,9 +210,21 @@ sin acceso" (true = nada); radar-resumen-diario URL ?registrar=true.
 scripts/probar-idempotencia.py (usuario 900000201, update_id 990000001-2,
 limpia antes y después): 15/15. Probado con el bot real. 129 tests.
 DoD ✅ → 11/12, solo falta reconstrucción (va al cierre).
+COMANDOS DE LA SPEC HECHOS 2026-10-06 (rama feature/comandos-spec):
+/subir_cv (instrucciones), /buscar TEXTO (título/empresa, sin tildes, todas
+las palabras, orden por puntaje, máx 10), /resumen (24 h a pedido, sin marcar
+idempotencia) → en /radar/comando + regex "radar" del Switch.
+/completar_perfil → regla nueva del Switch a "Buscar primera pregunta"
+(reutiliza la entrevista; "Avisar: perfil completo" con texto nuevo y Chat ID
+.first()). Switch con Fallback Output (extra) → "Comando del radar"
+(text || '') → responde AYUDA a comandos desconocidos, stickers, fotos.
+AYUDA lista todos los comandos. BUG-30: Telegram (n8n usa parse_mode
+Markdown por defecto) rechazaba "_" sueltos → comandos.escapar_md + ruta
+_RutaTelegram que escapa todo "telegram_text" (y summary). Textos fijos en
+n8n con "_" se escriben "\_". 136 tests. Probado con el bot real.
+Todos los comandos de la spec existen.
 SIGUE:
-reconstrucción desde repo + .env.example, comandos /subir_cv
-/completar_perfil /buscar /resumen, docs/decisions/, E2E/README/demo.
+reconstrucción desde repo + .env.example, docs/decisions/, E2E/README/demo.
 BUG-29 HECHO 2026-10-06 (rama fix/limpiar-pendientes): pending-score excluye
 descartadas; limpieza única app/limpiar_pendientes.py (vista previa /
 --aplicar) → 56 vacantes viejas descartadas, 50 siguen para puntaje (había

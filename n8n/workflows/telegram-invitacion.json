@@ -12,7 +12,7 @@
       "typeVersion": 1.5,
       "position": [
         0,
-        1632
+        1728
       ],
       "id": "2cf3dc7e-377a-4fb8-81c1-e12852adb021",
       "name": "Telegram Trigger",
@@ -185,7 +185,7 @@
                   {
                     "id": "cd5d1d6d-a877-447f-b5f1-f3f3ee765217",
                     "leftValue": "={{ $json.message.text || '' }}",
-                    "rightValue": "^/(mejores|nuevas|guardadas|detalle|guardar|descartar|pausar|reanudar)\\b",
+                    "rightValue": "^/(mejores|nuevas|guardadas|detalle|guardar|descartar|pausar|reanudar|buscar|resumen|subir_cv)\\b",
                     "operator": {
                       "type": "string",
                       "operation": "regex"
@@ -244,22 +244,48 @@
               },
               "renameOutput": true,
               "outputKey": "preferencias"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "b82a7d89-1caa-4f48-8cbd-81351ea0b338",
+                    "leftValue": "={{ $json.message.text }}",
+                    "rightValue": "/completar_perfil",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "completar_perfil"
             }
           ]
         },
         "looseTypeValidation": "={{ true }}",
-        "options": {}
+        "options": {
+          "fallbackOutput": "extra"
+        }
       },
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.4,
       "position": [
         672,
-        1040
+        1120
       ],
       "id": "d89a4433-e329-4059-b272-50e6d40eb013",
       "name": "Switch",
       "notesInFlow": true,
-      "notes": "Reparte: start = /start, cv = llegó archivo, respuesta = texto normal (respuesta a una pregunta), perfil = /perfil, corregir = /corregir <tema>, vacante = /vacante <link>, radar = /mejores /nuevas /guardadas /detalle /guardar /descartar, invitar = /invitar (solo admin).preferencias = /preferencias"
+      "notes": "Reparte: start = /start, cv = llegó archivo, respuesta = texto normal (respuesta a una pregunta), perfil = /perfil, corregir = /corregir <tema>, vacante = /vacante <link>, radar = /mejores /nuevas /guardadas /detalle /guardar /descartar /pausar /reanudar /buscar /resumen /subir_cv, invitar = /invitar (solo admin), preferencias = /preferencias, completar_perfil = /completar_perfil (va a Buscar primera pregunta). Fallback = cualquier otra cosa (comando mal escrito, sticker, foto) → Comando del radar responde la ayuda."
     },
     {
       "parameters": {
@@ -271,7 +297,7 @@
       "typeVersion": 1.2,
       "position": [
         896,
-        576
+        768
       ],
       "id": "48b723c1-ed2f-42bf-bcfe-702e05c773f3",
       "name": "Get a file",
@@ -297,7 +323,7 @@
       "typeVersion": 1.2,
       "position": [
         3136,
-        384
+        512
       ],
       "id": "ca3bbc8a-d22f-4e79-adde-06df444a0ae8",
       "name": "Enviar pregunta de entrevista",
@@ -354,7 +380,7 @@
       "typeVersion": 1.3,
       "position": [
         224,
-        1632
+        1728
       ],
       "id": "0b3912dc-d588-4b3d-82f2-66ef31420277",
       "name": "Call 'verificar-acceso'",
@@ -373,7 +399,7 @@
       "typeVersion": 2.7,
       "position": [
         3360,
-        384
+        512
       ],
       "id": "a5ea0da8-c5df-4e86-aa85-fc3df3d291f2",
       "name": "Anotar: esperando respuesta",
@@ -423,7 +449,7 @@
       "typeVersion": 2.7,
       "position": [
         896,
-        240
+        288
       ],
       "id": "c36d8617-98a9-4cae-80ab-86f13f235ecb",
       "name": "Leer anotación",
@@ -476,7 +502,7 @@
       "typeVersion": 2.3,
       "position": [
         1120,
-        240
+        288
       ],
       "id": "25af712d-ff17-44f4-bdf4-8fc8365a9104",
       "name": "¿Esperaba respuesta?",
@@ -521,7 +547,7 @@
       "typeVersion": 2.7,
       "position": [
         2688,
-        480
+        608
       ],
       "id": "bda6b98f-aa68-4a2f-be7e-8d1e54316d59",
       "name": "Buscar primera pregunta",
@@ -699,7 +725,7 @@
       "typeVersion": 3.5,
       "position": [
         2016,
-        480
+        672
       ],
       "id": "503aef32-6e23-4361-9632-fd34395a97bd",
       "name": "Instrucciones: extraer CV",
@@ -753,7 +779,7 @@
       "typeVersion": 1.3,
       "position": [
         2240,
-        480
+        672
       ],
       "id": "03f61865-7700-4127-8b6a-dc1cea9e8e2c",
       "name": "Analizar CV con IA",
@@ -773,7 +799,7 @@
       "typeVersion": 4.5,
       "position": [
         2464,
-        480
+        672
       ],
       "id": "49a57758-cc7f-45a7-aea5-38133fec46e9",
       "name": "Guardar perfil",
@@ -809,7 +835,7 @@
       "typeVersion": 2.3,
       "position": [
         2912,
-        480
+        608
       ],
       "id": "775bab59-abad-466e-83ea-b0c842d68191",
       "name": "¿Hay preguntas?",
@@ -818,8 +844,8 @@
     },
     {
       "parameters": {
-        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
-        "text": "¡Tu perfil está completo! No tengo preguntas por ahora. 🙌",
+        "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+        "text": "🙌 No tengo preguntas pendientes para tu perfil. Escribe /perfil para verlo. Si todavía no me has enviado tu hoja de vida, usa /subir\\_cv",
         "additionalFields": {
           "appendAttribution": false
         }
@@ -828,7 +854,7 @@
       "typeVersion": 1.2,
       "position": [
         3136,
-        576
+        704
       ],
       "id": "aa6847ba-99ef-4ab6-94bf-7fb7e9e71c94",
       "name": "Avisar: perfil completo",
@@ -840,7 +866,7 @@
           "name": "Telegram account"
         }
       },
-      "notes": "Fin sin entrevista: el CV no tiene datos faltantes, así que no se hacen preguntas."
+      "notes": "Fin sin preguntas: no quedan preguntas pendientes (CV completo o ya respondidas). También responde /completar_perfil. Chat ID con .first() y /subir\\_cv escapado: Telegram usa Markdown y un _ suelto rompe el mensaje (BUG-30)."
     },
     {
       "parameters": {
@@ -851,7 +877,7 @@
       "typeVersion": 4.5,
       "position": [
         896,
-        1152
+        1344
       ],
       "id": "20d0c382-086d-4482-8e1c-208f7910e368",
       "name": "Pedir resumen del perfil",
@@ -870,7 +896,7 @@
       "typeVersion": 1.2,
       "position": [
         1120,
-        1152
+        1344
       ],
       "id": "2e8c11a6-b8dd-4415-9d36-0fa27d83e439",
       "name": "Enviar resumen del perfil",
@@ -896,7 +922,7 @@
       "typeVersion": 2.7,
       "position": [
         896,
-        960
+        1152
       ],
       "id": "31bc6996-0f3b-49f0-95bb-4a2b70aa8d64",
       "name": "Buscar pregunta a corregir",
@@ -939,7 +965,7 @@
       "typeVersion": 2.3,
       "position": [
         1120,
-        960
+        1152
       ],
       "id": "bc5a060b-76a6-4669-aee4-1dc11c681f42",
       "name": "¿Tema válido?",
@@ -958,7 +984,7 @@
       "typeVersion": 1.2,
       "position": [
         1344,
-        1056
+        1248
       ],
       "id": "9917f62f-3ecf-4f84-9369-eeb96660bd26",
       "name": "Explicar /corregir",
@@ -984,7 +1010,7 @@
       "typeVersion": 1.2,
       "position": [
         1344,
-        864
+        1056
       ],
       "id": "02c43796-8390-456e-a222-994cc4c341e0",
       "name": "Enviar pregunta a corregir",
@@ -1010,7 +1036,7 @@
       "typeVersion": 2.7,
       "position": [
         1568,
-        864
+        1056
       ],
       "id": "65a1be73-891a-4951-b483-54c6a40d95f7",
       "name": "Anotar: corrigiendo",
@@ -1123,7 +1149,7 @@
       "typeVersion": 1.2,
       "position": [
         1120,
-        1344
+        1536
       ],
       "id": "f2fb0625-41c3-4bb2-b9bd-6f7076418fb6",
       "name": "Responder vacante guardada",
@@ -1150,7 +1176,7 @@
       "typeVersion": 4.5,
       "position": [
         896,
-        1344
+        1536
       ],
       "id": "d218e4c2-dcd6-46ee-a895-1350c8bc514f",
       "name": "Guardar vacante manual",
@@ -1163,14 +1189,14 @@
         "url": "http://profile-api:8000/radar/comando",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n       \"telegram_user_id\": {{ $('Telegram Trigger').item.json.message.from.id }},\n       \"text\": {{ JSON.stringify($('Telegram Trigger').item.json.message.text) }}\n     }",
+        "jsonBody": "={\n  \"telegram_user_id\": {{ $('Telegram Trigger').item.json.message.from.id }},\n  \"text\": {{ JSON.stringify($('Telegram Trigger').item.json.message.text || '') }}\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
         896,
-        1536
+        1728
       ],
       "id": "1710c665-9f1a-4949-95cb-8fe31b5bff2f",
       "name": "Comando del radar",
@@ -1190,7 +1216,7 @@
       "typeVersion": 1.2,
       "position": [
         1120,
-        1536
+        1728
       ],
       "id": "170b4c3a-e5c7-4ad4-837d-cfc19d348304",
       "name": "Responder comando del radar",
@@ -1233,7 +1259,7 @@
       "typeVersion": 2.3,
       "position": [
         448,
-        1632
+        1728
       ],
       "id": "6a3da8ff-eb48-4e17-910e-b033aa716641",
       "name": "¿Tiene acceso?",
@@ -1252,7 +1278,7 @@
       "typeVersion": 1.2,
       "position": [
         896,
-        2112
+        2304
       ],
       "id": "27fa5901-d479-443f-9128-63270d911ca9",
       "name": "Responder: sin acceso",
@@ -1279,7 +1305,7 @@
       "typeVersion": 4.5,
       "position": [
         896,
-        1920
+        2112
       ],
       "id": "d4826ac0-35a5-41a5-a105-0599101d8310",
       "name": "Crear invitación",
@@ -1298,7 +1324,7 @@
       "typeVersion": 1.2,
       "position": [
         1120,
-        1920
+        2112
       ],
       "id": "b056f510-6731-4bee-8f48-cdef9b2a9a96",
       "name": "Enviar invitación",
@@ -1324,7 +1350,7 @@
       "typeVersion": 1.2,
       "position": [
         896,
-        48
+        96
       ],
       "id": "df877e31-a3e9-479b-b3cb-9aca7301e948",
       "name": "Saludo: ya registrado",
@@ -1350,7 +1376,7 @@
       "typeVersion": 1.2,
       "position": [
         1568,
-        672
+        864
       ],
       "id": "ab4a3e99-8872-433b-81a5-6b5f483f9161",
       "name": "Avisar: CV sin texto",
@@ -1389,7 +1415,7 @@
       "typeVersion": 4.5,
       "position": [
         1120,
-        576
+        768
       ],
       "id": "11ff53cc-173d-416d-8f5a-82d7494cde62",
       "name": "Extraer texto del CV",
@@ -1409,7 +1435,7 @@
       "typeVersion": 4.5,
       "position": [
         1568,
-        480
+        672
       ],
       "id": "435a5f15-f44e-46a4-8d16-31f78a7e1566",
       "name": "Guardar CV",
@@ -1428,7 +1454,7 @@
       "typeVersion": 1.2,
       "position": [
         1792,
-        480
+        672
       ],
       "id": "6064ff84-8e86-4315-9997-8300f71b5a4d",
       "name": "Confirmar CV recibido",
@@ -1470,7 +1496,7 @@
       "typeVersion": 2.3,
       "position": [
         1344,
-        576
+        768
       ],
       "id": "53b034cb-dad0-4aa5-b215-cec710883b1a",
       "name": "¿Se pudo leer el CV?",
@@ -1490,7 +1516,7 @@
       "typeVersion": 4.5,
       "position": [
         896,
-        1728
+        1920
       ],
       "id": "b7f9a95c-b718-4857-ab00-a679c026523d",
       "name": "Preferencias de búsqueda",
@@ -1509,7 +1535,7 @@
       "typeVersion": 1.2,
       "position": [
         1120,
-        1728
+        1920
       ],
       "id": "2ecb5750-b9d6-4d38-9f81-6e200998842f",
       "name": "Responder preferencias",
@@ -1552,7 +1578,7 @@
       "typeVersion": 2.3,
       "position": [
         672,
-        2112
+        2304
       ],
       "id": "55cba50e-8f08-41b8-bab2-113cf0c62dbb",
       "name": "¿Es repetido?",
@@ -1634,6 +1660,20 @@
         [
           {
             "node": "Preferencias de búsqueda",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Buscar primera pregunta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Comando del radar",
             "type": "main",
             "index": 0
           }
@@ -2041,7 +2081,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "0c112bf3-e1d1-49ab-b617-c798d4b5cf12",
+  "versionId": "532c28dc-7f17-4003-9d32-8537ae8a484a",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"

@@ -1,16 +1,25 @@
 """Comandos del radar en Telegram (Semana 6). Funciones PURAS para pytest.
 
-/mejores, /nuevas, /guardadas, /detalle N, /guardar N, /descartar N.
+/mejores, /nuevas, /guardadas, /detalle N, /guardar N, /descartar N,
+/buscar TEXTO, /resumen, /subir_cv, /pausar, /reanudar.
 "N" es el número corto de la vacante (#12), que aparece en las listas.
 """
 import re
 from datetime import datetime, timezone
 
-COMANDOS = ("mejores", "nuevas", "guardadas", "detalle", "guardar", "descartar", "pausar", "reanudar")
+from app.busqueda import normalizar
+
+COMANDOS = ("mejores", "nuevas", "guardadas", "detalle", "guardar", "descartar", "pausar", "reanudar",
+            "buscar", "resumen", "subir_cv")
 CON_NUMERO = ("detalle", "guardar", "descartar")
 
 AYUDA = (
-    "Comandos del radar:\n"
+    "Comandos:\n"
+    "/perfil — ver tu perfil\n"
+    "/subir_cv — cómo enviarme tu hoja de vida\n"
+    "/completar_perfil — responder las preguntas que faltan de tu perfil\n"
+    "/buscar automation — buscar entre tus vacantes por palabra\n"
+    "/resumen — el resumen de las últimas 24 horas\n"
     "/mejores — las vacantes con mejor puntaje\n"
     "/nuevas — las que llegaron hace poco\n"
     "/guardadas — las que guardaste\n"
@@ -52,6 +61,55 @@ def leer_comando(texto: str) -> tuple[str | None, int | None]:
         return None, None
     numero = int(m.group(2)) if m.group(2) else None
     return m.group(1).lower(), numero
+
+
+TEXTO_SUBIR_CV = (
+    "📄 Envíame tu hoja de vida como archivo, en PDF o Word (.docx), aquí mismo en el chat.\n\n"
+    "La leo, armo tu perfil y te hago solo las preguntas que falten. "
+    "Si ya me la habías enviado, la nueva reemplaza a la anterior (la vieja queda guardada como versión).\n"
+    "Ojo: si el PDF es escaneado (una foto), no puedo leerlo; usa el PDF que exporta Word o Google Docs."
+)
+
+AYUDA_BUSCAR = ("🔎 Escribe /buscar y lo que buscas en el título o la empresa. Ejemplos:\n"
+                "/buscar automation\n/buscar qa remoto\n/buscar bancolombia")
+
+
+_MARKDOWN = re.compile(r"([_*`\[])")
+
+
+def escapar_md(texto: str) -> str:
+    """BUG-30: n8n manda los mensajes a Telegram con parse_mode Markdown (legacy).
+
+    Un "_" suelto (ej. "/subir_cv" o "Bogotá_9740") abre una cursiva que no
+    cierra y Telegram rechaza el mensaje ("can't parse entities"). Con "\\"
+    delante, Telegram muestra el carácter normal.
+    """
+    return _MARKDOWN.sub(r"\\\1", texto)
+
+
+def escapar_textos_telegram(datos):
+    """Escapa todo campo "telegram_text" de una respuesta (también dentro de listas)."""
+    if isinstance(datos, dict):
+        return {k: (escapar_md(v) if k == "telegram_text" and isinstance(v, str)
+                    else escapar_textos_telegram(v)) for k, v in datos.items()}
+    if isinstance(datos, list):
+        return [escapar_textos_telegram(x) for x in datos]
+    return datos
+
+
+def leer_busqueda(texto: str | None) -> str:
+    """'/buscar QA Automation' → 'qa automation' (normalizado). Vacío si no escribió nada."""
+    m = re.match(r"^\s*/buscar(?:@\w+)?\s*(.*)$", texto or "", re.IGNORECASE | re.DOTALL)
+    return normalizar(m.group(1)) if m else ""
+
+
+def coincide_busqueda(consulta: str, *campos: str | None) -> bool:
+    """¿Todas las palabras de la consulta están en el título/empresa? (sin tildes, sin mayúsculas)."""
+    palabras = normalizar(consulta).split()
+    if not palabras:
+        return False
+    texto = normalizar(" ".join(c or "" for c in campos))
+    return all(p in texto for p in palabras)
 
 
 def _hace(segundos: float) -> str:

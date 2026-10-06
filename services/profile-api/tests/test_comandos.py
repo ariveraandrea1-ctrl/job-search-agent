@@ -148,3 +148,53 @@ def test_email_valido(entrada, esperado):
 def test_texto_correo_trae_el_resumen_y_como_pausar():
     texto = comandos.texto_correo("☀️ Buenos días. Resumen…")
     assert texto.startswith("☀️ Buenos días") and "/pausar" in texto
+
+
+# --- /buscar, /resumen, /subir_cv (comandos de la especificación) ---
+
+def test_leer_comando_nuevos():
+    assert comandos.leer_comando("/buscar qa")[0] == "buscar"
+    assert comandos.leer_comando("/resumen")[0] == "resumen"
+    assert comandos.leer_comando("/subir_cv")[0] == "subir_cv"
+
+
+def test_leer_busqueda():
+    assert comandos.leer_busqueda("/buscar QA Automatización") == "qa automatizacion"
+    assert comandos.leer_busqueda("/buscar@MiBot  remoto ") == "remoto"
+    assert comandos.leer_busqueda("/buscar") == ""
+
+
+def test_coincide_busqueda_todas_las_palabras_sin_tildes():
+    assert comandos.coincide_busqueda("qa remoto", "QA Engineer Remoto", "Acme")
+    assert comandos.coincide_busqueda("automatizacion", "Analista de Automatización", None)
+    assert comandos.coincide_busqueda("bancolombia", "Analista QA", "Bancolombia S.A.")
+    assert not comandos.coincide_busqueda("qa senior", "QA Engineer Junior", "Acme")
+    assert not comandos.coincide_busqueda("", "QA", "Acme")
+
+
+def test_ayuda_menciona_comandos_de_la_especificacion():
+    for cmd in ("/subir_cv", "/completar_perfil", "/buscar", "/resumen", "/perfil"):
+        assert cmd in comandos.AYUDA
+
+
+# --- BUG-30: Markdown de Telegram ---
+
+def test_escapar_md():
+    assert comandos.escapar_md("/subir_cv") == "/subir\\_cv"
+    assert comandos.escapar_md("Bogotá_9740 *ya* [x] `y`") == "Bogotá\\_9740 \\*ya\\* \\[x] \\`y\\`"
+    assert comandos.escapar_md("QA Engineer — Remoto") == "QA Engineer — Remoto"
+
+
+def test_escapar_textos_telegram_solo_ese_campo_y_en_listas():
+    datos = {"telegram_text": "a_b", "texto_correo": "a_b",
+             "items": [{"telegram_text": "c*d", "email": "x_y@z.co"}]}
+    r = comandos.escapar_textos_telegram(datos)
+    assert r["telegram_text"] == "a\\_b"
+    assert r["texto_correo"] == "a_b"  # el correo no se toca
+    assert r["items"][0]["telegram_text"] == "c\\*d"
+    assert r["items"][0]["email"] == "x_y@z.co"
+
+
+def test_ayuda_escapada_no_deja_guiones_bajos_sueltos():
+    import re
+    assert not re.search(r"(?<!\\)_", comandos.escapar_md(comandos.AYUDA))

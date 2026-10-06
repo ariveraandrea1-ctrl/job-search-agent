@@ -46,6 +46,7 @@ datos reales · error en uso normal
 | BUG-27 | 2026-10-05 | 🔍 | Prueba de restauración marcaba DIFERENTE porque el radar guardó vacantes durante el respaldo | Corregido |
 | BUG-28 | 2026-10-06 | 🐞 | Llegaban vacantes de correo sin relación con la búsqueda (ej. "Analista de nómina") | Corregido + tests |
 | BUG-29 | 2026-10-06 | 🐞 | La IA seguía puntuando 111 vacantes viejas sin relación (anteriores a BUG-28) y también las descartadas | Corregido + limpieza |
+| BUG-30 | 2026-10-06 | 🐞 | /completar_perfil fallaba: Telegram rechazaba mensajes con "_" ("can't parse entities") | Corregido + tests |
 
 ---
 
@@ -249,6 +250,17 @@ datos reales · error en uso normal
 - **Cómo se detectó:** revisando la salida del nodo "Pedir vacantes sin puntaje" durante la prueba de telemetría.
 - **Lección:** cuando se agrega un filtro, revisar también los datos que ya estaban guardados, no solo los nuevos.
 - **Hallazgo extra (falso negativo):** la vista previa mostró que las palabras de Andrea descartaban vacantes de QA ("Test Analyst", "Junior SDET", "Test Automation", "Automatizador") y de servicio/soporte. Se ajustaron las palabras (test, sdet, automatiza, automation, soporte, mesa de ayuda, servicio al cliente, ia, ai, artificial) y el máximo de palabras subió de 12 a 15 (`MAX_PALABRAS`). Lección: el prefijo "tester" no atrapa "test"; conviene usar la raíz más corta.
+
+---
+
+### BUG-30 · Telegram rechaza mensajes con "_" (Markdown)
+- **Síntoma:** `/completar_perfil` → alerta "Bad request" en "Avisar: perfil completo". El detalle de Telegram: `can't parse entities: Can't find end of the entity starting at byte offset 136`.
+- **Causa raíz:** el nodo Telegram de n8n manda los mensajes con `parse_mode` Markdown (legacy) aunque no se configure. Un `_` suelto (el nuevo texto decía `/subir_cv`) abre una cursiva que nunca cierra y Telegram rechaza todo el mensaje. Era un bug latente: cualquier vacante con `_`, `*`, `` ` `` o `[` en el título (ej. "Analista de Transformación Operacional, Bogotá_9740") rompía /nuevas, /mejores, /buscar o el resumen; y la nueva /ayuda tiene `/subir_cv` y `/completar_perfil`.
+- **Primera hipótesis descartada:** el Chat ID con `.item` tras un Postgres sin filas (como BUG-20). Se cambió a `.first()` y siguió fallando: el error real estaba en el detalle de la ejecución, no en el resumen de la alerta.
+- **Corrección:** `comandos.escapar_md()` antepone `\` a `_`, `*`, `` ` `` y `[`. Se aplica en UN solo lugar a todo campo `telegram_text` de cualquier respuesta (`_RutaTelegram`, una ruta de FastAPI que procesa la respuesta) y al texto de /profiles/{id}/summary. En n8n, los textos fijos con `_` se escriben `\_`.
+- **Prueba de regresión:** 3 tests en `test_comandos.py` (escapado, solo el campo telegram_text y no el correo, la ayuda sin `_` sueltos).
+- **Cómo se detectó:** probando los comandos nuevos con el bot real.
+- **Lección:** leer el detalle completo del error (`errorDescription`) antes de cambiar cosas; y los datos externos (títulos de vacantes) pueden traer caracteres especiales.
 
 ---
 

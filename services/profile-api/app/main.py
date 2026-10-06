@@ -30,7 +30,9 @@ from datetime import datetime, timedelta, timezone
 from typing import Literal
 from urllib.parse import urlsplit, urlunsplit
 
-from fastapi import Depends, FastAPI, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, Form, HTTPException, Request, UploadFile
+from fastapi.responses import JSONResponse
+from fastapi.routing import APIRoute
 from pydantic import BaseModel
 from pypdf import PdfReader
 from docx import Document as DocxDocument
@@ -57,7 +59,30 @@ from app import telemetria
 from app import idempotencia
 from app import puntaje as puntaje_ia
 
+class _RutaTelegram(APIRoute):
+    """BUG-30: escapa Markdown en todo "telegram_text" de las respuestas.
+
+    Un solo lugar para todos los endpoints: n8n manda esos textos a Telegram
+    con parse_mode Markdown y un "_" o "*" de un título rompía el mensaje.
+    """
+
+    def get_route_handler(self):
+        original = super().get_route_handler()
+
+        async def handler(request: Request):
+            respuesta = await original(request)
+            cuerpo = getattr(respuesta, "body", None)
+            if cuerpo and b'"telegram_text"' in cuerpo and \
+                    respuesta.headers.get("content-type", "").startswith("application/json"):
+                datos = comandos.escapar_textos_telegram(json.loads(cuerpo))
+                return JSONResponse(datos, status_code=respuesta.status_code)
+            return respuesta
+
+        return handler
+
+
 app = FastAPI(title="profile-api", version="0.1.0")
+app.router.route_class = _RutaTelegram
 
 
 @app.get("/health")
@@ -443,7 +468,7 @@ def get_profile_summary(telegram_user_id: int, db: Session = Depends(get_db)) ->
     # Telegram acepta máximo 4096 caracteres por mensaje.
     if len(texto) > 4000:
         texto = texto[:3990] + "\n…"
-    return {"has_profile": True, "text": texto}
+    return {"has_profile": True, "text": comandos.escapar_md(texto)}  # BUG-30
 
 
 def _normalizar_url(url: str) -> str:
@@ -881,9 +906,27 @@ def radar_comando(payload: ComandoIn, db: Session = Depends(get_db)) -> dict:
         db.commit()
         return {"ok": True, "comando": comando, "telegram_text": comandos.TEXTOS_ESTADO_USUARIO[user.estado]}
 
+    if comando == "subir_cv":
+        return {"ok": True, "comando": comando, "telegram_text": comandos.TEXTO_SUBIR_CV}
+    if comando == "resumen":
+        # A pedido: no marca idempotencia (el de la mañana sigue llegando).
+        return {"ok": True, "comando": comando,
+                "telegram_text": _resumen_de(db, payload.telegram_user_id, 24)["telegram_text"]}
+
     base = select(Opportunity).where(Opportunity.telegram_user_id == payload.telegram_user_id)
 
-    if comando == "mejores":
+    if comando == "buscar":
+        consulta = comandos.leer_busqueda(payload.text)
+        if not consulta:
+            return {"ok": False, "comando": comando, "telegram_text": comandos.AYUDA_BUSCAR}
+        filas = db.scalars(base.where(Opportunity.status != "descartada")
+                           .order_by(Opportunity.created_at.desc()).limit(1000)).all()
+        encontradas = [v for v in filas if comandos.coincide_busqueda(consulta, v.title, v.company)]
+        encontradas.sort(key=lambda v: (v.score is None, -(v.score or 0)))
+        texto = comandos.texto_lista(f"🔎 Vacantes con \"{consulta}\" ({len(encontradas)}):",
+                                     [_vacante_dict(v) for v in encontradas[:10]],
+                                     f"No encontré vacantes con \"{consulta}\". Prueba otra palabra.")
+    elif comando == "mejores":
         filas = db.scalars(base.where(Opportunity.score.is_not(None),
                                       Opportunity.status != "descartada")
                            .order_by(Opportunity.score.desc(), Opportunity.created_at.desc())
