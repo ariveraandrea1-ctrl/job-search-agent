@@ -78,3 +78,18 @@ def test_getonbrd_filtra_por_palabras_del_usuario():
 def test_getonbrd_sin_palabras_usa_regla_vieja_de_qa():
     assert getonbrd_sirve({**_BASE, "title": "QA Tester"}) is True
     assert getonbrd_sirve({**_BASE, "title": "Data Analyst"}) is False
+
+
+# ------------------------------------------- BUG-28: filtro de correo
+
+def test_filtrar_por_palabras_saca_las_que_no_tienen_nada_que_ver():
+    ofertas = [{"title": "Analista de Nómina"}, {"title": "QA Tester Jr"},
+               {"title": "Analista de Calidad de Software"}, {"title": "Auxiliar Contable"}]
+    sirven, descartadas = b.filtrar_por_palabras(ofertas, ["qa", "tester", "calidad"])
+    assert [o["title"] for o in sirven] == ["QA Tester Jr", "Analista de Calidad de Software"]
+    assert descartadas == 2
+
+
+def test_filtrar_sin_palabras_no_descarta_nada():
+    ofertas = [{"title": "Analista de Nómina"}]
+    assert b.filtrar_por_palabras(ofertas, []) == (ofertas, 0)

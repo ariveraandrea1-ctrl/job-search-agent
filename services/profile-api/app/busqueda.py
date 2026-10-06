@@ -147,3 +147,15 @@ def texto_preferencias(palabras: list[str], categorias: list[str], cambiadas: bo
             + "Solo te llegan vacantes cuyo título tenga alguna de esas palabras.\n"
             + "Para cambiarlas escribe /preferencias y la lista separada por comas. Ejemplo:\n"
             + "/preferencias qa, tester, pruebas, calidad")
+
+
+def filtrar_por_palabras(ofertas: list[dict], palabras: list[str]) -> tuple[list[dict], int]:
+    """Deja solo las ofertas cuyo título tiene alguna palabra del usuario (BUG-28).
+
+    Sin palabras configuradas no filtra (mejor que perder todo).
+    Devuelve (las que sirven, cuántas se descartaron).
+    """
+    if not palabras:
+        return list(ofertas), 0
+    sirven = [o for o in ofertas if titulo_coincide(o.get("title"), palabras)]
+    return sirven, len(ofertas) - len(sirven)

@@ -44,6 +44,7 @@ datos reales · error en uso normal
 | BUG-25 | 2026-10-05 | 🔍 | Prueba de aislamiento fallaba con "Connection reset" justo después de reiniciar profile-api | Corregido |
 | BUG-26 | 2026-10-05 | 🐞 | Al reenviar el CV, la entrevista volvía a hacer las preguntas ya respondidas | Corregido |
 | BUG-27 | 2026-10-05 | 🔍 | Prueba de restauración marcaba DIFERENTE porque el radar guardó vacantes durante el respaldo | Corregido |
+| BUG-28 | 2026-10-06 | 🐞 | Llegaban vacantes de correo sin relación con la búsqueda (ej. "Analista de nómina") | Corregido + tests |
 
 ---
 
@@ -229,6 +230,13 @@ datos reales · error en uso normal
 - **Corrección:** se cuenta antes Y después del respaldo; es válido si lo restaurado queda entre los dos números (archivo .conteo: "tabla antes despues"). Compatible con respaldos viejos (un solo número).
 - **Lección:** con BUG-17 (falso positivo) son las dos caras: una prueba debe fallar cuando hay error real y NO fallar cuando el sistema está bien.
 - **Cómo se detectó:** primera prueba de restauración con el radar multiusuario corriendo.
+
+### BUG-28 · Vacantes de correo que no tienen nada que ver
+- **Síntoma:** a Telegram llegaban avisos como "Analista de nómina" que no sirven y llenan el chat.
+- **Causa raíz:** en la búsqueda por usuario (multiusuario parte 4) las palabras clave solo se aplicaron a Get on Board; las vacantes de LinkedIn/Indeed/Workana por correo se guardaban sin revisar el título.
+- **Corrección:** `busqueda.filtrar_por_palabras()` en POST /radar/email con las palabras del dueño del buzón (sin palabras configuradas no filtra). Se cuentan en "skipped".
+- **Prueba de regresión:** 2 tests en `test_busqueda.py` (114 en total).
+- **Cómo se detectó:** observación de Andrea al usar el bot.
 
 ---
 
