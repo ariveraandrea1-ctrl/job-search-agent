@@ -185,9 +185,23 @@ PENDIENTE PASO A PRODUCCIÓN (anotar en README): cambiar la credencial del
 nodo de correo de Mailpit a un SMTP real (ej. Gmail con contraseña de
 aplicación) cuando haya servidor. Decisión de Andrea: por ahora Mailpit.
 Chrome: desactivar traducción en localhost (cambia fechas y nombres).
+TELEMETRÍA IA HECHA 2026-10-06 (rama feature/telemetria-ia):
+tabla ai_calls (migración 0014): tarea, telegram_user_id, proveedor, modelo,
+prompt_version, tokens entrada/salida, latencia_ms, costo_usd, fallback, ok,
+error. app/telemetria.py (costo con AI_PRECIOS_JSON del .env; vacío = 0 por
+plan gratis). /profiles (tarea cv) y /opportunities/{id}/score (tarea
+puntaje) registran también los 422. GET /telemetria/ia?dias=7 = resumen +
+telegram_text. n8n ai-model-router: Set "Marcar inicio" (inicio_ms) tras el
+trigger; ambas "Respuesta limpia" agregan modelo, tokens, latencia_ms,
+fallback (Gemini: tokens de usageMetadata o 0). "Guardar puntaje" y
+"Guardar perfil" mandan objeto telemetria. Probado: 20 llamadas (groq 16,
+gemini 4 fallback), 0 inválidas, mediana 991 ms. 126 tests. DoD ✅ (11/12).
+Tarea cv se verifica en E2E (al mandar un CV).
 SIGUE:
-telemetría, idempotencia, reconstrucción, E2E/README/demo, y los
-comandos /subir_cv /completar_perfil /buscar /resumen de la spec.
+idempotencia (fallos recuperables sin duplicados), reconstrucción, E2E/
+README/demo, y los comandos /subir_cv /completar_perfil /buscar /resumen.
+Revisar: vacantes de Indeed sin relación con QA (recepcionista, ventas)
+llegando a puntaje — ¿anteriores a BUG-28 o el filtro no las ataja?
 
 RETOMAR: Semana 6 en rama `feature/puntaje-ia`. HECHO: puntaje con IA
 (workflow radar-puntaje) y comandos /mejores /nuevas /guardadas /detalle N

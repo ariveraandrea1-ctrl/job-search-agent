@@ -20,7 +20,7 @@
       "id": "d43cda0b-d09f-4245-b9f1-0c7e59691bd3",
       "name": "Reloj: cada hora",
       "notesInFlow": true,
-      "notes": "Puntaje: cada hora puntúa con IA hasta 10 vacantes que aún no tienen puntaje (de todos los usuarios activos)."
+      "notes": "  Puntaje: cada hora puntúa con IA hasta 10 vacantes que aún no tienen puntaje."
     },
     {
       "parameters": {
@@ -115,7 +115,7 @@
         "url": "=http://profile-api:8000/opportunities/{{ $('Separar vacantes').item.json.id }}/score",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n       \"text\": {{ JSON.stringify($json.text) }},\n       \"provider\": {{ JSON.stringify($json.provider) }},\n       \"prompt_version\": \"puntaje-v1\"\n     }",
+        "jsonBody": "={\n  \"text\": {{ JSON.stringify($json.text) }},\n  \"provider\": {{ JSON.stringify($json.provider) }},\n  \"prompt_version\": \"puntaje-v1\",\n  \"telemetria\": {\n    \"modelo\": {{ JSON.stringify($json.modelo) }},\n    \"tokens_entrada\": {{ $json.tokens_entrada ?? 0 }},\n    \"tokens_salida\": {{ $json.tokens_salida ?? 0 }},\n    \"latencia_ms\": {{ $json.latencia_ms ?? 0 }},\n    \"fallback\": {{ $json.fallback ?? false }}\n  }\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -128,7 +128,7 @@
       "name": "Guardar puntaje",
       "notesInFlow": true,
       "onError": "continueRegularOutput",
-      "notes": "Puntaje: manda la respuesta de la IA a profile-api, que la valida, aplica las reglas fijas (topes por inglés, senior o señales de alerta) y guarda el puntaje. Si la respuesta es inválida responde 422 y la vacante queda pendiente para la próxima vuelta."
+      "notes": "Puntaje: manda la respuesta de la IA a profile-api, que la valida, aplica las reglas fijas (topes por inglés, senior o señales de alerta) y guarda el puntaje. Si la respuesta es inválida responde 422 y la vacante queda pendiente para la próxima vuelta. Manda también la telemetría de la IA (modelo, tokens, latencia, fallback), que profile-api guarda en ai_calls."
     }
   ],
   "pinData": {},
@@ -187,7 +187,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "e2ba3abb-cbc8-49d2-9678-23eb03462617",
+  "versionId": "baf5b03d-18cd-4971-87ba-ee9d531eb40a",
   "meta": {
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"
   },

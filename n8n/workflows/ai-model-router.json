@@ -39,7 +39,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
-        224,
+        448,
         96
       ],
       "id": "093f55dd-065a-411e-b05e-ecb74e519cfc",
@@ -69,6 +69,36 @@
               "name": "provider",
               "value": "groq",
               "type": "string"
+            },
+            {
+              "id": "82232f76-1a84-41a2-8615-6aa33f929433",
+              "name": "modelo",
+              "value": "openai/gpt-oss-120b",
+              "type": "string"
+            },
+            {
+              "id": "6b59ad3d-d08b-4f9a-90c3-2f2a59f50640",
+              "name": "tokens_entrada",
+              "value": "={{ $json.usage.prompt_tokens }}",
+              "type": "number"
+            },
+            {
+              "id": "2c4cdf25-0c35-47da-aeb0-014a2ac67072",
+              "name": "tokens_salida",
+              "value": "={{ $json.usage.completion_tokens }}",
+              "type": "number"
+            },
+            {
+              "id": "3ec2ba72-0dcd-47ff-b80d-cfe93127ad19",
+              "name": "latencia_ms",
+              "value": "={{ $now.toMillis() - $('Marcar inicio').item.json.inicio_ms }}",
+              "type": "number"
+            },
+            {
+              "id": "61fc1fad-e94b-4cf1-8be5-ca735eb8d1de",
+              "name": "fallback",
+              "value": false,
+              "type": "boolean"
             }
           ]
         },
@@ -77,13 +107,13 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.5,
       "position": [
-        512,
+        736,
         0
       ],
       "id": "a4b64d77-c1c3-429e-89e4-f6e140cfcdf9",
       "name": "Respuesta limpia",
       "notesInFlow": true,
-      "notes": "Entrega: devuelve solo el texto de la IA y qué proveedor respondió."
+      "notes": "Entrega: texto de la IA + proveedor (groq) + telemetría (modelo, tokens, latencia_ms, fallback=false)."
     },
     {
       "parameters": {
@@ -108,7 +138,7 @@
       "type": "@n8n/n8n-nodes-langchain.googleGemini",
       "typeVersion": 1.2,
       "position": [
-        448,
+        672,
         192
       ],
       "id": "868bfb9a-9f69-4add-8551-a49d11c148b0",
@@ -137,6 +167,36 @@
               "name": "provider",
               "value": "gemini",
               "type": "string"
+            },
+            {
+              "id": "187a622e-73f4-4009-9683-ab13f88bf674",
+              "name": "modelo",
+              "value": "gemini-3.5-flash-lite",
+              "type": "string"
+            },
+            {
+              "id": "b46a9362-d498-4b92-aedb-016c9159af1c",
+              "name": "tokens_entrada",
+              "value": "={{ $json.usageMetadata?.promptTokenCount ?? 0 }}",
+              "type": "number"
+            },
+            {
+              "id": "6c4ca61e-2e51-4147-bd9e-be791cb0e598",
+              "name": "tokens_salida",
+              "value": "={{ $json.usageMetadata?.candidatesTokenCount ?? 0 }}",
+              "type": "number"
+            },
+            {
+              "id": "db0a73d6-ae31-41ba-8b68-407d25d8c8d2",
+              "name": "latencia_ms",
+              "value": "={{ $now.toMillis() - $('Marcar inicio').item.json.inicio_ms }}",
+              "type": "number"
+            },
+            {
+              "id": "26ee903b-03f0-4007-b091-20b734e0ef73",
+              "name": "fallback",
+              "value": true,
+              "type": "boolean"
             }
           ]
         },
@@ -145,13 +205,39 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.5,
       "position": [
-        816,
+        1040,
         192
       ],
       "id": "bb4c27ad-b7d6-4c0e-95c4-2065e0494ccf",
       "name": "Respuesta limpia (Gemini)",
       "notesInFlow": true,
-      "notes": "Entrega: mismo formato que la de Groq (text + provider)."
+      "notes": "Entrega: mismo formato que la de Groq, con fallback=true. Tokens en 0 si Gemini no los manda."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5df7323d-d17e-4af1-bb12-edc813fa00bc",
+              "name": "inicio_ms",
+              "value": "={{ $now.toMillis() }}",
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        224,
+        96
+      ],
+      "id": "581eb319-d02a-4568-ab26-148cf7bb2155",
+      "name": "Marcar inicio",
+      "notes": "Telemetría: anota la hora de inicio (inicio_ms) para medir cuánto se demora la IA. Deja pasar system_prompt y user_text.",
+      "notesInFlow": true
     }
   ],
   "pinData": {
@@ -169,7 +255,7 @@
       "main": [
         [
           {
-            "node": "Groq: preguntar a la IA",
+            "node": "Marcar inicio",
             "type": "main",
             "index": 0
           }
@@ -204,6 +290,17 @@
           }
         ]
       ]
+    },
+    "Marcar inicio": {
+      "main": [
+        [
+          {
+            "node": "Groq: preguntar a la IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -215,7 +312,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "3123ce67-1b97-4a5d-856c-e8e3a566c335",
+  "versionId": "50f74450-c4c3-4e96-b3f7-3a816086ab61",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"

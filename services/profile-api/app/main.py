@@ -39,7 +39,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import TENANT_PRINCIPAL, Document, Invitation, InterviewAnswer, Opportunity, Profile, User
+from app.models import TENANT_PRINCIPAL, AICall, Document, Invitation, InterviewAnswer, Opportunity, Profile, User
 from app.parsers import (
     elegir_lector,
     identificar_url,
@@ -51,6 +51,7 @@ from app import comandos
 from app import usuarios
 from app import busqueda
 from app import almacen
+from app import telemetria
 from app import puntaje as puntaje_ia
 
 app = FastAPI(title="profile-api", version="0.1.0")
@@ -202,6 +203,30 @@ def save_interview_answer(
     }
 
 
+class TelemetriaIn(BaseModel):
+    """Datos de la llamada a la IA que mide ai-model-router (todos opcionales)."""
+
+    modelo: str | None = None
+    tokens_entrada: int | None = None
+    tokens_salida: int | None = None
+    latencia_ms: int | None = None
+    fallback: bool = False
+
+
+def _registrar_ia(db: Session, tarea: str, telegram_user_id: int | None, proveedor: str | None,
+                  prompt_version: str | None, t: TelemetriaIn | None, ok: bool,
+                  error: str | None = None) -> None:
+    """Guarda la telemetría de una llamada a la IA (también cuando la respuesta no sirvió)."""
+    t = t or TelemetriaIn()
+    db.add(AICall(telegram_user_id=telegram_user_id, tarea=tarea, proveedor=proveedor,
+                  modelo=t.modelo, prompt_version=prompt_version,
+                  tokens_entrada=t.tokens_entrada, tokens_salida=t.tokens_salida,
+                  latencia_ms=t.latencia_ms, fallback=t.fallback or proveedor == "gemini",
+                  costo_usd=telemetria.costo_usd(t.modelo, t.tokens_entrada, t.tokens_salida),
+                  ok=ok, error=error))
+    db.commit()
+
+
 class ProfileIn(BaseModel):
     """Lo que n8n manda después de "Analizar CV con IA".
 
@@ -215,6 +240,7 @@ class ProfileIn(BaseModel):
     text: str
     provider: str
     prompt_version: str
+    telemetria: TelemetriaIn | None = None
 
 
 @app.post("/profiles")
@@ -225,18 +251,20 @@ def save_profile(payload: ProfileIn, db: Session = Depends(get_db)) -> dict:
     objeto ({...}). Si la IA devolvió algo roto, responde 422 con un
     mensaje claro y NO guarda nada, para no llenar la tabla de basura.
     """
+    registrar = lambda ok, error=None: _registrar_ia(  # noqa: E731
+        db, "cv", payload.telegram_user_id, payload.provider, payload.prompt_version,
+        payload.telemetria, ok, error)
     try:
         datos = json.loads(payload.text)
     except json.JSONDecodeError as error:
-        raise HTTPException(
-            status_code=422,
-            detail=f"La IA no devolvió un JSON válido: {error.msg} (posición {error.pos}).",
-        )
+        detalle = f"La IA no devolvió un JSON válido: {error.msg} (posición {error.pos})."
+        registrar(False, detalle)
+        raise HTTPException(status_code=422, detail=detalle)
     if not isinstance(datos, dict):
-        raise HTTPException(
-            status_code=422,
-            detail="La IA devolvió JSON, pero no es un objeto {...} con el perfil.",
-        )
+        detalle = "La IA devolvió JSON, pero no es un objeto {...} con el perfil."
+        registrar(False, detalle)
+        raise HTTPException(status_code=422, detail=detalle)
+    registrar(True)
 
     perfil = Profile(
         telegram_user_id=payload.telegram_user_id,
@@ -782,6 +810,7 @@ class ScoreIn(BaseModel):
     text: str
     provider: str
     prompt_version: str
+    telemetria: TelemetriaIn | None = None
 
 
 @app.post("/opportunities/{opportunity_id}/score")
@@ -797,7 +826,11 @@ def save_score(opportunity_id: uuid.UUID, payload: ScoreIn, db: Session = Depend
     try:
         analisis = puntaje_ia.leer_respuesta_puntaje(payload.text)
     except puntaje_ia.RespuestaInvalida as error:
+        _registrar_ia(db, "puntaje", vacante.telegram_user_id, payload.provider,
+                      payload.prompt_version, payload.telemetria, False, str(error))
         raise HTTPException(status_code=422, detail=str(error))
+    _registrar_ia(db, "puntaje", vacante.telegram_user_id, payload.provider,
+                  payload.prompt_version, payload.telemetria, True)
     vacante.score = analisis["puntaje"]
     vacante.analysis = analisis
     vacante.scored_at = datetime.now(timezone.utc)
@@ -1087,3 +1120,17 @@ def preferencias(payload: PreferenciasIn, db: Session = Depends(get_db)) -> dict
     palabras, categorias = _busqueda_de(db, user)
     return {"ok": True, "palabras": palabras, "categorias": categorias,
             "telegram_text": busqueda.texto_preferencias(palabras, categorias)}
+
+
+
+@app.get("/telemetria/ia")
+def telemetria_ia(dias: int = 7, db: Session = Depends(get_db)) -> dict:
+    """Resumen del uso de la IA en los últimos `dias` (llamadas, fallback, errores, latencia, costo)."""
+    dias = max(1, min(dias, 90))
+    desde = datetime.now(timezone.utc) - timedelta(days=dias)
+    filas = db.scalars(select(AICall).where(AICall.created_at >= desde)).all()
+    llamadas = [{"tarea": f.tarea, "proveedor": f.proveedor, "ok": f.ok, "fallback": f.fallback,
+                 "latencia_ms": f.latencia_ms, "tokens_entrada": f.tokens_entrada,
+                 "tokens_salida": f.tokens_salida, "costo_usd": float(f.costo_usd or 0)} for f in filas]
+    r = telemetria.resumen(llamadas)
+    return {**r, "dias": dias, "telegram_text": telemetria.texto_resumen(r, dias)}

@@ -259,7 +259,7 @@
       "id": "d89a4433-e329-4059-b272-50e6d40eb013",
       "name": "Switch",
       "notesInFlow": true,
-      "notes": "Reparte: start = /start, cv = llegó archivo, respuesta = texto normal (respuesta a una pregunta), perfil = /perfil, corregir = /corregir <tema>, vacante = /vacante <link>, radar = /mejores /nuevas /guardadas /detalle /guardar /descartar /pausar /reanudar, invitar = /invitar (solo admin), preferencias = /preferencias."
+      "notes": "Reparte: start = /start, cv = llegó archivo, respuesta = texto normal (respuesta a una pregunta), perfil = /perfil, corregir = /corregir <tema>, vacante = /vacante <link>, radar = /mejores /nuevas /guardadas /detalle /guardar /descartar, invitar = /invitar (solo admin).preferencias = /preferencias"
     },
     {
       "parameters": {
@@ -533,7 +533,7 @@
           "name": "Postgres account"
         }
       },
-      "notes": "Lista: trae la primera pregunta cuyo tema está en los faltantes del último perfil Y que la persona todavía no ha respondido (BUG-26). \"Always Output Data\" activado para seguir aunque no haya ninguna."
+      "notes": "Lista: trae la primera pregunta cuyo tema (topic) está en los faltantes del último perfil del usuario (tabla profiles). \"Always Output Data\" activado para seguir aunque no haya ninguna."
     },
     {
       "parameters": {
@@ -559,7 +559,7 @@
           "name": "Postgres account"
         }
       },
-      "notes": "Lista: trae la siguiente pregunta (position mayor a la actual) cuyo tema está en los faltantes del último perfil y aún no fue respondido (BUG-26). Si no hay más, sale vacío (\"Always Output Data\" activado)."
+      "notes": "Lista: trae la siguiente pregunta (position mayor a la actual) cuyo tema está en los faltantes del último perfil. Si no hay más, sale vacío (\"Always Output Data\" activado)."
     },
     {
       "parameters": {
@@ -766,7 +766,7 @@
         "url": "http://profile-api:8000/profiles",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"telegram_user_id\": {{ $('Telegram Trigger').item.json.message.chat.id }},\n  \"document_id\": {{ JSON.stringify($('Guardar CV').item.json.id) }},\n  \"text\": {{ JSON.stringify($json.text) }},\n  \"provider\": {{ JSON.stringify($json.provider) }},\n  \"prompt_version\": \"v4\"\n}",
+        "jsonBody": "={\n  \"telegram_user_id\": {{ $('Telegram Trigger').item.json.message.chat.id }},\n  \"document_id\": {{ JSON.stringify($('Guardar CV').item.json.id) }},\n  \"text\": {{ JSON.stringify($json.text) }},\n  \"provider\": {{ JSON.stringify($json.provider) }},\n  \"prompt_version\": \"v4\",\n  \"telemetria\": {\n    \"modelo\": {{ JSON.stringify($json.modelo) }},\n    \"tokens_entrada\": {{ $json.tokens_entrada ?? 0 }},\n    \"tokens_salida\": {{ $json.tokens_salida ?? 0 }},\n    \"latencia_ms\": {{ $json.latencia_ms ?? 0 }},\n    \"fallback\": {{ $json.fallback ?? false }}\n  }\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -778,7 +778,7 @@
       "id": "49a57758-cc7f-45a7-aea5-38133fec46e9",
       "name": "Guardar perfil",
       "notesInFlow": true,
-      "notes": "Guarda en la tabla profiles (POST /profiles) el perfil que armó la IA a partir del CV: usuario de Telegram, id del CV (de Guardar CV), JSON del perfil, proveedor (groq o gemini) y versión del prompt (v4). Si la IA devolvió un JSON roto, profile-api responde 422 y no guarda nada."
+      "notes": "Guarda en la tabla profiles (POST /profiles) el perfil que armó la IA a partir del CV: usuario de Telegram, id del CV (de Guardar CV), JSON del perfil, proveedor (groq o gemini) y versión del prompt (v4). Si la IA devolvió un JSON roto, profile-api responde 422 y no guarda nada. Manda también la telemetría de la IA (modelo, tokens, latencia, fallback), que profile-api guarda en ai_calls."
     },
     {
       "parameters": {
@@ -1175,7 +1175,7 @@
       "id": "1710c665-9f1a-4949-95cb-8fe31b5bff2f",
       "name": "Comando del radar",
       "notesInFlow": true,
-      "notes": "Radar: manda el comando (/mejores, /nuevas, /guardadas, /detalle N, /guardar N, /descartar N, /pausar, /reanudar) a profile-api (POST /radar/comando), que responde el texto listo para Telegram."
+      "notes": "Radar: manda el comando (/mejores, /nuevas, /guardadas, /detalle N, /guardar N, /descartar N) a profile-api (POST /radar/comando), que responde el texto listo para Telegram."
     },
     {
       "parameters": {
@@ -1336,7 +1336,7 @@
           "name": "Telegram account"
         }
       },
-      "notes": "Saludo: responde a quien ya está registrado y escribe /start (sin código)."
+      "notes": "Saludo: responde cuando escribo /start."
     },
     {
       "parameters": {
@@ -1993,7 +1993,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "ec9fd512-c73e-4ffb-a7bd-7cae16896a32",
+  "versionId": "f7871283-2cca-41e0-82b7-72d9e8cd34dc",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"
