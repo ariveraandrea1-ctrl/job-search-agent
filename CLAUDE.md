@@ -170,8 +170,23 @@ restaura en bucket "prueba-restauracion-minio" y compara objetos + huella.
 BUG-26 (entrevista repetía preguntas: excluir temas ya respondidos) y
 BUG-27 (conteo antes/después del respaldo). Prueba: PASO 8/8 + MinIO.
 112 tests. DoD "respaldo restaurable PG y MinIO" ✅.
+BUG-28 HECHO 2026-10-06: vacantes de correo filtradas con las palabras
+del dueño (busqueda.filtrar_por_palabras). Andrea ajustó /preferencias
+(12 palabras: QA + n8n, python, ia, atención/servicio al cliente…).
+RESUMEN POR CORREO HECHO 2026-10-06 (rama feature/resumen-correo):
+/radar/resumenes trae por usuario email (del CV, contacto.email, validado
+con comandos.email_valido), asunto, texto_correo, y lista con_correo.
+n8n radar-resumen-diario: 2ª rama Pedir resumen → "Separar los que tienen
+correo" (Split Out con_correo) → "Enviar resumen por correo" (Send Email,
+credencial SMTP "Mailpit": host mailpit, port 1025, sin SSL). Probado:
+llegó a Mailpit (localhost:8025). 121 tests. DoD "resumen Telegram y
+correo" ✅ (10/12).
+PENDIENTE PASO A PRODUCCIÓN (anotar en README): cambiar la credencial del
+nodo de correo de Mailpit a un SMTP real (ej. Gmail con contraseña de
+aplicación) cuando haya servidor. Decisión de Andrea: por ahora Mailpit.
+Chrome: desactivar traducción en localhost (cambia fechas y nombres).
 SIGUE:
-correo, telemetría, idempotencia, reconstrucción, E2E/README/demo, y los
+telemetría, idempotencia, reconstrucción, E2E/README/demo, y los
 comandos /subir_cv /completar_perfil /buscar /resumen de la spec.
 
 RETOMAR: Semana 6 en rama `feature/puntaje-ia`. HECHO: puntaje con IA
