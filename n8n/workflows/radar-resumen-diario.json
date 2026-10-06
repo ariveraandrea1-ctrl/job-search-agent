@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "url": "http://profile-api:8000/radar/resumenes",
+        "url": "http://profile-api:8000/radar/resumenes?registrar=true",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -15,7 +15,7 @@
       "id": "d2a5732b-1ee1-4cf7-8a17-e0eb899474a6",
       "name": "Pedir resumen del día",
       "notesInFlow": true,
-      "notes": "Resumen: pide a profile-api (GET /radar/resumenes) el resumen de las últimas 24 h de CADA usuario activo (los pausados no)."
+      "notes": "Resumen: pide a profile-api (GET /radar/resumenes?registrar=true) el resumen de las últimas 24 h de CADA usuario activo (los pausados no). registrar=true = idempotencia: un resumen por usuario y día; si el flujo se vuelve a correr el mismo día, no llega repetido."
     },
     {
       "parameters": {
@@ -186,7 +186,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "b3dcf151-72de-407d-b399-87be64f184da",
+  "versionId": "e478825b-3c23-4554-b19a-e4789325f2ce",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"

@@ -35,11 +35,13 @@ from pydantic import BaseModel
 from pypdf import PdfReader
 from docx import Document as DocxDocument
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import TENANT_PRINCIPAL, AICall, Document, Invitation, InterviewAnswer, Opportunity, Profile, User
+from app.models import (TENANT_PRINCIPAL, AICall, Document, IdempotencyKey, Invitation, InterviewAnswer,
+                        Opportunity, Profile, User)
 from app.parsers import (
     elegir_lector,
     identificar_url,
@@ -52,6 +54,7 @@ from app import usuarios
 from app import busqueda
 from app import almacen
 from app import telemetria
+from app import idempotencia
 from app import puntaje as puntaje_ia
 
 app = FastAPI(title="profile-api", version="0.1.0")
@@ -929,18 +932,33 @@ def resumen_diario(telegram_user_id: int, horas: int = 24, db: Session = Depends
 
 
 @app.get("/radar/resumenes")
-def resumenes(horas: int = 24, db: Session = Depends(get_db)) -> dict:
-    """El resumen de la mañana para CADA usuario activo (multiusuario)."""
-    hoy = datetime.now(timezone(timedelta(hours=-5))).strftime("%d/%m/%Y")  # hora Colombia
+def resumenes(horas: int = 24, registrar: bool = False, telegram_user_id: int | None = None,
+              db: Session = Depends(get_db)) -> dict:
+    """El resumen de la mañana para CADA usuario activo (multiusuario).
+
+    registrar=true (lo usa n8n): idempotencia, un resumen por usuario y día.
+    Si el flujo se vuelve a correr el mismo día, ese usuario no sale otra vez
+    (no le llega repetido). Sin registrar (curl de prueba) no marca nada.
+    telegram_user_id: solo ese usuario (pruebas).
+    """
+    ahora = datetime.now(timezone.utc)
+    hoy = ahora.astimezone(idempotencia.COLOMBIA).strftime("%d/%m/%Y")
+    usuarios_lista = _usuarios_activos(db)
+    if telegram_user_id is not None:
+        usuarios_lista = [u for u in usuarios_lista if u == telegram_user_id]
     items = []
-    for uid in _usuarios_activos(db):
+    ya_enviados = 0
+    for uid in usuarios_lista:
+        if registrar and not _primera_vez(db, idempotencia.clave_resumen(uid, ahora)):
+            ya_enviados += 1
+            continue
         resumen = _resumen_de(db, uid, horas)
         # Correo (DoD "resumen por Telegram y correo"): el del CV, si lo tiene.
         email = comandos.email_valido(_email_del_perfil(db, uid))
         items.append({"telegram_user_id": uid, **resumen, "email": email,
                       "asunto": f"Tu resumen de vacantes del {hoy}",
                       "texto_correo": comandos.texto_correo(resumen["telegram_text"])})
-    return {"count": len(items), "items": items,
+    return {"count": len(items), "items": items, "ya_enviados_hoy": ya_enviados,
             "con_correo": [it for it in items if it["email"]]}
 
 
@@ -977,6 +995,20 @@ class AccesoIn(BaseModel):
     telegram_user_id: int
     text: str | None = None
     nombre: str | None = None
+    # update_id del mensaje de Telegram (idempotency_key). Si Telegram reenvía
+    # el mismo mensaje, se ignora (spec 7.2). Opcional para llamadas viejas.
+    update_id: int | None = None
+
+
+def _primera_vez(db: Session, clave: str) -> bool:
+    """Guarda la clave de idempotencia. True si es nueva; False si ya estaba (reintento)."""
+    fila = db.execute(
+        pg_insert(IdempotencyKey).values(clave=clave)
+        .on_conflict_do_nothing(index_elements=["clave"])
+        .returning(IdempotencyKey.clave)
+    ).first()
+    db.commit()
+    return fila is not None
 
 
 @app.post("/usuarios/acceso")
@@ -988,8 +1020,12 @@ def usuarios_acceso(payload: AccesoIn, db: Session = Depends(get_db)) -> dict:
       se registra; permitido = false porque el mensaje ya quedó atendido:
       n8n solo responde telegram_text (bienvenida).
     - Cualquier otro caso → permitido = false + telegram_text con el motivo.
+    - Mensaje repetido (mismo update_id) → permitido = false, repetido = true,
+      sin texto: n8n no hace nada (Telegram lo reenvió; ya se atendió).
     Siempre 200.
     """
+    if payload.update_id is not None and not _primera_vez(db, idempotencia.clave_update(payload.update_id)):
+        return {"permitido": False, "motivo": "repetido", "repetido": True}
     user = db.scalars(select(User).where(User.telegram_user_id == payload.telegram_user_id)).first()
     if user is not None:
         return {"permitido": True, "rol": user.rol, "estado": user.estado}

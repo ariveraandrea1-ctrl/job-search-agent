@@ -20,7 +20,7 @@
         "url": "http://profile-api:8000/usuarios/acceso",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n       \"telegram_user_id\": {{ $json.message.from.id }},\n       \"text\": {{ JSON.stringify($json.message.text || '') }},\n       \"nombre\": {{ JSON.stringify($json.message.from.first_name || '') }}\n     }",
+        "jsonBody": "={\n  \"telegram_user_id\": {{ $json.message.from.id }},\n  \"text\": {{ JSON.stringify($json.message.text || '') }},\n  \"nombre\": {{ JSON.stringify($json.message.from.first_name || '') }},\n  \"update_id\": {{ $json.update_id }}\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -32,7 +32,7 @@
       "id": "59d9e3c8-e7f9-4522-b29a-642d398acba0",
       "name": "Preguntar al portero",
       "notesInFlow": true,
-      "notes": "Portero: pregunta a profile-api (POST /usuarios/acceso) si quien escribe está registrado. Si trae /start CÓDIGO válido, lo registra. Responde permitido (true/false) y, si no tiene acceso, el texto para contestarle."
+      "notes": "Portero: pregunta a profile-api (POST /usuarios/acceso) si quien escribe está registrado. Si trae /start CÓDIGO válido, lo registra. Responde permitido (true/false) y, si no tiene acceso, el texto para contestarle. Manda también update_id (idempotencia): si Telegram reenvía el mismo mensaje responde repetido = true y no se atiende otra vez."
     },
     {
       "parameters": {
@@ -86,7 +86,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "a380400b-5f93-4d1b-930c-2be48f4586d2",
+  "versionId": "21a17957-0076-4463-8aa2-b28d875824f9",
   "meta": {
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"
   },

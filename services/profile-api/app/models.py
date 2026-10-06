@@ -248,3 +248,15 @@ class AICall(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
+
+
+class IdempotencyKey(Base):
+    """Cosas que deben pasar una sola vez (migración 0015, app/idempotencia.py)."""
+
+    __tablename__ = "idempotency_keys"
+
+    clave: Mapped[str] = mapped_column(Text, primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = _tenant_id()
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )

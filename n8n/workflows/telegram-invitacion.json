@@ -12,7 +12,7 @@
       "typeVersion": 1.5,
       "position": [
         0,
-        1312
+        1632
       ],
       "id": "2cf3dc7e-377a-4fb8-81c1-e12852adb021",
       "name": "Telegram Trigger",
@@ -354,7 +354,7 @@
       "typeVersion": 1.3,
       "position": [
         224,
-        1312
+        1632
       ],
       "id": "0b3912dc-d588-4b3d-82f2-66ef31420277",
       "name": "Call 'verificar-acceso'",
@@ -423,7 +423,7 @@
       "typeVersion": 2.7,
       "position": [
         896,
-        192
+        240
       ],
       "id": "c36d8617-98a9-4cae-80ab-86f13f235ecb",
       "name": "Leer anotación",
@@ -476,7 +476,7 @@
       "typeVersion": 2.3,
       "position": [
         1120,
-        192
+        240
       ],
       "id": "25af712d-ff17-44f4-bdf4-8fc8365a9104",
       "name": "¿Esperaba respuesta?",
@@ -778,7 +778,7 @@
       "id": "49a57758-cc7f-45a7-aea5-38133fec46e9",
       "name": "Guardar perfil",
       "notesInFlow": true,
-      "notes": "Guarda en la tabla profiles (POST /profiles) el perfil que armó la IA a partir del CV: usuario de Telegram, id del CV (de Guardar CV), JSON del perfil, proveedor (groq o gemini) y versión del prompt (v4). Si la IA devolvió un JSON roto, profile-api responde 422 y no guarda nada. Manda también la telemetría de la IA (modelo, tokens, latencia, fallback), que profile-api guarda en ai_calls."
+      "notes": "Guarda en la tabla profiles (POST /profiles) el perfil que armó la IA a partir del CV: usuario de Telegram, id del CV (de Guardar CV), JSON del perfil, proveedor (groq o gemini) y versión del prompt (v4). Si la IA devolvió un JSON roto, profile-api responde 422 y no guarda nada."
     },
     {
       "parameters": {
@@ -1233,7 +1233,7 @@
       "typeVersion": 2.3,
       "position": [
         448,
-        1312
+        1632
       ],
       "id": "6a3da8ff-eb48-4e17-910e-b033aa716641",
       "name": "¿Tiene acceso?",
@@ -1251,8 +1251,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        672,
-        1456
+        896,
+        2112
       ],
       "id": "27fa5901-d479-443f-9128-63270d911ca9",
       "name": "Responder: sin acceso",
@@ -1324,7 +1324,7 @@
       "typeVersion": 1.2,
       "position": [
         896,
-        0
+        48
       ],
       "id": "df877e31-a3e9-479b-b3cb-9aca7301e948",
       "name": "Saludo: ya registrado",
@@ -1522,6 +1522,42 @@
         }
       },
       "notes": "Búsqueda: responde la búsqueda actual (o confirma el cambio)."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3bda2094-bc73-4060-9cae-3b538d4f70c2",
+              "leftValue": "={{ $json.acceso.repetido === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        2112
+      ],
+      "id": "55cba50e-8f08-41b8-bab2-113cf0c62dbb",
+      "name": "¿Es repetido?",
+      "notesInFlow": true,
+      "notes": "Idempotencia: si Telegram reenvía el mismo mensaje (mismo update_id), el portero responde repetido = true y aquí no se hace nada, porque ese mensaje ya se atendió. Si no es repetido, va a \"Responder: sin acceso\"."
     }
   ],
   "pinData": {},
@@ -1903,7 +1939,7 @@
         ],
         [
           {
-            "node": "Responder: sin acceso",
+            "node": "¿Es repetido?",
             "type": "main",
             "index": 0
           }
@@ -1982,6 +2018,18 @@
           }
         ]
       ]
+    },
+    "¿Es repetido?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Responder: sin acceso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -1993,7 +2041,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "f7871283-2cca-41e0-82b7-72d9e8cd34dc",
+  "versionId": "0c112bf3-e1d1-49ab-b617-c798d4b5cf12",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"

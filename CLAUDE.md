@@ -195,11 +195,24 @@ telegram_text. n8n ai-model-router: Set "Marcar inicio" (inicio_ms) tras el
 trigger; ambas "Respuesta limpia" agregan modelo, tokens, latencia_ms,
 fallback (Gemini: tokens de usageMetadata o 0). "Guardar puntaje" y
 "Guardar perfil" mandan objeto telemetria. Probado: 20 llamadas (groq 16,
-gemini 4 fallback), 0 inválidas, mediana 991 ms. 126 tests. DoD ✅ (11/12).
+gemini 4 fallback), 0 inválidas, mediana 991 ms. 126 tests. DoD ✅.
 Tarea cv se verifica en E2E (al mandar un CV).
+IDEMPOTENCIA HECHA 2026-10-06 (rama feature/idempotencia): tabla
+idempotency_keys (migración 0015, clave PK) + app/idempotencia.py.
+Claves: telegram-update:{update_id} (POST /usuarios/acceso con update_id →
+si ya estaba: permitido=false, repetido=true, sin texto) y
+resumen:{tg}:{AAAA-MM-DD hora Colombia} (GET /radar/resumenes?registrar=true;
+sin registrar no marca; ?telegram_user_id= para pruebas; devuelve
+ya_enviados_hoy). Vacantes ya eran idempotentes (dedup_key), puntaje
+sobrescribe. n8n: verificar-acceso manda update_id; telegram-invitacion If
+"¿Es repetido?" ({{ $json.acceso.repetido === true }}) antes de "Responder:
+sin acceso" (true = nada); radar-resumen-diario URL ?registrar=true.
+scripts/probar-idempotencia.py (usuario 900000201, update_id 990000001-2,
+limpia antes y después): 15/15. Probado con el bot real. 129 tests.
+DoD ✅ → 11/12, solo falta reconstrucción (va al cierre).
 SIGUE:
-idempotencia (fallos recuperables sin duplicados), reconstrucción, E2E/
-README/demo, y los comandos /subir_cv /completar_perfil /buscar /resumen.
+reconstrucción desde repo + .env.example, comandos /subir_cv
+/completar_perfil /buscar /resumen, docs/decisions/, E2E/README/demo.
 BUG-29 HECHO 2026-10-06 (rama fix/limpiar-pendientes): pending-score excluye
 descartadas; limpieza única app/limpiar_pendientes.py (vista previa /
 --aplicar) → 56 vacantes viejas descartadas, 50 siguen para puntaje (había
