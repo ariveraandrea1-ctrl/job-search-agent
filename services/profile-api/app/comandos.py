@@ -176,3 +176,20 @@ def texto_resumen_diario(vacantes: list[dict], pendientes: int, horas: int = 24,
     numero = (puntuadas or vacantes)[0]["numero"]
     lineas += ["", f"Escribe /detalle {numero} para ver más, o /nuevas para la lista completa."]
     return _recortar("\n".join(lineas))
+
+
+_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[a-z]{2,}$", re.IGNORECASE)
+
+
+def email_valido(email: str | None) -> str | None:
+    """Devuelve el correo limpio si tiene forma de correo; si no, None."""
+    email = (email or "").strip().strip("<>").lower()
+    return email if _EMAIL.match(email) else None
+
+
+def texto_correo(texto_telegram: str) -> str:
+    """El resumen de Telegram adaptado a correo (con cómo verlo en el bot)."""
+    return (texto_telegram
+            + "\n\n—\nEste resumen también te llegó por Telegram. "
+              "Escríbele al bot /detalle y el número para ver una vacante, "
+              "o /pausar para dejar de recibir resúmenes.")

@@ -63,7 +63,7 @@
       "id": "436b516b-78ea-4dcf-b8cb-ac9dda33fdf6",
       "name": "Reloj: 11 am",
       "notesInFlow": true,
-      "notes": "Resumen: todos los días a las 11 am (hora de Colombia) manda el resumen del radar a cada usuario activo."
+      "notes": "Resumen: todos los días a las 11 am (hora de Colombia) manda el resumen del radar a cada usuario activo (Telegram y, si tiene correo en su CV, también por correo)."
     },
     {
       "parameters": {
@@ -80,6 +80,49 @@
       "name": "Separar por usuario",
       "notesInFlow": true,
       "notes": "Resumen: separa la lista en un item por usuario, para mandarle a cada uno su propio resumen."
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "con_correo",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        416,
+        176
+      ],
+      "id": "5a78ce82-cd75-4726-a09e-322141435a07",
+      "name": "Separar los que tienen correo",
+      "notesInFlow": true,
+      "notes": "Resumen por correo: un item por usuario que tiene correo en su CV."
+    },
+    {
+      "parameters": {
+        "fromEmail": "radar@job-search-agent.local",
+        "toEmail": "={{ $json.email }}",
+        "subject": "={{ $json.asunto }}",
+        "emailFormat": "text",
+        "text": "={{ $json.texto_correo }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        640,
+        176
+      ],
+      "id": "04a0e140-730c-4b68-8db9-0c8bafa64094",
+      "name": "Enviar resumen por correo",
+      "webhookId": "cd91a153-b6bf-4807-9147-346eaa49aca1",
+      "notesInFlow": true,
+      "credentials": {
+        "smtp": {
+          "id": "Zk3jNVFRs48PWLvE",
+          "name": "Mailpit"
+        }
+      },
+      "notes": "Resumen por correo: manda el resumen al correo del CV. En local va a Mailpit (http://localhost:8025), que atrapa los correos sin enviarlos de verdad."
     }
   ],
   "pinData": {},
@@ -89,6 +132,11 @@
         [
           {
             "node": "Separar por usuario",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Separar los que tienen correo",
             "type": "main",
             "index": 0
           }
@@ -116,6 +164,17 @@
           }
         ]
       ]
+    },
+    "Separar los que tienen correo": {
+      "main": [
+        [
+          {
+            "node": "Enviar resumen por correo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -127,7 +186,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "c1864fd3-7532-40aa-94d5-a2d7a3506aac",
+  "versionId": "b3dcf151-72de-407d-b399-87be64f184da",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"

@@ -897,9 +897,25 @@ def resumen_diario(telegram_user_id: int, horas: int = 24, db: Session = Depends
 @app.get("/radar/resumenes")
 def resumenes(horas: int = 24, db: Session = Depends(get_db)) -> dict:
     """El resumen de la mañana para CADA usuario activo (multiusuario)."""
-    items = [{"telegram_user_id": uid, **_resumen_de(db, uid, horas)}
-             for uid in _usuarios_activos(db)]
-    return {"count": len(items), "items": items}
+    hoy = datetime.now(timezone(timedelta(hours=-5))).strftime("%d/%m/%Y")  # hora Colombia
+    items = []
+    for uid in _usuarios_activos(db):
+        resumen = _resumen_de(db, uid, horas)
+        # Correo (DoD "resumen por Telegram y correo"): el del CV, si lo tiene.
+        email = comandos.email_valido(_email_del_perfil(db, uid))
+        items.append({"telegram_user_id": uid, **resumen, "email": email,
+                      "asunto": f"Tu resumen de vacantes del {hoy}",
+                      "texto_correo": comandos.texto_correo(resumen["telegram_text"])})
+    return {"count": len(items), "items": items,
+            "con_correo": [it for it in items if it["email"]]}
+
+
+def _email_del_perfil(db: Session, telegram_user_id: int) -> str | None:
+    resultado = _perfil_vigente(db, telegram_user_id)
+    if resultado is None:
+        return None
+    perfil = resultado[0]
+    return ((perfil.data or {}).get("contacto") or {}).get("email")
 
 
 def _resumen_de(db: Session, telegram_user_id: int, horas: int) -> dict:

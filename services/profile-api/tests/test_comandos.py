@@ -129,3 +129,22 @@ def test_ayuda_menciona_pausar_y_reanudar():
 def test_textos_de_estado_explican_como_volver():
     assert "/reanudar" in comandos.TEXTOS_ESTADO_USUARIO["pausado"]
     assert set(comandos.TEXTOS_ESTADO_USUARIO) == {"pausado", "activo"}
+
+
+# ------------------------------------------------ resumen por correo
+
+@pytest.mark.parametrize("entrada, esperado", [
+    ("andrea@gmail.com", "andrea@gmail.com"),
+    ("  Andrea.Rivera@Gmail.COM ", "andrea.rivera@gmail.com"),
+    ("<andrea@correo.co>", "andrea@correo.co"),
+    ("andrea arroba gmail", None),
+    ("", None),
+    (None, None),
+])
+def test_email_valido(entrada, esperado):
+    assert comandos.email_valido(entrada) == esperado
+
+
+def test_texto_correo_trae_el_resumen_y_como_pausar():
+    texto = comandos.texto_correo("☀️ Buenos días. Resumen…")
+    assert texto.startswith("☀️ Buenos días") and "/pausar" in texto
