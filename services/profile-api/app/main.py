@@ -784,7 +784,8 @@ def pending_score(telegram_user_id: int | None = None, limit: int = 5,
     vacantes = db.scalars(
         select(Opportunity)
         .where(Opportunity.telegram_user_id.in_(list(perfiles)),
-               Opportunity.scored_at.is_(None))
+               Opportunity.scored_at.is_(None),
+               Opportunity.status != "descartada")  # BUG-29: no gastar IA en descartadas
         .order_by(Opportunity.created_at.desc())
         .limit(limit)
     ).all()

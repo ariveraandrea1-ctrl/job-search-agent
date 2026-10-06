@@ -12,7 +12,7 @@ Funciones puras (sin base de datos) para probarlas con pytest.
 import re
 import unicodedata
 
-MAX_PALABRAS = 12
+MAX_PALABRAS = 15
 
 # Categorías públicas de Get on Board (GET /api/v0/categories) y las
 # palabras (sin tildes, en minúscula) que indican que una le sirve a alguien.
@@ -63,7 +63,7 @@ def leer_palabras(texto: str | None) -> list[str]:
     """'QA, Tester / pruebas y calidad' → ['qa', 'tester', 'pruebas', 'calidad'].
 
     Separa por coma, punto y coma, barra, guion, salto de línea y la
-    palabra "y" / "o"; quita palabras vacías y repetidas; máximo 12.
+    palabra "y" / "o"; quita palabras vacías y repetidas; máximo 15.
     """
     trozos = re.split(r"[,;/\n|]+|\s*-\s+|\s+y\s+|\s+o\s+", normalizar(texto))
     palabras = []

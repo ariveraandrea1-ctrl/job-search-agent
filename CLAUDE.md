@@ -200,8 +200,12 @@ Tarea cv se verifica en E2E (al mandar un CV).
 SIGUE:
 idempotencia (fallos recuperables sin duplicados), reconstrucción, E2E/
 README/demo, y los comandos /subir_cv /completar_perfil /buscar /resumen.
-Revisar: vacantes de Indeed sin relación con QA (recepcionista, ventas)
-llegando a puntaje — ¿anteriores a BUG-28 o el filtro no las ataja?
+BUG-29 HECHO 2026-10-06 (rama fix/limpiar-pendientes): pending-score excluye
+descartadas; limpieza única app/limpiar_pendientes.py (vista previa /
+--aplicar) → 56 vacantes viejas descartadas, 50 siguen para puntaje (había
+5 descartadas antes). MAX_PALABRAS 12→15. Palabras de Andrea: qa, test,
+sdet, pruebas, calidad, automatiza, automation, n8n, soporte, mesa de ayuda,
+atencion al cliente, servicio al cliente, ia, ai, artificial.
 
 RETOMAR: Semana 6 en rama `feature/puntaje-ia`. HECHO: puntaje con IA
 (workflow radar-puntaje) y comandos /mejores /nuevas /guardadas /detalle N

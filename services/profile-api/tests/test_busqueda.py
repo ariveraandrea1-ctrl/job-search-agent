@@ -13,8 +13,8 @@ def test_leer_palabras_quita_tildes_y_palabras_vacias():
     assert b.leer_palabras("Automatización, de, Junior, remoto") == ["automatizacion"]
 
 
-def test_maximo_12_palabras():
-    assert len(b.leer_palabras(",".join(f"palabra{i}" for i in range(20)))) == 12
+def test_maximo_15_palabras():
+    assert len(b.leer_palabras(",".join(f"palabra{i}" for i in range(20)))) == 15
 
 
 def test_sugerir_desde_rol_y_cargos_agrega_palabras_de_area():

@@ -45,6 +45,7 @@ datos reales · error en uso normal
 | BUG-26 | 2026-10-05 | 🐞 | Al reenviar el CV, la entrevista volvía a hacer las preguntas ya respondidas | Corregido |
 | BUG-27 | 2026-10-05 | 🔍 | Prueba de restauración marcaba DIFERENTE porque el radar guardó vacantes durante el respaldo | Corregido |
 | BUG-28 | 2026-10-06 | 🐞 | Llegaban vacantes de correo sin relación con la búsqueda (ej. "Analista de nómina") | Corregido + tests |
+| BUG-29 | 2026-10-06 | 🐞 | La IA seguía puntuando 111 vacantes viejas sin relación (anteriores a BUG-28) y también las descartadas | Corregido + limpieza |
 
 ---
 
@@ -237,6 +238,17 @@ datos reales · error en uso normal
 - **Corrección:** `busqueda.filtrar_por_palabras()` en POST /radar/email con las palabras del dueño del buzón (sin palabras configuradas no filtra). Se cuentan en "skipped".
 - **Prueba de regresión:** 2 tests en `test_busqueda.py` (114 en total).
 - **Cómo se detectó:** observación de Andrea al usar el bot.
+
+---
+
+### BUG-29 · La IA puntuaba vacantes viejas que no sirven
+- **Síntoma:** al probar la telemetría, radar-puntaje mandó a la IA "Recepcionista hotel", "Ejecutivo(a) de Negocios", etc.
+- **Causa raíz:** (1) BUG-28 filtró solo las vacantes nuevas; las que ya estaban en la fila de puntaje (111, del 30-sep y 1-oct, confirmado con una consulta SQL GROUP BY por día) seguían ahí. (2) /opportunities/pending-score no excluía las de estado "descartada": gastaba IA en vacantes que la persona ya había descartado.
+- **Corrección:** pending-score ahora excluye `status = 'descartada'`. Limpieza única con `python -m app.limpiar_pendientes` (vista previa) y `--aplicar`: les pasa el mismo filtro de palabras de cada usuario y marca como descartadas las que no coinciden (no borra nada).
+- **Prueba de regresión:** el filtro ya tiene tests (BUG-28); se verificó con la vista previa antes de aplicar y con la consulta SQL después.
+- **Cómo se detectó:** revisando la salida del nodo "Pedir vacantes sin puntaje" durante la prueba de telemetría.
+- **Lección:** cuando se agrega un filtro, revisar también los datos que ya estaban guardados, no solo los nuevos.
+- **Hallazgo extra (falso negativo):** la vista previa mostró que las palabras de Andrea descartaban vacantes de QA ("Test Analyst", "Junior SDET", "Test Automation", "Automatizador") y de servicio/soporte. Se ajustaron las palabras (test, sdet, automatiza, automation, soporte, mesa de ayuda, servicio al cliente, ia, ai, artificial) y el máximo de palabras subió de 12 a 15 (`MAX_PALABRAS`). Lección: el prefijo "tester" no atrapa "test"; conviene usar la raíz más corta.
 
 ---
 
