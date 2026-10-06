@@ -565,6 +565,11 @@ def radar_email(payload: RadarEmailIn, db: Session = Depends(get_db)) -> dict:
     encontradas = lector(payload.text or "")
     # Regla fija de ubicación (BUG-18): otro país → no se guarda.
     ofertas = [o for o in encontradas if ubicacion_sirve(o.get("location"))]
+    # Palabras clave del dueño del buzón (BUG-28): título que no tiene nada
+    # que ver con lo que busca (ej. "Analista de nómina") → no se guarda.
+    dueno = db.scalars(select(User).where(User.telegram_user_id == payload.telegram_user_id)).first()
+    if dueno is not None:
+        ofertas, _ = busqueda.filtrar_por_palabras(ofertas, _busqueda_de(db, dueno)[0])
     for oferta in ofertas:
         oferta["raw"] = {"email_subject": payload.subject}
     nuevas, duplicadas = _guardar_lote(db, payload.telegram_user_id, ofertas)
