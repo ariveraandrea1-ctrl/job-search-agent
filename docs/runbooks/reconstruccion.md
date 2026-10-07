@@ -80,6 +80,14 @@ Revisar en Settings de cada uno que el **Error workflow** sea
 
 ## Probar la reconstrucción sin tocar tu instalación
 Para repetir esta prueba en el mismo computador donde ya corre el sistema:
+0. **Antes de empezar, ten a mano la contraseña de tu n8n.** Las dos
+   instalaciones usan la misma dirección (localhost:5678); al entrar al n8n
+   de prueba, el navegador reemplaza la sesión del original y después te la
+   pide. Si no la recuerdas: `docker compose --env-file .env -f
+   compose/docker-compose.local.yml exec n8n n8n user-management:reset` y
+   `... restart n8n` borran solo los usuarios (workflows, credenciales y
+   ejecuciones se conservan) y te dejan crear la cuenta otra vez. Saca un
+   respaldo antes (`bash scripts/backup-db.sh`).
 1. Apagar la instalación actual **sin borrar datos**:
    `docker compose --env-file .env -f compose/docker-compose.local.yml down`
    (sin `-v`; los volúmenes se conservan).
@@ -91,3 +99,11 @@ Para repetir esta prueba en el mismo computador donde ya corre el sistema:
 4. Borrar la prueba con sus volúmenes, desde la carpeta de prueba:
    `docker compose --env-file .env -f compose/docker-compose.local.yml down -v`
 5. Volver a la carpeta original y `bash scripts/start-local.sh`.
+
+## Resultado de la prueba (2026-10-07)
+Reconstrucción completa en una carpeta nueva con solo el repo y el
+`.env.example`: 15 migraciones, admin creada, 5 credenciales y 8 workflows
+importados con `importar-n8n.py`, bot de prueba respondiendo, CV procesado
+por Groq y guardado en MinIO, aislamiento 42/42, idempotencia 15/15 y
+respaldo + restauración 8/8 tablas + MinIO. Hallazgos corregidos en el
+repo: ver BUG-31 en `docs/bitacora-bugs.md`.

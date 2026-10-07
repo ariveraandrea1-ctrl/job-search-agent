@@ -223,8 +223,21 @@ Markdown por defecto) rechazaba "_" sueltos → comandos.escapar_md + ruta
 _RutaTelegram que escapa todo "telegram_text" (y summary). Textos fijos en
 n8n con "_" se escriben "\_". 136 tests. Probado con el bot real.
 Todos los comandos de la spec existen.
-SIGUE:
-reconstrucción desde repo + .env.example, docs/decisions/, E2E/README/demo.
+DECISIONES (2026-10-07): docs/decisions/ ADR 001-006 (Groq+Gemini, Get on
+Board, sin embeddings, 8 workflows con equivalencias, correo solo admin,
+Mailpit→SMTP real). RECONSTRUCCIÓN HECHA 2026-10-07 (rama
+feature/reconstruccion): .env.example reescrito (COMPOSE_PROJECT_NAME,
+GROQ_API_KEY, GEMINI_API_KEY, IMAP/SMTP), scripts/importar-n8n.py (crea 5-6
+credenciales con los ids de los workflows + import:workflow; chat de
+alertas = ADMIN_TELEGRAM_USER_ID; chown node), start-local.sh siempre con
+--env-file, docs/runbooks/reconstruccion.md. Probado en ~/projects/
+jsa-reconstruccion (COMPOSE_PROJECT_NAME=jsa-reconstruccion, bot de prueba,
+sin IMAP): todo OK (ver BUG-31). La instalación real usa el nombre de
+proyecto por defecto "compose" (volúmenes compose_*). Ojo: n8n de prueba en
+localhost:5678 reemplaza la sesión del original; se hizo user-management:
+reset y Andrea creó la cuenta de nuevo. DoD 12/12 ✅.
+SIGUE: plan de pruebas E2E, README (con paso a producción SMTP), guion del
+video demo. Luego: hoja de vida y LinkedIn → sesión de repaso → Proyecto 2.
 BUG-29 HECHO 2026-10-06 (rama fix/limpiar-pendientes): pending-score excluye
 descartadas; limpieza única app/limpiar_pendientes.py (vista previa /
 --aplicar) → 56 vacantes viejas descartadas, 50 siguen para puntaje (había

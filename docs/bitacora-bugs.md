@@ -47,6 +47,7 @@ datos reales · error en uso normal
 | BUG-28 | 2026-10-06 | 🐞 | Llegaban vacantes de correo sin relación con la búsqueda (ej. "Analista de nómina") | Corregido + tests |
 | BUG-29 | 2026-10-06 | 🐞 | La IA seguía puntuando 111 vacantes viejas sin relación (anteriores a BUG-28) y también las descartadas | Corregido + limpieza |
 | BUG-30 | 2026-10-06 | 🐞 | /completar_perfil fallaba: Telegram rechazaba mensajes con "_" ("can't parse entities") | Corregido + tests |
+| BUG-31 | 2026-10-07 | 🐞 | El sistema no se podía reconstruir desde el repo sin pasos ocultos (prueba de reconstrucción) | Corregido + probado desde cero |
 
 ---
 
@@ -261,6 +262,21 @@ datos reales · error en uso normal
 - **Prueba de regresión:** 3 tests en `test_comandos.py` (escapado, solo el campo telegram_text y no el correo, la ayuda sin `_` sueltos).
 - **Cómo se detectó:** probando los comandos nuevos con el bot real.
 - **Lección:** leer el detalle completo del error (`errorDescription`) antes de cambiar cosas; y los datos externos (títulos de vacantes) pueden traer caracteres especiales.
+
+---
+
+### BUG-31 · Lo que impedía reconstruir el sistema desde el repo
+Encontrados al hacer la prueba de reconstrucción (DoD "reconstrucción desde
+repositorio y .env.example") en una carpeta nueva, sin tocar la instalación real.
+- **`test-conexion-postgres.json` tenía el mismo id que `telegram-invitacion`:** al importar en un n8n vacío uno pisaba al otro. → Se quitó del repo (era una prueba vieja).
+- **Las alertas de errores tenían el chat de la admin escrito fijo:** en otra instalación avisarían a otra persona. → `importar-n8n.py` lo cambia por `ADMIN_TELEGRAM_USER_ID`.
+- **`start-local.sh` tenía dos comandos sin `--env-file .env`:** en una segunda copia del proyecto habrían reiniciado el túnel de la instalación equivocada. → Agregado.
+- **Las credenciales de n8n no viajaban en el repo** (son secretos) y había que crearlas a mano en 8 flujos. → `scripts/importar-n8n.py` las crea desde el `.env` con los mismos ids que usan los workflows.
+- **`.env.example` desactualizado** (NVIDIA NIM, variables sin uso, sin Groq/Gemini). → Reescrito y explicado.
+- **Permisos (encontrado al correr la prueba):** `import:credentials` falló con `EACCES` porque `docker cp` conserva los permisos del Mac (solo el usuario del Mac puede leer) y n8n corre como `node`. → `chown -R node:node` después de copiar. La limpieza del archivo con secretos sí funcionó aunque falló la importación.
+- **Prueba de regresión:** reconstrucción completa repetida con éxito (ver `docs/runbooks/reconstruccion.md`).
+- **Efecto secundario aprendido:** al usar el n8n de prueba en la misma dirección (localhost:5678) se perdió la sesión del n8n original y no se recordaba la contraseña. Se resolvió con `n8n user-management:reset` (conserva workflows y credenciales) tras sacar un respaldo; quedó anotado en el runbook.
+- **Lección:** "funciona en mi Mac" no prueba que el proyecto se pueda instalar; hay que probarlo en un entorno limpio, igual que un caso de prueba.
 
 ---
 
