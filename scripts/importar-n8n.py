@@ -113,6 +113,9 @@ def main() -> int:
         print("==> Copiando al contenedor de n8n…")
         correr("exec", "-T", "-u", "root", "n8n", "rm", "-rf", "/tmp/importar")
         correr("cp", tmp, "n8n:/tmp/importar")
+        # docker cp conserva los permisos del Mac (solo tu usuario puede leer);
+        # n8n corre como el usuario "node" dentro del contenedor.
+        correr("exec", "-T", "-u", "root", "n8n", "chown", "-R", "node:node", "/tmp/importar")
         try:
             print("==> Importando credenciales…")
             correr("exec", "-T", "n8n", "n8n", "import:credentials", "--input=/tmp/importar/credenciales.json")
