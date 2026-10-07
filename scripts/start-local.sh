@@ -18,14 +18,14 @@ echo "==> Levantando servicios..."
 docker compose --env-file .env -f compose/docker-compose.local.yml up -d
 
 echo "==> Renovando el tunel de Cloudflare (siempre se recrea, es gratis y rapido)..."
-docker compose -f compose/docker-compose.local.yml up -d --force-recreate cloudflared
+docker compose --env-file .env -f compose/docker-compose.local.yml up -d --force-recreate cloudflared
 
 echo "==> Esperando a que el tunel entregue su URL..."
 sleep 6
 
 NEW_URL=""
 for i in 1 2 3 4 5; do
-  NEW_URL=$(docker compose -f compose/docker-compose.local.yml logs cloudflared 2>/dev/null \
+  NEW_URL=$(docker compose --env-file .env -f compose/docker-compose.local.yml logs cloudflared 2>/dev/null \
     | grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' | tail -1)
   if [ -n "$NEW_URL" ]; then
     break
@@ -36,7 +36,7 @@ done
 if [ -z "$NEW_URL" ]; then
   echo "No se pudo leer la URL del tunel automaticamente."
   echo "Revisa manualmente con:"
-  echo "  docker compose -f compose/docker-compose.local.yml logs cloudflared | grep trycloudflare"
+  echo "  docker compose --env-file .env -f compose/docker-compose.local.yml logs cloudflared | grep trycloudflare"
   exit 1
 fi
 
