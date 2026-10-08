@@ -76,10 +76,10 @@ desarrollo; este plan la vuelve a ejecutar de forma ordenada y con evidencia.
 |---|---|---|---|---|---|---|---|---|
 | E2E-12 | Vacante por correo | Esperar (o reenviar a la etiqueta Radar) una alerta de LinkedIn/Indeed | Aviso por Telegram con la vacante y su link | DoD 3 fuentes | radar-correo | ⬜ | | |
 | E2E-13 | Get on Board | Ejecutar `radar-getonbrd` a mano | Las nuevas que coinciden con tus palabras llegan por Telegram | DoD 3 fuentes | 2026-10-03 | ⬜ | | |
-| E2E-14 | URL manual | `/vacante <link>` | Vacante guardada con número | DoD 3 fuentes | | ⬜ | | |
-| E2E-15 | **Vacante duplicada** entre fuentes | `/vacante` con el link de una vacante que ya llegó por Get on Board o correo | "👌 Esa vacante ya la tenías guardada" (mismo número); no crea otra | E2E spec, DoD dedup | | ⬜ | | |
-| E2E-16 | Filtro de palabras | Revisar los avisos del día | Solo títulos con tus palabras clave (sin "nómina", "recepcionista"…) | — | BUG-28, BUG-29 | ⬜ | | |
-| E2E-17 | Filtro de ubicación | Revisar avisos | Sin vacantes de otros países (ej. México), aunque sean remotas | — | BUG-18 | ⬜ | | |
+| E2E-14 | URL manual | `/vacante <link>` | Vacante guardada con número | DoD 3 fuentes | | ❌ ([BUG-33](../bitacora-bugs.md)) | 2026-10-08 | [vacante nueva](evidencias/E2E-14_vacante_nueva.jpg) · la guarda (quedó como #367, verificado en [/nuevas](evidencias/E2E-16_nuevas_1.jpg)) y limpia el link, pero no muestra el número |
+| E2E-15 | **Vacante duplicada** entre fuentes | `/vacante` con el link de una vacante que ya llegó por Get on Board o correo | "👌 Esa vacante ya la tenías guardada" (mismo número); no crea otra | E2E spec, DoD dedup | | ✅ | 2026-10-08 | [duplicado y link con parámetros](evidencias/E2E-15_duplicado.jpg) · no duplica, ni con `?refId=…&trackingId=…` (prueba exploratoria). El número no se muestra (BUG-33); verificado en `/nuevas` que no apareció otra BairesDev |
+| E2E-16 | Filtro de palabras | Revisar los avisos del día | Solo títulos con tus palabras clave (sin "nómina", "recepcionista"…) | — | BUG-28, BUG-29 | ✅ | 2026-10-08 | [nuevas 1](evidencias/E2E-16_nuevas_1.jpg), [nuevas 2](evidencias/E2E-16_nuevas_2.jpg), [nuevas 3](evidencias/E2E-16_nuevas_3.jpg) · las 10 más recientes (#357–#367) tienen alguna palabra clave en el título |
+| E2E-17 | Filtro de ubicación | Revisar avisos | Sin vacantes de otros países (ej. México), aunque sean remotas | — | BUG-18 | ✅ | 2026-10-08 | [nuevas 1](evidencias/E2E-16_nuevas_1.jpg), [nuevas 2](evidencias/E2E-16_nuevas_2.jpg), [nuevas 3](evidencias/E2E-16_nuevas_3.jpg) · todas en Colombia (Bogotá, Medellín) o remotas; ninguna de otro país |
 
 ### D. Consultas y gestión por Telegram
 | ID | Caso | Pasos | Resultado esperado | Cubre | Antecedente | Estado | Fecha | Evidencia |
@@ -152,6 +152,10 @@ Hallazgos que no hacen fallar un caso, pero vale la pena registrar (posibles mej
 | E2E-06 | Pregunta el nivel de inglés aunque el CV dice "lectura básica de documentación técnica". Se defiende porque el CV no dice escritura ni conversación, pero podría usar lo que ya sabe: "Tu CV dice lectura básica; ¿y escritura y conversación?". | Baja (mejora) | Pendiente de decidir |
 | E2E-07 | Tras recibir el CV, el bot responde "No tengo preguntas pendientes… Si todavía no me has enviado tu hoja de vida, usa /subir_cv". La segunda frase es genérica (viene de `/completar_perfil`) y no tiene sentido justo después de enviar el CV. | Baja (mejora) | Pendiente de decidir: mensaje propio para "CV recibido y perfil completo" |
 | E2E-07 / E2E-08 | El mismo CV en PDF (E2E-06) y en DOCX (E2E-07) dio listas de habilidades distintas: con DOCX aparecen "gestión de defectos en JIRA", "colecciones de API", "códigos de estado HTTP". La extracción con IA no es determinista: el mismo documento puede dar un perfil algo diferente cada vez. | Informativa | Sin cambio por ahora; tenerlo en cuenta al comparar perfiles |
+| E2E-14 | ✅ Hallazgo positivo: un link largo de búsqueda de LinkedIn (`/jobs/search-results/?currentJobId=4477446145&…`) se guardó limpio como `/jobs/view/4477446145/`. | Informativa | — |
+| E2E-15 | ✅ Prueba exploratoria (fuera del plan): el link de la #303 con `?refId=abc123&trackingId=xyz` se reconoce como la misma vacante. | Informativa | Agregar como caso al plan |
+| E2E-16 | En `/buscar bogota` (E2E-20) aparecieron vacantes sin ninguna palabra clave en el título (#188 "Especialista de nómina", #223 "Topógrafo", #225 "Diseño geométrico", #178 "Especialista EWM"). Llegaron hace 4–5 días, antes del filtro de BUG-28; siguen guardadas con 0–15 pts. | Baja | Pendiente de decidir: limpiarlas o dejarlas como histórico |
+| E2E-17 | El filtro de ubicación solo saca otros países: llegan vacantes presenciales en Bogotá (ej. #354 "Presencial") aunque la preferencia es Remoto / Medellín. La IA las deja con puntaje bajo, pero igual se notifican. | Baja (mejora) | Pendiente de decidir: filtrar presenciales fuera de la ciudad elegida |
 
 ### Pendientes de corrección
 Se corrigen al terminar de ejecutar todo el plan. Después de cada corrección:
@@ -160,6 +164,7 @@ Se corrigen al terminar de ejecutar todo el plan. Después de cada corrección:
 | Bug / observación | Caso | Re-test | Estado |
 |---|---|---|---|
 | BUG-32 · `/preferencias` descarta en silencio la palabra 16 | E2E-21 | E2E-21 | Abierto |
+| BUG-33 · `/vacante` no muestra el número de la vacante | E2E-14 | E2E-14 y E2E-15 | Abierto |
 | Observaciones de la sección 9 | — | El caso de cada una | Por decidir cuáles se corrigen |
 
 ## 10. Siguiente nivel (opcional): mutation testing

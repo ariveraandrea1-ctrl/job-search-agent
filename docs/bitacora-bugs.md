@@ -49,6 +49,7 @@ datos reales · error en uso normal
 | BUG-30 | 2026-10-06 | 🐞 | /completar_perfil fallaba: Telegram rechazaba mensajes con "_" ("can't parse entities") | Corregido + tests |
 | BUG-31 | 2026-10-07 | 🐞 | El sistema no se podía reconstruir desde el repo sin pasos ocultos (prueba de reconstrucción) | Corregido + probado desde cero |
 | BUG-32 | 2026-10-08 | 🐞 | /preferencias descarta en silencio las palabras después de la 15 | Abierto |
+| BUG-33 | 2026-10-08 | 🐞 | /vacante no muestra el número (#) de la vacante guardada o repetida | Abierto |
 
 ---
 
@@ -292,6 +293,21 @@ repositorio y .env.example") en una carpeta nueva, sin tocar la instalación rea
 - **Causa:** `leer_palabras()` en `services/profile-api/app/busqueda.py` recorta la lista a `MAX_PALABRAS = 15` (`palabras[:MAX_PALABRAS]`) y el mensaje no informa el recorte.
 - **Severidad:** baja · **Prioridad:** media. En este caso no afectó el radar ("test" ya atrapa "tester" por prefijo), pero cualquier usuario puede perder una palabra importante sin saberlo, y el "✅ Listo" le hace creer que quedó guardada.
 - **Corrección propuesta:** si llegan más de 15 palabras, responder con un aviso ("El máximo es 15; no guardé: tester") o no guardar y pedir que quite algunas. Agregar un test unitario con 16 palabras.
+- **Estado:** abierto.
+
+---
+
+### BUG-33 · /vacante no muestra el número de la vacante
+- **Cómo se detectó:** prueba manual en Telegram (casos E2E-14 y E2E-15 del plan de pruebas).
+- **Pasos para reproducir:**
+  1. Escribir `/vacante <link de una vacante nueva>`.
+  2. Escribir `/vacante https://www.linkedin.com/jobs/view/4258064259/` (la #303, ya guardada).
+- **Resultado esperado:** "Guardé la vacante #N…" y "Esa vacante ya la tenías guardada (#303)", para poder usar `/detalle`, `/guardar` o `/descartar` de inmediato.
+- **Resultado real:** las dos respuestas muestran fuente, título y link, pero ningún número. Para gestionarla hay que buscarla en `/nuevas`.
+- **Evidencia:** `docs/testing/evidencias/E2E-14_vacante_nueva.jpg`, `E2E-15_duplicado.jpg`.
+- **Causa:** `radar_url()` en `services/profile-api/app/main.py` arma el texto con `oportunidad.title` y `oportunidad.url`, sin `numero` (el resto de comandos sí lo usan: `#{v['numero']}` en `comandos.py`).
+- **Severidad:** baja · **Prioridad:** media. La vacante se guarda y la deduplicación funciona; el problema es de usabilidad y de verificación (no se puede comprobar "mismo número" en el duplicado).
+- **Corrección propuesta:** incluir `#{numero}` en los dos mensajes y agregar un test que lo verifique.
 - **Estado:** abierto.
 
 ---
