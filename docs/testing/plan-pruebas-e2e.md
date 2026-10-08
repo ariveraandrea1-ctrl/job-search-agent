@@ -58,17 +58,17 @@ desarrollo; este plan la vuelve a ejecutar de forma ordenada y con evidencia.
 | E2E-01 | Invitación válida | Admin: `/invitar`. Persona nueva: `/start CODIGO` | Bienvenida; queda registrada como usuario activo | DoD 5 usuarios | Multiusuario parte 2 (Carolina, Ludwing) | ⬜ | | |
 | E2E-02 | Sin invitación | Persona no registrada escribe `hola` | Mensaje de que necesita invitación; no se registra | DoD 5 usuarios | probar-aislamiento | ⬜ | | |
 | E2E-03 | Código ya usado | Otra persona usa el código de E2E-01 | "Código ya usado"; no se registra | DoD 5 usuarios | probar-aislamiento | ⬜ | | |
-| E2E-04 | `/start` estando registrada | Admin escribe `/start` | "👋 Ya tienes acceso…" (sin datos raros) | — | BUG-23 | ⬜ | | |
+| E2E-04 | `/start` estando registrada | Admin escribe `/start` | "👋 Ya tienes acceso…" (sin datos raros) | — | BUG-23 | ✅ | 2026-10-08 | [/start](evidencias/E2E-04_start.jpg) |
 
 ### B. CV y perfil
 | ID | Caso | Pasos | Resultado esperado | Cubre | Antecedente | Estado | Fecha | Evidencia |
 |---|---|---|---|---|---|---|---|---|
 | E2E-05 | `/subir_cv` | Escribir `/subir_cv` | Instrucciones de cómo enviar el CV | Comandos spec | 2026-10-06 | ✅ | 2026-10-08 | [/subir_cv](evidencias/E2E-05_subir_cv.jpg) |
 | E2E-06 | CV en PDF real | Enviar el PDF | Confirma caracteres leídos; perfil creado; preguntas solo de lo que falta; archivo en MinIO | DoD PDF | Reconstrucción 2026-10-07 | ✅ | 2026-10-08 | [PDF y pregunta](evidencias/E2E-06_pdf_pregunta.jpg), [perfil 1](evidencias/E2E-06_perfil_1.jpg), [perfil 2](evidencias/E2E-06_perfil_2.jpg) · MinIO no revisado en esta ejecución (verificado en la reconstrucción 2026-10-07) |
-| E2E-07 | CV en DOCX real | Enviar el mismo CV en Word | Igual que E2E-06 | DoD DOCX | | ⬜ | | |
-| E2E-08 | PDF escaneado | Enviar un PDF que es solo imagen | Aviso de que no se pudo leer; NO crea perfil vacío | — | BUG-24 | ⬜ | | |
+| E2E-07 | CV en DOCX real | Enviar el mismo CV en Word | Igual que E2E-06 | DoD DOCX | | ✅ | 2026-10-08 | [docx](evidencias/E2E-07_docx.jpg) |
+| E2E-08 | PDF escaneado | Enviar un PDF que es solo imagen | Aviso de que no se pudo leer; NO crea perfil vacío | — | BUG-24 | ✅ | 2026-10-08 | [aviso y perfil](evidencias/E2E-08_escaneado_perfil_1.jpg), [perfil intacto](evidencias/E2E-08_perfil_2.jpg) |
 | E2E-09 | Reenviar el CV | Enviar el CV otra vez con la entrevista ya respondida | No repite preguntas ya respondidas | DoD perfil versionado | BUG-26 | ✅ | 2026-10-08 | [solo pregunta inglés](evidencias/E2E-06_pdf_pregunta.jpg), [perfil: falta solo inglés](evidencias/E2E-06_perfil_2.jpg) · ejecutado junto con E2E-06 |
-| E2E-10 | `/completar_perfil` | Con todo respondido | "No tengo preguntas pendientes…" | Comandos spec | BUG-30 | ⬜ | | |
+| E2E-10 | `/completar_perfil` | Con todo respondido | "No tengo preguntas pendientes…" | Comandos spec | BUG-30 | ✅ | 2026-10-08 | [/completar_perfil](evidencias/E2E-10_completar_perfil.jpg) |
 | E2E-11 | `/perfil` y `/corregir` | `/perfil`; luego `/corregir ciudad` y responder | Muestra el perfil; la corrección se guarda y aparece en `/perfil` | DoD inferencia corregible | | ✅ | 2026-10-08 | [/corregir salario](evidencias/E2E-11_corregir_salario.jpg), [perfil corregido](evidencias/E2E-11_perfil_corregido.jpg) |
 
 ### C. Radar: fuentes y duplicados
@@ -150,6 +150,8 @@ Hallazgos que no hacen fallar un caso, pero vale la pena registrar (posibles mej
 | E2E-22 | Ante un comando mal escrito el bot muestra la lista de comandos, pero no dice que no entendió ("No conozco /ayudaa"). Además la lista no incluye `/vacante <link>` ni `/corregir <tema>`, que sí existen (casos E2E-11 y E2E-14). | Baja (mejora) | Pendiente de decidir: decir qué no entendió y completar la ayuda |
 | E2E-06 | La entrevista aceptó "1000000" como aspiración salarial (error al responder; está por debajo del salario mínimo) sin advertir nada. La IA usa el salario al puntuar, así que un dato equivocado puede afectar los puntajes. | Media (mejora) | Pendiente de decidir: validar el rango y pedir confirmación si es muy bajo o muy alto |
 | E2E-06 | Pregunta el nivel de inglés aunque el CV dice "lectura básica de documentación técnica". Se defiende porque el CV no dice escritura ni conversación, pero podría usar lo que ya sabe: "Tu CV dice lectura básica; ¿y escritura y conversación?". | Baja (mejora) | Pendiente de decidir |
+| E2E-07 | Tras recibir el CV, el bot responde "No tengo preguntas pendientes… Si todavía no me has enviado tu hoja de vida, usa /subir_cv". La segunda frase es genérica (viene de `/completar_perfil`) y no tiene sentido justo después de enviar el CV. | Baja (mejora) | Pendiente de decidir: mensaje propio para "CV recibido y perfil completo" |
+| E2E-07 / E2E-08 | El mismo CV en PDF (E2E-06) y en DOCX (E2E-07) dio listas de habilidades distintas: con DOCX aparecen "gestión de defectos en JIRA", "colecciones de API", "códigos de estado HTTP". La extracción con IA no es determinista: el mismo documento puede dar un perfil algo diferente cada vez. | Informativa | Sin cambio por ahora; tenerlo en cuenta al comparar perfiles |
 
 ### Pendientes de corrección
 Se corrigen al terminar de ejecutar todo el plan. Después de cada corrección:
