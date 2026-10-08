@@ -84,7 +84,7 @@ desarrollo; este plan la vuelve a ejecutar de forma ordenada y con evidencia.
 ### D. Consultas y gestión por Telegram
 | ID | Caso | Pasos | Resultado esperado | Cubre | Antecedente | Estado | Fecha | Evidencia |
 |---|---|---|---|---|---|---|---|---|
-| E2E-18 | `/nuevas` y `/mejores` | Escribir ambos | Listas con número, puntaje y link | DoD consulta | | ⬜ | | |
+| E2E-18 | `/nuevas` y `/mejores` | Escribir ambos | Listas con número, puntaje y link | DoD consulta | | ✅ | 2026-10-08 | [nuevas 1](evidencias/E2E-18_nuevas_1.jpg), [nuevas 2](evidencias/E2E-18_nuevas_2.jpg), [mejores 1](evidencias/E2E-18_mejores_1.jpg), [mejores 2](evidencias/E2E-18_mejores_2.jpg) |
 | E2E-19 | `/detalle`, `/guardar`, `/descartar` | Con un número de la lista | Detalle completo; guardada aparece en `/guardadas`; descartada sale de `/mejores` y no se puntúa | DoD guardado y descarte | BUG-29 | ⬜ | | |
 | E2E-20 | `/buscar` | `/buscar bogota` (sin tilde) | Encuentra "Bogotá"; ordena por puntaje | Comandos spec | 2026-10-06 | ⬜ | | |
 | E2E-21 | `/preferencias` | Ver y cambiar las palabras | Responde con las palabras nuevas; los próximos avisos las usan | — | BUG-28 | ⬜ | | |
@@ -137,7 +137,15 @@ desarrollo; este plan la vuelve a ejecutar de forma ordenada y con evidencia.
   pausa entre vacantes (ver `docs/decisions/001`).
 - El sistema depende de que el Mac esté encendido (ver riesgos en la bitácora).
 
-## 9. Siguiente nivel (opcional): mutation testing
+## 9. Observaciones de la ejecución
+Hallazgos que no hacen fallar un caso, pero vale la pena registrar (posibles mejoras):
+
+| Caso | Observación | Severidad | Decisión |
+|---|---|---|---|
+| E2E-18 | `/mejores` muestra sobre todo vacantes de hace 5–6 días; puede que algunas ya estén cerradas. No tiene límite de antigüedad. | Baja (mejora) | Pendiente de decidir |
+| E2E-18 | `/nuevas` incluye vacantes poco afines ("Técnico de soporte en sitio", "Analista de producción, calidad e inventarios") porque coinciden con palabras amplias (soporte, calidad, ia). Es lo esperado: el filtro es amplio y el puntaje (15–20 pts) las deja abajo. | Informativa | Sin cambio |
+
+## 10. Siguiente nivel (opcional): mutation testing
 Romper el código a propósito para comprobar que las pruebas lo detectan
 (ej. quitar la deduplicación, invertir el filtro de ubicación, saltar la
 idempotencia). Si al "mutar" el código ninguna prueba falla, esa prueba no
