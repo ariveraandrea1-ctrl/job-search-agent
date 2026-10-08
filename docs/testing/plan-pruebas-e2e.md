@@ -55,9 +55,9 @@ desarrollo; este plan la vuelve a ejecutar de forma ordenada y con evidencia.
 ### A. Registro y acceso
 | ID | Caso | Pasos | Resultado esperado | Cubre | Antecedente | Estado | Fecha | Evidencia |
 |---|---|---|---|---|---|---|---|---|
-| E2E-01 | Invitación válida | Admin: `/invitar`. Persona nueva: `/start CODIGO` | Bienvenida; queda registrada como usuario activo | DoD 5 usuarios | Multiusuario parte 2 (Carolina, Ludwing) | ⬜ | | |
-| E2E-02 | Sin invitación | Persona no registrada escribe `hola` | Mensaje de que necesita invitación; no se registra | DoD 5 usuarios | probar-aislamiento | ⬜ | | |
-| E2E-03 | Código ya usado | Otra persona usa el código de E2E-01 | "Código ya usado"; no se registra | DoD 5 usuarios | probar-aislamiento | ⬜ | | |
+| E2E-01 | Invitación válida | Admin: `/invitar`. Persona nueva: `/start CODIGO` | Bienvenida; queda registrada como usuario activo | DoD 5 usuarios | Multiusuario parte 2 (Carolina, Ludwing) | ✅ | 2026-10-08 | [bienvenida](evidencias/E2E-01_bienvenida.jpg) (recortada: el resto muestra datos personales del ayudante) · aislamiento: [`/nuevas` vacío y `/preferencias` propias](evidencias/E2E-01_aislamiento_nuevas_preferencias.jpg), [cambia sus palabras sin tocar las de la admin](evidencias/E2E-01_aislamiento_preferencias_propias.jpg); `/perfil` muestra solo su CV (captura no publicada) · exploratoria: [código inexistente](evidencias/E2E-01_ayudante_codigo_inexistente.jpg) |
+| E2E-02 | Sin invitación | Persona no registrada escribe `hola` | Mensaje de que necesita invitación; no se registra | DoD 5 usuarios | probar-aislamiento | ✅ | 2026-10-08 | [ayudante](evidencias/E2E-02_ayudante_hola.jpg), [tercera persona](evidencias/E2E-03_tercero.jpg) · las dos reciben "solo por invitación" |
+| E2E-03 | Código ya usado | Otra persona usa el código de E2E-01 | "Código ya usado"; no se registra | DoD 5 usuarios | probar-aislamiento | ✅ | 2026-10-08 | [tercera persona](evidencias/E2E-03_tercero.jpg) · el código A3JFN2BN, ya usado por el ayudante, responde "Ese código ya fue usado"; tampoco entra con `zzz9999` |
 | E2E-04 | `/start` estando registrada | Admin escribe `/start` | "👋 Ya tienes acceso…" (sin datos raros) | — | BUG-23 | ✅ | 2026-10-08 | [/start](evidencias/E2E-04_start.jpg) |
 
 ### B. CV y perfil
@@ -166,6 +166,9 @@ Hallazgos que no hacen fallar un caso, pero vale la pena registrar (posibles mej
 | E2E-27 | Una sola causa (profile-api apagado) generó 2 alertas: `verificar-acceso` y `telegram-invitacion` (que llama al primero). En un corte largo, cada mensaje de cada usuario dispara 2 alertas. | Baja | Pendiente de decidir: alertar una sola vez por causa / agrupar |
 | E2E-27 | El texto de la alerta ("incorrect host (domain) value") es el error técnico de n8n y despista: el host está bien, el servicio está apagado. | Informativa | Agregar a la alerta una pista: "¿está prendido profile-api?" |
 | E2E-27 | La #367 (agregada con `/vacante`, sin título ni descripción) recibió 15 pts en la vuelta de las 15:00. La IA puntuó una vacante de la que no sabe nada: ese número no tiene sustento. | Baja (mejora) | Pendiente de decidir: no puntuar vacantes sin título ni descripción, o marcarlas "sin datos" |
+| E2E-01 | El perfil de un usuario que no es de QA (Tech Lead / AI Engineer) queda incompleto: el esquema de habilidades es de QA (`QA`, `Automatización`, `Bases de datos`, `Herramientas`), así que sus lenguajes, frameworks e IA no tienen dónde ir y "QA" y "Automatización" salen vacíos. Además, 4 de 8 experiencias quedaron con fechas "? – ?" y 3 sin cargo ("— en Dale"). | Media (mejora) | Pendiente de decidir: esquema de habilidades general para multiusuario y revisar la extracción de experiencias |
+| E2E-01 | La entrevista del ayudante solo hizo 2 preguntas (salario y contrato). Aceptó "10000 USD" y "Todos" sin validar ni pedir confirmación (mismo tema de la observación de salario del E2E-06). | Baja | Ver observación E2E-06 |
+| E2E-01 | Las palabras clave que la IA sacó del CV del ayudante eran solo 3 ("tech lead, ai engineer, ai"); él tuvo que escribir las suyas. Con 3 palabras el radar le traería muy pocas vacantes. | Baja (mejora) | Pendiente de decidir: sugerir más palabras desde el CV |
 
 ### Pendientes de corrección
 Se corrigen al terminar de ejecutar todo el plan. Después de cada corrección:
