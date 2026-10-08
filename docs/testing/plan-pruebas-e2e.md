@@ -86,9 +86,9 @@ desarrollo; este plan la vuelve a ejecutar de forma ordenada y con evidencia.
 |---|---|---|---|---|---|---|---|---|
 | E2E-18 | `/nuevas` y `/mejores` | Escribir ambos | Listas con número, puntaje y link | DoD consulta | | ✅ | 2026-10-08 | [nuevas 1](evidencias/E2E-18_nuevas_1.jpg), [nuevas 2](evidencias/E2E-18_nuevas_2.jpg), [mejores 1](evidencias/E2E-18_mejores_1.jpg), [mejores 2](evidencias/E2E-18_mejores_2.jpg) |
 | E2E-19 | `/detalle`, `/guardar`, `/descartar` | Con un número de la lista | Detalle completo; guardada aparece en `/guardadas`; descartada sale de `/mejores` y no se puntúa | DoD guardado y descarte | BUG-29 | ✅ | 2026-10-08 | [detalle](evidencias/E2E-19_detalle.jpg), [guardar y guardadas](evidencias/E2E-19_guardar_guardadas.jpg), [descartar y nuevas](evidencias/E2E-19_descartar_nuevas.jpg) |
-| E2E-20 | `/buscar` | `/buscar bogota` (sin tilde) | Encuentra "Bogotá"; ordena por puntaje | Comandos spec | 2026-10-06 | ⬜ | | |
-| E2E-21 | `/preferencias` | Ver y cambiar las palabras | Responde con las palabras nuevas; los próximos avisos las usan | — | BUG-28 | ⬜ | | |
-| E2E-22 | Comando mal escrito / sticker | `/ayudaa` y un sticker | Responde la lista de comandos; nunca se queda callado | — | 2026-10-06 | ⬜ | | |
+| E2E-20 | `/buscar` | `/buscar bogota` (sin tilde) | Encuentra "Bogotá"; ordena por puntaje | Comandos spec | 2026-10-06 | ✅ | 2026-10-08 | [buscar 1](evidencias/E2E-20_buscar_1.jpg), [buscar 2](evidencias/E2E-20_buscar_2.jpg) |
+| E2E-21 | `/preferencias` | Ver y cambiar las palabras | Responde con las palabras nuevas; los próximos avisos las usan | — | BUG-28 | ❌ ([BUG-32](../bitacora-bugs.md)) | 2026-10-08 | [ver y reemplazar](evidencias/E2E-21_preferencias_1.jpg), [lista con 1 palabra](evidencias/E2E-21_preferencias_2.jpg), [16 palabras, guarda 15](evidencias/E2E-21_preferencias_3.jpg) |
+| E2E-22 | Comando mal escrito / sticker | `/ayudaa` y un sticker | Responde la lista de comandos; nunca se queda callado | — | 2026-10-06 | ✅ | 2026-10-08 | [/ayudaa](evidencias/E2E-22_ayudaa.jpg), [sticker](evidencias/E2E-22_sticker.jpg) |
 | E2E-23 | `/pausar` y `/reanudar` | Pausar; esperar el resumen; reanudar | Pausada no recibe avisos ni resumen; al reanudar vuelven | — | multiusuario | ⬜ | | |
 
 ### E. Resumen diario
@@ -145,6 +145,18 @@ Hallazgos que no hacen fallar un caso, pero vale la pena registrar (posibles mej
 | E2E-18 | `/mejores` muestra sobre todo vacantes de hace 5–6 días; puede que algunas ya estén cerradas. No tiene límite de antigüedad. | Baja (mejora) | Pendiente de decidir |
 | E2E-18 | `/nuevas` incluye vacantes poco afines ("Técnico de soporte en sitio", "Analista de producción, calidad e inventarios") porque coinciden con palabras amplias (soporte, calidad, ia). Es lo esperado: el filtro es amplio y el puntaje (15–20 pts) las deja abajo. | Informativa | Sin cambio |
 | E2E-19 | En `/detalle 303`, la IA pone "Experiencia en automatización con Python y pytest" como punto a favor, pero en contra dice que la vacante no trae requisitos. El punto a favor sale del perfil, no de la vacante, así que puede dar una confianza que no está sustentada. | Baja (mejora) | Pendiente de decidir: ajustar el prompt para que los puntos a favor solo citen lo que dice la vacante |
+| E2E-20 | `/buscar` solo busca en título y empresa, no en la ubicación. `/buscar bogota` no muestra vacantes como la #303 (BairesDev, 70 pts) o la #359 (Capgemini), que son de Bogotá pero no lo dicen en el título. El bot lo avisa en su ayuda, pero un usuario que busca una ciudad probablemente espera verlas todas. | Baja (mejora) | Pendiente de decidir: incluir la ubicación en la búsqueda |
+| E2E-21 | `/preferencias tester` **reemplazó** las 15 palabras por una sola, sin aviso, y las categorías de Get on Board bajaron de 4 a 1. Funciona como está diseñado, pero un usuario que quiere *agregar* una palabra deja el radar casi ciego sin darse cuenta (pasó en la prueba real). | Media (mejora) | Pendiente de decidir: pedir confirmación al reemplazar, o comandos separados para agregar y quitar |
+| E2E-22 | Ante un comando mal escrito el bot muestra la lista de comandos, pero no dice que no entendió ("No conozco /ayudaa"). Además la lista no incluye `/vacante <link>` ni `/corregir <tema>`, que sí existen (casos E2E-11 y E2E-14). | Baja (mejora) | Pendiente de decidir: decir qué no entendió y completar la ayuda |
+
+### Pendientes de corrección
+Se corrigen al terminar de ejecutar todo el plan. Después de cada corrección:
+**re-test** del caso que falló y **regresión** (pruebas unitarias e integración).
+
+| Bug / observación | Caso | Re-test | Estado |
+|---|---|---|---|
+| BUG-32 · `/preferencias` descarta en silencio la palabra 16 | E2E-21 | E2E-21 | Abierto |
+| Observaciones de la sección 9 | — | El caso de cada una | Por decidir cuáles se corrigen |
 
 ## 10. Siguiente nivel (opcional): mutation testing
 Romper el código a propósito para comprobar que las pruebas lo detectan

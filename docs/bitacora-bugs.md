@@ -48,6 +48,7 @@ datos reales · error en uso normal
 | BUG-29 | 2026-10-06 | 🐞 | La IA seguía puntuando 111 vacantes viejas sin relación (anteriores a BUG-28) y también las descartadas | Corregido + limpieza |
 | BUG-30 | 2026-10-06 | 🐞 | /completar_perfil fallaba: Telegram rechazaba mensajes con "_" ("can't parse entities") | Corregido + tests |
 | BUG-31 | 2026-10-07 | 🐞 | El sistema no se podía reconstruir desde el repo sin pasos ocultos (prueba de reconstrucción) | Corregido + probado desde cero |
+| BUG-32 | 2026-10-08 | 🐞 | /preferencias descarta en silencio las palabras después de la 15 | Abierto |
 
 ---
 
@@ -277,6 +278,21 @@ repositorio y .env.example") en una carpeta nueva, sin tocar la instalación rea
 - **Prueba de regresión:** reconstrucción completa repetida con éxito (ver `docs/runbooks/reconstruccion.md`).
 - **Efecto secundario aprendido:** al usar el n8n de prueba en la misma dirección (localhost:5678) se perdió la sesión del n8n original y no se recordaba la contraseña. Se resolvió con `n8n user-management:reset` (conserva workflows y credenciales) tras sacar un respaldo; quedó anotado en el runbook.
 - **Lección:** "funciona en mi Mac" no prueba que el proyecto se pueda instalar; hay que probarlo en un entorno limpio, igual que un caso de prueba.
+
+---
+
+### BUG-32 · /preferencias descarta en silencio las palabras después de la 15
+- **Cómo se detectó:** prueba manual en Telegram (caso E2E-21 del plan de pruebas).
+- **Pasos para reproducir:**
+  1. Escribir `/preferencias` con 16 palabras separadas por coma (las 15 actuales + `tester`).
+  2. Leer la respuesta del bot.
+- **Resultado esperado:** el bot guarda las 16 palabras, o avisa que el máximo es 15 y cuál quedó por fuera.
+- **Resultado real:** responde "✅ Listo, actualicé tu búsqueda" con solo 15 palabras; `tester` desaparece sin ningún aviso.
+- **Evidencia:** `docs/testing/evidencias/E2E-21_preferencias_3.jpg`.
+- **Causa:** `leer_palabras()` en `services/profile-api/app/busqueda.py` recorta la lista a `MAX_PALABRAS = 15` (`palabras[:MAX_PALABRAS]`) y el mensaje no informa el recorte.
+- **Severidad:** baja · **Prioridad:** media. En este caso no afectó el radar ("test" ya atrapa "tester" por prefijo), pero cualquier usuario puede perder una palabra importante sin saberlo, y el "✅ Listo" le hace creer que quedó guardada.
+- **Corrección propuesta:** si llegan más de 15 palabras, responder con un aviso ("El máximo es 15; no guardé: tester") o no guardar y pedir que quite algunas. Agregar un test unitario con 16 palabras.
+- **Estado:** abierto.
 
 ---
 
