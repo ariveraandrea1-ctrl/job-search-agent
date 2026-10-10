@@ -1199,7 +1199,9 @@ def preferencias(payload: PreferenciasIn, db: Session = Depends(get_db)) -> dict
         user.categorias = busqueda.sugerir_categorias(nuevas)
         db.commit()
         return {"ok": True, "palabras": nuevas, "categorias": user.categorias,
-                "telegram_text": busqueda.texto_preferencias(nuevas, user.categorias, cambiadas=True)}
+                "telegram_text": busqueda.texto_preferencias(
+                    nuevas, user.categorias, cambiadas=True,
+                    sobrantes=busqueda.palabras_que_sobran(payload.text))}
     palabras, categorias = _busqueda_de(db, user)
     return {"ok": True, "palabras": palabras, "categorias": categorias,
             "telegram_text": busqueda.texto_preferencias(palabras, categorias)}

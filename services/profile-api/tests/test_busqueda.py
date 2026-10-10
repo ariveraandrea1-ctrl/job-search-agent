@@ -17,6 +17,31 @@ def test_maximo_15_palabras():
     assert len(b.leer_palabras(",".join(f"palabra{i}" for i in range(20)))) == 15
 
 
+# BUG-32: con 16 palabras se guardaban 15 y la 16 desaparecía sin avisar.
+_DIECISEIS = "/preferencias " + ", ".join(f"palabra{i}" for i in range(15)) + ", tester"
+
+
+def test_con_16_palabras_se_guardan_15_y_sobra_la_ultima():
+    assert len(b.leer_comando_preferencias(_DIECISEIS)) == 15
+    assert b.palabras_que_sobran(_DIECISEIS) == ["tester"]
+
+
+def test_con_15_o_menos_no_sobra_nada():
+    assert b.palabras_que_sobran("/preferencias qa, tester, pruebas") == []
+    assert b.palabras_que_sobran("/preferencias") == []
+
+
+def test_el_mensaje_avisa_cuales_no_se_guardaron():
+    texto = b.texto_preferencias(["qa"], [], cambiadas=True, sobrantes=["tester"])
+    assert "No guardé: tester" in texto
+    assert "máximo es 15" in texto
+
+
+def test_sin_sobrantes_el_mensaje_no_menciona_el_maximo():
+    texto = b.texto_preferencias(["qa"], [], cambiadas=True)
+    assert "No guardé" not in texto
+
+
 def test_sugerir_desde_rol_y_cargos_agrega_palabras_de_area():
     palabras = b.sugerir_palabras("QA Engineer, Tester manual", ["Analista de Pruebas"])
     assert {"qa", "tester", "pruebas"} <= set(palabras)
