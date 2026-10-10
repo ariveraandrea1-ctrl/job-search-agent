@@ -118,3 +118,15 @@ def test_filtrar_por_palabras_saca_las_que_no_tienen_nada_que_ver():
 def test_filtrar_sin_palabras_no_descarta_nada():
     ofertas = [{"title": "Analista de Nómina"}]
     assert b.filtrar_por_palabras(ofertas, []) == (ofertas, 0)
+
+
+
+# Observación E2E-21: /preferencias con una palabra reemplazaba las 15 sin avisar.
+def test_avisa_si_la_lista_nueva_tiene_menos_palabras():
+    texto = b.texto_preferencias(["tester"], [], cambiadas=True, antes=15)
+    assert "antes tenías 15 palabras y ahora queda 1 palabra" in texto
+
+
+def test_no_avisa_si_la_lista_crece_o_queda_igual():
+    texto = b.texto_preferencias(["qa", "tester"], [], cambiadas=True, antes=2)
+    assert "antes tenías" not in texto

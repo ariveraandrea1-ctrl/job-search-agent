@@ -27,9 +27,23 @@ AYUDA = (
     "/guardar 12 — guardar la #12\n"
     "/descartar 12 — descartar la #12\n"
     "/preferencias — ver o cambiar las palabras de tu búsqueda\n"
+    "/vacante link — guardar una vacante que encontraste por tu cuenta\n"
+    "/corregir salario — corregir una respuesta de tu perfil (también rol, ciudad, contrato…)\n"
     "/pausar — dejar de recibir vacantes por un tiempo\n"
     "/reanudar — volver a recibirlas"
 )
+
+# Comandos que piden la ayuda a propósito: no se les dice "no conozco".
+PIDEN_AYUDA = ("ayuda", "help", "comandos")
+
+
+def texto_comando_desconocido(texto: str | None) -> str:
+    """Ayuda para un comando que no existe, diciendo cuál no entendí (observación E2E-22)."""
+    m = re.match(r"^\s*/(\w+)", texto or "")
+    if not m or m.group(1).lower() in PIDEN_AYUDA:
+        return AYUDA
+    return f"No conozco el comando /{m.group(1)}. Estos son los que entiendo:\n\n" + AYUDA
+
 
 TEXTOS_ESTADO_USUARIO = {
     "pausado": ("⏸ Listo, pausé tu radar: no te llegarán vacantes nuevas ni el resumen "
@@ -70,8 +84,8 @@ TEXTO_SUBIR_CV = (
     "Ojo: si el PDF es escaneado (una foto), no puedo leerlo; usa el PDF que exporta Word o Google Docs."
 )
 
-AYUDA_BUSCAR = ("🔎 Escribe /buscar y lo que buscas en el título o la empresa. Ejemplos:\n"
-                "/buscar automation\n/buscar qa remoto\n/buscar bancolombia")
+AYUDA_BUSCAR = ("🔎 Escribe /buscar y lo que buscas en el título, la empresa o la ubicación. Ejemplos:\n"
+                "/buscar automation\n/buscar qa remoto\n/buscar bancolombia\n/buscar bogota")
 
 
 _MARKDOWN = re.compile(r"([_*`\[])")
@@ -104,7 +118,10 @@ def leer_busqueda(texto: str | None) -> str:
 
 
 def coincide_busqueda(consulta: str, *campos: str | None) -> bool:
-    """¿Todas las palabras de la consulta están en el título/empresa? (sin tildes, sin mayúsculas)."""
+    """¿Todas las palabras de la consulta están en los campos? (sin tildes, sin mayúsculas).
+
+    main.py le pasa título, empresa y ubicación (la ubicación se agregó por la
+    observación E2E-20: /buscar bogota no traía vacantes de Bogotá)."""
     palabras = normalizar(consulta).split()
     if not palabras:
         return False
@@ -208,14 +225,14 @@ def texto_resumen_diario(vacantes: list[dict], pendientes: int, horas: int = 24,
     """
     nombres_fuentes = nombres_fuentes or {}
     if not vacantes:
-        return (f"☀️ Buenos días. En las últimas {horas} h no llegaron vacantes nuevas.\n"
+        return (f"☀️ Hola. En las últimas {horas} h no llegaron vacantes nuevas.\n"
                 "Puedes revisar /mejores o /guardadas.")
     conteo: dict[str, int] = {}
     for v in vacantes:
         fuente = nombres_fuentes.get(v.get("source"), v.get("source"))
         conteo[fuente] = conteo.get(fuente, 0) + 1
     por_fuente = ", ".join(f"{f} {n}" for f, n in sorted(conteo.items(), key=lambda x: -x[1]))
-    lineas = [f"☀️ Buenos días. Resumen del radar (últimas {horas} h):", "",
+    lineas = [f"☀️ Hola. Resumen del radar (últimas {horas} h):", "",
               f"Llegaron {len(vacantes)} vacante(s): {por_fuente}."]
     freelance = [v for v in vacantes if v.get("tipo") == "freelance"]
     if freelance:
