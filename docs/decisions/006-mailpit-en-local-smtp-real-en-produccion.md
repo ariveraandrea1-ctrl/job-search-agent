@@ -1,28 +1,27 @@
-# ADR 006 · Resumen por correo: Mailpit en local, SMTP real en producción
+# ADR 006. Resumen por correo: Mailpit en local y SMTP real en producción
 
-**Fecha:** 2026-10-06 · **Estado:** aceptada · **Decidió:** Andrea
+Fecha: 2026-10-06. Estado: aceptada. Decidió: Andrea.
 
 ## Contexto
-La definición de terminado pide "resumen por Telegram y correo". El correo
-de cada usuario sale de su CV (`contacto.email`).
+
+La definición de terminado pide el resumen por Telegram y por correo. El correo de cada usuario se saca de su CV (`contacto.email`).
 
 ## Decisión
-En local, el nodo "Enviar resumen por correo" usa la credencial SMTP
-**Mailpit** (host `mailpit`, puerto 1025, sin SSL). Mailpit atrapa los
-correos y los muestra en http://localhost:8025 sin enviarlos de verdad.
+
+En local, el nodo "Enviar resumen por correo" usa la credencial SMTP de Mailpit (host `mailpit`, puerto 1025, sin SSL). Mailpit atrapa los correos y los muestra en http://localhost:8025, sin enviarlos de verdad.
 
 ## Por qué
-- Permite probar el envío completo sin riesgo de mandar correos reales a
-  usuarios de prueba ni que Gmail marque la cuenta como spam.
-- No hace falta guardar una contraseña de correo real en el entorno local.
+
+Así puedo probar el envío completo sin mandar correos reales a usuarios de prueba y sin que Gmail marque la cuenta como spam.
+
+Tampoco hace falta guardar la contraseña de un correo real en el entorno local.
 
 ## Consecuencias
-- **Paso a producción (pendiente, va en el README):** cambiar la credencial
-  del nodo a un SMTP real (ej. Gmail con contraseña de aplicación, o un
-  servicio de envío) y revisar remitente, SPF/DKIM y límites diarios.
-- El resumen por correo usa la misma idempotencia que el de Telegram: uno
-  por usuario y día.
+
+Para pasar a producción (todavía pendiente) hay que cambiar la credencial del nodo por un SMTP real, por ejemplo Gmail con contraseña de aplicación o un servicio de envío, y revisar el remitente, SPF y DKIM, y los límites diarios.
+
+El resumen por correo tiene la misma protección contra repetidos que el de Telegram: uno por usuario y por día.
 
 ## Cuándo revisarla
-- Al desplegar en un servidor o al tener usuarios reales que esperen el
-  correo.
+
+Al desplegar en un servidor, o cuando haya usuarios reales esperando el correo.

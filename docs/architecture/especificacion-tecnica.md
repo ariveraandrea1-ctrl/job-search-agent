@@ -1,21 +1,19 @@
 # Hoja de ruta técnica: agente de búsqueda y postulación laboral con n8n
 
-> Tres proyectos acumulativos, desde un laboratorio local hasta un producto multiusuario listo para comercialización.
+Este es el plan técnico con el que arranqué el proyecto. Describe las tres etapas, desde un laboratorio local hasta un producto para varios usuarios. Durante la construcción del Proyecto 1 tomé algunas decisiones distintas a las que dice este documento; cada una está explicada en `docs/decisions/`.
 
-**Estado:** estrategia refinada para implementación
-**Horizonte inicial:** beta de 5 usuarios; máximo 30 usuarios durante los primeros 3 meses
-**Método:** diseño regresivo desde el producto final e implementación progresiva
-**Núcleo:** n8n como plano de control de toda la automatización
-
----
+- Estado: estrategia lista para implementar.
+- Horizonte inicial: una beta de 5 usuarios, con un máximo de 30 durante los primeros 3 meses.
+- Método: primero defino el producto final y después construyo por etapas, de lo más básico a lo más completo.
+- Núcleo: n8n coordina toda la automatización.
 
 ## 1. Visión del producto
 
 No se construirán tres aplicaciones aisladas. Cada proyecto será una versión más capaz del mismo producto:
 
-1. **Proyecto 1 — Perfil inteligente y radar:** crea el núcleo de datos, la entrevista profesional y la búsqueda multifuente.
-2. **Proyecto 2 — Copiloto de postulaciones:** añade adaptación documental, aprobaciones, navegación asistida y seguimiento.
-3. **Proyecto 3 — Agente laboral multiusuario:** completa la automatización autorizada, la operación continua y el despliegue comercial.
+1. Proyecto 1, perfil inteligente y radar: crea el núcleo de datos, la entrevista profesional y la búsqueda en varias fuentes.
+2. Proyecto 2, copiloto de postulaciones: agrega la adaptación de documentos, las aprobaciones, la navegación asistida y el seguimiento.
+3. Proyecto 3, agente laboral para varios usuarios: completa la automatización autorizada, la operación continua y el despliegue comercial.
 
 El producto final deberá analizar CV, entrevistar al usuario, mantener un perfil versionado, generar filtros, buscar en distintas fuentes, puntuar vacantes, preparar documentos, solicitar autorización, postular cuando esté permitido y seguir las respuestas de reclutadores.
 
@@ -37,13 +35,11 @@ flowchart RL
 | Copiloto de postulaciones | 2 | Preparación, aprobación y seguimiento |
 | Perfil y radar | 1 | Datos confiables y oportunidades |
 
----
-
 ## 2. Principios no negociables
 
 ### 2.1 n8n como protagonista
 
-n8n será el **orquestador central**:
+n8n será el orquestador central:
 
 - Recibe eventos de Telegram, correo, cron y webhooks.
 - Coordina subworkflows y servicios especializados.
@@ -95,11 +91,9 @@ Aunque el Proyecto 1 sea local, las tablas funcionales tendrán tenant_id y user
 - Los modelos se consumen mediante alias y un router.
 - Los secretos no aparecen en workflows exportados.
 
----
-
 ## 3. Comparación de los tres proyectos
 
-| Dimensión | Proyecto 1 — Básico | Proyecto 2 — Intermedio | Proyecto 3 — Completo |
+| Dimensión | Proyecto 1, Básico | Proyecto 2, Intermedio | Proyecto 3, Completo |
 |---|---|---|---|
 | Producto | Perfil + radar | Copiloto de postulación | Agente laboral SaaS |
 | Usuarios | 1 local; preparado para 5 | 5 beta; hasta 30 | Multiusuario comercial |
@@ -128,9 +122,7 @@ flowchart TB
 
 En el Proyecto 1 no se despliegan colas ni navegador. En el Proyecto 2 se añade el navegador. En el Proyecto 3 se activan colas, workers y operación productiva.
 
----
-
-# Proyecto 1 — Perfil inteligente y radar multifuente
+# Proyecto 1: Perfil inteligente y radar multifuente
 
 ## 4. Resultado funcional
 
@@ -271,7 +263,7 @@ n8n invoca el subworkflow ai-model-router:
 
 Se registran proveedor, alias, prompt, tokens, latencia, costo y fallback.
 
-Control de costo: filtros determinísticos → embeddings → evaluación generativa de las mejores vacantes. Meta local: **USD 0–5 al mes**, como estimación y no como tarifa garantizada.
+Control de costo: primero filtros fijos, después embeddings y al final una evaluación con IA generativa solo para las mejores vacantes. Meta local: USD 0–5 al mes, como estimación y no como tarifa garantizada.
 
 ## 9. Workflows de n8n del Proyecto 1
 
@@ -311,11 +303,9 @@ Comandos: /start, /perfil, /subir_cv, /completar_perfil, /preferencias, /buscar,
 - Respaldo restaurable de PostgreSQL y MinIO.
 - Reconstrucción desde repositorio y .env.example.
 
-**Puerta al Proyecto 2:** no automatizar postulaciones hasta validar perfil, evidencia, deduplicación, idempotencia, secretos y restauración.
+Puerta al Proyecto 2: no automatizar postulaciones hasta validar perfil, evidencia, deduplicación, idempotencia, secretos y restauración.
 
----
-
-# Proyecto 2 — Copiloto de postulaciones y seguimiento
+# Proyecto 2: Copiloto de postulaciones y seguimiento
 
 ## 11. Resultado funcional
 
@@ -463,7 +453,7 @@ Cuotas iniciales por usuario:
 - 3 procesos de navegador por semana.
 - 250 MB de documentos.
 
-Presupuesto orientativo: **USD 25–70/mes** para 5 usuarios, sujeto a proveedor, región y precios vigentes.
+Presupuesto orientativo: USD 25–70/mes para 5 usuarios, sujeto a proveedor, región y precios vigentes.
 
 ## 20. Plan de 7–9 semanas
 
@@ -490,9 +480,7 @@ Presupuesto orientativo: **USD 25–70/mes** para 5 usuarios, sujeto a proveedor
 - Ruta probada hasta 30.
 - Cero duplicados en E2E y restauración documentada.
 
----
-
-# Proyecto 3 — Agente laboral multiusuario completo
+# Proyecto 3: Agente laboral multiusuario completo
 
 ## 21. Resultado funcional
 
@@ -588,11 +576,11 @@ Ejemplos:
 - "¿Qué falta para autorizarla?".
 - "Muéstrame procesos sin respuesta durante diez días".
 
-Flujo: intención → permisos/contexto → confirmación sensible → workflow determinístico → auditoría → respuesta. El LLM interpreta y explica; no ejecuta por sí solo acciones irreversibles.
+Flujo: primero se entiende la intención, luego se revisan permisos y contexto, se pide confirmación si la acción es sensible, se ejecuta un flujo fijo, se deja registro y al final se responde. El LLM interpreta y explica; no ejecuta por sí solo acciones irreversibles.
 
 ## 26. Credenciales y aislamiento
 
-Se propone un **credential broker**:
+Se propone un credential broker:
 
 - n8n recibe una referencia opaca.
 - El servicio valida tenant, usuario, propósito y vigencia.
@@ -618,9 +606,9 @@ Conjunto de evaluación: 30 CV, 100 vacantes, 50 preguntas, 50 correos, casos ad
 
 ## 28. Observabilidad
 
-**Técnica:** ejecuciones, p50/p95, reintentos, cola, errores por conector, recursos, sesiones de navegador y costo de IA.
+Técnica: ejecuciones, p50/p95, reintentos, cola, errores por conector, recursos, sesiones de navegador y costo de IA.
 
-**Producto:** vacantes, descartes, aplicaciones, respuestas, entrevistas, ofertas, tiempo de respuesta, rendimiento por fuente/CV, intervenciones y costo unitario.
+Producto: vacantes, descartes, aplicaciones, respuestas, entrevistas, ofertas, tiempo de respuesta, rendimiento por fuente/CV, intervenciones y costo unitario.
 
 No se fijan SLA comerciales hasta medir 30 días de beta.
 
@@ -665,8 +653,6 @@ La decisión continúa como investigación. No debe asumirse que Community cubre
 - Decisión formal de licencia.
 - Políticas de privacidad y retención.
 
----
-
 ## 32. Repositorio objetivo
 
 ~~~text
@@ -704,11 +690,11 @@ job-search-agent/
 
 ## 34. Pruebas acumulativas
 
-**Unitarias:** extracción, normalización, duplicados, filtros, comandos, evidencia, correo y autorizaciones.
+Unitarias: extracción, normalización, duplicados, filtros, comandos, evidencia, correo y autorizaciones.
 
-**Integración:** Telegram–n8n–PostgreSQL; documento–perfil; fuente–deduplicación; aprobación–ejecutor; correo–estado; n8n–browser; fallo–reintento.
+Integración: Telegram–n8n–PostgreSQL; documento–perfil; fuente–deduplicación; aprobación–ejecutor; correo–estado; n8n–browser; fallo–reintento.
 
-**E2E:** alta y CV; vacante duplicada; postulación autorizada; CAPTCHA/MFA; autorización expirada; formulario modificado; reintento sin duplicado; rechazo/entrevista; exportación y eliminación.
+E2E: alta y CV; vacante duplicada; postulación autorizada; CAPTCHA/MFA; autorización expirada; formulario modificado; reintento sin duplicado; rechazo/entrevista; exportación y eliminación.
 
 ## 35. Riesgos
 
@@ -773,7 +759,7 @@ Comenzar solo el Proyecto 1:
 9. Normalización, deduplicación y scoring.
 10. Resumen y recuperación de fallos.
 
-**Regla:** no automatizar postulaciones hasta demostrar que perfil, evidencia, deduplicación y autorización son confiables.
+Regla: no automatizar postulaciones hasta demostrar que perfil, evidencia, deduplicación y autorización son confiables.
 
 ## 39. Referencias
 
