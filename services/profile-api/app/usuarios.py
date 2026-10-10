@@ -77,3 +77,12 @@ def texto_invitacion(codigo: str, expira: datetime) -> str:
             f"Pásale este mensaje a la persona:\n"
             f"\"Abre el bot y escribe: /start {codigo}\"\n\n"
             f"Sirve una sola vez y vence el {expira.strftime('%d/%m/%Y')}.")
+
+
+def avisa_radar(estado: str | None, creadas: int) -> bool:
+    """Si el radar debe avisar por Telegram de las vacantes nuevas.
+
+    Solo avisa si hay vacantes nuevas y el usuario no está en pausa. Las
+    vacantes se guardan igual; lo único que se frena es el aviso (BUG-34).
+    """
+    return creadas > 0 and estado != "pausado"

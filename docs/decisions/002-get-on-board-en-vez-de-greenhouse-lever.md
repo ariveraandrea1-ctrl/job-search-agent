@@ -1,40 +1,31 @@
-# ADR 002 · Fuente por API: Get on Board en vez de Greenhouse/Lever
+# ADR 002. Fuente por API: Get on Board en vez de Greenhouse y Lever
 
-**Fecha:** 2026-10-01 · **Estado:** aceptada · **Decidieron:** Andrea y Claude
+Fecha: 2026-10-01. Estado: aceptada. Decidió: Andrea.
 
 ## Contexto
-La especificación pide tres tipos de fuentes: alertas por correo,
-**APIs públicas de Greenhouse y Lever** por empresa, y URL manual.
+
+La especificación pide tres tipos de fuente: alertas por correo, las APIs públicas de Greenhouse y Lever (empresa por empresa) y vacantes que el usuario manda con un link.
 
 ## Decisión
-Reemplazar Greenhouse/Lever por la **API pública de Get on Board**
-(`https://www.getonbrd.com/api/v0/categories/{categoria}/jobs`), sin clave
-y sin scraping. El flujo `radar-getonbrd` consulta cada 4 horas las
-categorías de los usuarios activos, y profile-api filtra por palabras clave
-del usuario, idioma (no inglés), ubicación (remota o Colombia) y nivel
-(hasta Semi Senior).
+
+Cambié Greenhouse y Lever por la API pública de Get on Board (`https://www.getonbrd.com/api/v0/categories/{categoria}/jobs`), que no pide clave ni requiere scraping. El flujo `radar-getonbrd` consulta cada hora las categorías de los usuarios activos, y profile-api filtra los resultados por las palabras clave de cada usuario, el idioma (que no pidan inglés), la ubicación (remota o en Colombia) y el nivel (hasta Semi Senior).
 
 ## Por qué
-- Se investigó: las empresas con vacantes de QA en Colombia que publican en
-  Greenhouse/Lever son internacionales, piden nivel senior y entrevistas en
-  inglés (ej. CI&T, Monks, Capco sin vacantes en Colombia). No encajan con
-  el perfil objetivo (QA junior, español).
-- Greenhouse/Lever exigen mantener una lista de empresas una por una; Get on
-  Board es un portal tech de Latinoamérica, en español, con categorías
-  (ej. `sysadmin-devops-qa`) y nivel de experiencia en los datos.
-- Sigue cumpliendo el requisito de fondo: una fuente por **API oficial**,
-  sin scraping (respeta términos de uso).
+
+Antes de decidir investigué qué empresas con vacantes de QA en Colombia publican en Greenhouse y Lever. Casi todas son internacionales, piden nivel senior y hacen las entrevistas en inglés; algunas, como CI&T, Monks o Capco, ni siquiera tenían vacantes en Colombia. No encajaban con lo que busco, que es QA junior y en español.
+
+Además, con Greenhouse y Lever habría que mantener una lista de empresas una por una. Get on Board es un portal de tecnología de Latinoamérica, en español, organizado por categorías (por ejemplo `sysadmin-devops-qa`) y con el nivel de experiencia dentro de los datos.
+
+Con este cambio se sigue cumpliendo lo importante del requisito: tener una fuente por API oficial, sin scraping y respetando los términos de uso.
 
 ## Consecuencias
-- Las tres fuentes quedan: correo (LinkedIn, Indeed, Workana), API (Get on
-  Board) y URL manual (`/vacante`).
-- Las categorías de Get on Board se derivan de las palabras clave de cada
-  usuario (`/preferencias`).
-- El lector de URL reconoce links de Get on Board (mismo id que la API, sin
-  duplicados entre fuentes).
+
+Las tres fuentes quedan así: correo (LinkedIn, Indeed y Workana), API (Get on Board) y link manual con `/vacante`.
+
+Las categorías de Get on Board se sacan de las palabras clave de cada usuario, las que se ven y se cambian con `/preferencias`.
+
+El lector de links reconoce los de Get on Board y usa el mismo id que la API, así que una vacante no se duplica si llega por las dos vías.
 
 ## Cuándo revisarla
-- Si el perfil buscado cambia a roles donde Greenhouse/Lever sí tengan
-  vacantes relevantes (ej. inglés avanzado, empresas internacionales):
-  agregar un conector por empresa es compatible con el diseño actual
-  (`_guardar_lote` en profile-api).
+
+Si cambia el tipo de cargo que busco hacia roles donde Greenhouse o Lever sí tengan vacantes que sirvan, por ejemplo con inglés avanzado en empresas internacionales. Agregar un conector por empresa es compatible con el diseño actual (`_guardar_lote` en profile-api).
