@@ -39,7 +39,13 @@ _UBICACION_OTRO_PAIS = re.compile(
     r"s[aã]o paulo|costa rica|panam[aá]|guatemala|honduras|el salvador|"
     r"nicaragua|rep[uú]blica dominicana|espa[ñn]a|spain|madrid|barcelona|"
     r"estados unidos|united states|usa|canad[aá]|reino unido|"
-    r"united kingdom|portugal|alemania|germany|francia|france|india)\b",
+    r"united kingdom|portugal|alemania|germany|francia|france|india|"
+    # BUG-35: LinkedIn a veces abrevia el país o solo pone la ciudad o el
+    # barrio ("Polanco, CMX", "Huixquilucán, MEX"). Códigos de país de 3
+    # letras y ciudades o estados de México que aparecen en las alertas.
+    r"mex|cmx|arg|chl|per|ecu|bra|ven|ury|pry|bol|esp|"
+    r"jalisco|nuevo le[oó]n|quer[eé]taro|puebla|zapopan|tijuana|"
+    r"huixquiluc[aá]n|polanco|naucalpan|tlalnepantla)\b",
     re.IGNORECASE,
 )
 
