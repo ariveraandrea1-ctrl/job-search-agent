@@ -149,7 +149,7 @@ def palabras_que_sobran(texto: str | None) -> list[str]:
 
 
 def texto_preferencias(palabras: list[str], categorias: list[str], cambiadas: bool = False,
-                       sobrantes: list[str] | None = None) -> str:
+                       sobrantes: list[str] | None = None, antes: int = 0) -> str:
     inicio = "✅ Listo, actualicé tu búsqueda.\n\n" if cambiadas else "🔎 Tu búsqueda de vacantes\n\n"
     if not palabras:
         return (inicio + "Todavía no tienes palabras clave. Envíame tu CV o escribe, por ejemplo:\n"
@@ -160,6 +160,13 @@ def texto_preferencias(palabras: list[str], categorias: list[str], cambiadas: bo
         inicio += (f"Ojo: el máximo es {MAX_PALABRAS} palabras y enviaste {MAX_PALABRAS + len(sobrantes)}. "
                    "No guardé: " + ", ".join(sobrantes) + ". "
                    "Si alguna es más importante, quita otra de la lista y vuelve a enviarla.\n\n")
+    # /preferencias reemplaza la lista completa. Si quedaron menos palabras que
+    # antes, puede que el usuario quisiera agregar y no reemplazar (observación E2E-21).
+    if cambiadas and antes > len(palabras):
+        quedan = "queda 1 palabra" if len(palabras) == 1 else f"quedan {len(palabras)} palabras"
+        inicio += (f"Ojo: antes tenías {antes} palabras y ahora {quedan}. "
+                   "/preferencias reemplaza la lista completa. Si querías agregar una palabra, "
+                   "vuelve a enviar todas juntas.\n\n")
     return (inicio
             + "Palabras clave: " + ", ".join(palabras) + "\n"
             + "Categorías de Get on Board: " + (", ".join(nombres) if nombres else "ninguna (revisa tus palabras)") + "\n\n"

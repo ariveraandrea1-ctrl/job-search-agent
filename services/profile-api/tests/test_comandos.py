@@ -220,3 +220,30 @@ def test_tip_de_titulo_solo_si_no_mando_titulo():
     sin = comandos.texto_vacante_guardada(True, "LinkedIn", "QA", "https://x.co/1", 1)
     assert "Tip:" in con
     assert "Tip:" not in sin
+
+
+
+# Observación E2E-22: ante un comando mal escrito el bot no decía qué no entendió,
+# y la ayuda no mencionaba /vacante ni /corregir.
+def test_comando_desconocido_dice_cual_no_entendio():
+    texto = comandos.texto_comando_desconocido("/ayudaa")
+    assert texto.startswith("No conozco el comando /ayudaa")
+    assert comandos.AYUDA in texto
+
+
+def test_pedir_ayuda_no_dice_que_no_lo_conoce():
+    assert comandos.texto_comando_desconocido("/ayuda") == comandos.AYUDA
+
+
+def test_ayuda_incluye_vacante_y_corregir():
+    assert "/vacante" in comandos.AYUDA and "/corregir" in comandos.AYUDA
+
+
+# Observación E2E-20: /buscar bogota no traía vacantes que solo dicen Bogotá en la ubicación.
+def test_buscar_encuentra_por_ubicacion():
+    assert comandos.coincide_busqueda("bogota", "QA Engineer", "BairesDev", "Bogotá, D.C.")
+
+
+# Observación E2E-24: el resumen decía "Buenos días" aunque saliera en la tarde.
+def test_resumen_no_saluda_segun_la_hora():
+    assert "Buenos días" not in comandos.texto_resumen_diario([], 0)

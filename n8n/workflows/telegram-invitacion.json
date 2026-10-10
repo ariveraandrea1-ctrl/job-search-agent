@@ -845,7 +845,7 @@
     {
       "parameters": {
         "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
-        "text": "🙌 No tengo preguntas pendientes para tu perfil. Escribe /perfil para verlo. Si todavía no me has enviado tu hoja de vida, usa /subir\\_cv",
+        "text": "={{ $('Telegram Trigger').first().json.message.document ? '🙌 Recibí tu hoja de vida y tu perfil quedó completo: no tengo preguntas pendientes. Escribe /perfil para verlo.' : '🙌 No tengo preguntas pendientes para tu perfil. Escribe /perfil para verlo. Si todavía no me has enviado tu hoja de vida, usa /subir\\\\_cv' }}",
         "additionalFields": {
           "appendAttribution": false
         }
@@ -866,7 +866,7 @@
           "name": "Telegram account"
         }
       },
-      "notes": "Fin sin preguntas: no quedan preguntas pendientes (CV completo o ya respondidas). También responde /completar_perfil. Chat ID con .first() y /subir\\_cv escapado: Telegram usa Markdown y un _ suelto rompe el mensaje (BUG-30)."
+      "notes": "Fin sin preguntas: no quedan preguntas pendientes (CV completo o ya respondidas). También responde /completar_perfil. Si el mensaje trae un archivo, dice que recibió la hoja de vida; si no, el texto de siempre (observación E2E-07). Chat ID con .first() y /subir\\_cv escapado: Telegram usa Markdown y un _ suelto rompe el mensaje (BUG-30)."
     },
     {
       "parameters": {
@@ -2081,7 +2081,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "532c28dc-7f17-4003-9d32-8537ae8a484a",
+  "versionId": "87ee303f-7435-44fb-90ba-69f42fe4ab08",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"

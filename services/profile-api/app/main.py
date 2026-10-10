@@ -894,7 +894,7 @@ def radar_comando(payload: ComandoIn, db: Session = Depends(get_db)) -> dict:
     """
     comando, numero = comandos.leer_comando(payload.text)
     if comando is None:
-        return {"ok": False, "telegram_text": comandos.AYUDA}
+        return {"ok": False, "telegram_text": comandos.texto_comando_desconocido(payload.text)}
 
     if comando in ("pausar", "reanudar"):
         user = db.scalars(select(User).where(User.telegram_user_id == payload.telegram_user_id)).first()
@@ -919,7 +919,7 @@ def radar_comando(payload: ComandoIn, db: Session = Depends(get_db)) -> dict:
             return {"ok": False, "comando": comando, "telegram_text": comandos.AYUDA_BUSCAR}
         filas = db.scalars(base.where(Opportunity.status != "descartada")
                            .order_by(Opportunity.created_at.desc()).limit(1000)).all()
-        encontradas = [v for v in filas if comandos.coincide_busqueda(consulta, v.title, v.company)]
+        encontradas = [v for v in filas if comandos.coincide_busqueda(consulta, v.title, v.company, v.location)]
         encontradas.sort(key=lambda v: (v.score is None, -(v.score or 0)))
         texto = comandos.texto_lista(f"🔎 Vacantes con \"{consulta}\" ({len(encontradas)}):",
                                      [_vacante_dict(v) for v in encontradas[:10]],
@@ -1190,13 +1190,15 @@ def preferencias(payload: PreferenciasIn, db: Session = Depends(get_db)) -> dict
         return {"ok": False, "telegram_text": usuarios.TEXTOS_RECHAZO["sin_codigo"]}
     nuevas = busqueda.leer_comando_preferencias(payload.text)
     if nuevas:
+        anteriores = list(user.palabras_clave or [])
         user.palabras_clave = nuevas
         user.categorias = busqueda.sugerir_categorias(nuevas)
         db.commit()
         return {"ok": True, "palabras": nuevas, "categorias": user.categorias,
                 "telegram_text": busqueda.texto_preferencias(
                     nuevas, user.categorias, cambiadas=True,
-                    sobrantes=busqueda.palabras_que_sobran(payload.text))}
+                    sobrantes=busqueda.palabras_que_sobran(payload.text),
+                    antes=len(anteriores))}
     palabras, categorias = _busqueda_de(db, user)
     return {"ok": True, "palabras": palabras, "categorias": categorias,
             "telegram_text": busqueda.texto_preferencias(palabras, categorias)}
