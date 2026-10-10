@@ -175,7 +175,7 @@ Los corrijo cuando termine de ejecutar todo el plan. Después de cada correcció
 | BUG-33: `/vacante` no muestra el número de la vacante | E2E-14 | E2E-14 y E2E-15 | Abierto |
 | BUG-34: con el radar en pausa siguen llegando avisos por correo | E2E-23 | E2E-23 | Abierto |
 | BUG-35: el filtro de ubicación deja pasar "MEX" y "CMX" | E2E-17 | E2E-17 y un test con los dos casos reales | Abierto |
-| BUG-36: después de reiniciar, Telegram queda sin webhook y `start-local.sh` dice "Listo" | E2E-23 | Reiniciar Docker y comprobar que el script detecta el webhook vacío | Abierto |
+| BUG-36: después de reiniciar, Telegram queda sin webhook y `start-local.sh` dice "Listo" | E2E-23 | Borrar el webhook, correr el script y comprobar que lo deja registrado y el bot responde | Corregido y probado (2026-10-10) |
 | Observaciones de la sección 9 | | El caso de cada una | Por decidir cuáles se corrigen |
 
 ## 10. Siguiente paso, opcional: mutation testing
