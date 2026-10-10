@@ -342,6 +342,10 @@ def test_url_getonbrd_da_el_mismo_id_que_la_api():
         "Bogotá, D.C.",
         "Envigado, Antioquia, Colombia",
         "Santiago de Cali",
+        # BUG-35: los códigos nuevos (per, bra, ven...) no deben atrapar ciudades de Colombia.
+        "Pereira, Risaralda",
+        "Barranquilla, Atlántico",
+        "Bucaramanga, Santander",
         "Colombia (En remoto)",
         "Remoto",
         "Latinoamérica (Remoto)",
@@ -363,6 +367,12 @@ def test_ubicacion_sirve_colombia_remoto_o_desconocida(ubicacion):
         "Lima, Perú",
         "Madrid, España",
         "United States (Remote)",
+        # BUG-35: casos reales que llegaron el 8 oct con el país abreviado.
+        "Huixquilucán, MEX",
+        "Polanco, CMX",
+        "Guadalajara, JAL, MEX",
+        "Zapopan, Jalisco",
+        "Santiago, CHL",
     ],
 )
 def test_ubicacion_no_sirve_otro_pais(ubicacion):
