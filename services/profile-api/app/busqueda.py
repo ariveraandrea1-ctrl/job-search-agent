@@ -65,6 +65,11 @@ def leer_palabras(texto: str | None) -> list[str]:
     Separa por coma, punto y coma, barra, guion, salto de línea y la
     palabra "y" / "o"; quita palabras vacías y repetidas; máximo 15.
     """
+    return _todas_las_palabras(texto)[:MAX_PALABRAS]
+
+
+def _todas_las_palabras(texto: str | None) -> list[str]:
+    """Igual que leer_palabras, pero sin cortar en 15."""
     trozos = re.split(r"[,;/\n|]+|\s*-\s+|\s+y\s+|\s+o\s+", normalizar(texto))
     palabras = []
     for trozo in trozos:
@@ -73,7 +78,7 @@ def leer_palabras(texto: str | None) -> list[str]:
             continue
         if trozo not in palabras:
             palabras.append(trozo)
-    return palabras[:MAX_PALABRAS]
+    return palabras
 
 
 def sugerir_palabras(rol_buscado: str | None, cargos: list | None = None) -> list[str]:
@@ -135,12 +140,26 @@ def leer_comando_preferencias(texto: str | None) -> list[str] | None:
     return leer_palabras(m.group(1))
 
 
-def texto_preferencias(palabras: list[str], categorias: list[str], cambiadas: bool = False) -> str:
+def palabras_que_sobran(texto: str | None) -> list[str]:
+    """Las palabras de '/preferencias ...' que no caben porque pasan de 15 (BUG-32)."""
+    m = re.match(r"^\s*/preferencias(?:@\w+)?\s*(.*)$", texto or "", re.IGNORECASE | re.DOTALL)
+    if not m:
+        return []
+    return _todas_las_palabras(m.group(1))[MAX_PALABRAS:]
+
+
+def texto_preferencias(palabras: list[str], categorias: list[str], cambiadas: bool = False,
+                       sobrantes: list[str] | None = None) -> str:
     inicio = "✅ Listo, actualicé tu búsqueda.\n\n" if cambiadas else "🔎 Tu búsqueda de vacantes\n\n"
     if not palabras:
         return (inicio + "Todavía no tienes palabras clave. Envíame tu CV o escribe, por ejemplo:\n"
                 "/preferencias analista de datos, bi, sql")
     nombres = [CATEGORIAS[c][0] for c in categorias if c in CATEGORIAS]
+    # Si mandó más de 15, se guardan las primeras 15 y se le dice cuáles no (BUG-32).
+    if sobrantes:
+        inicio += (f"Ojo: el máximo es {MAX_PALABRAS} palabras y enviaste {MAX_PALABRAS + len(sobrantes)}. "
+                   "No guardé: " + ", ".join(sobrantes) + ". "
+                   "Si alguna es más importante, quita otra de la lista y vuelve a enviarla.\n\n")
     return (inicio
             + "Palabras clave: " + ", ".join(palabras) + "\n"
             + "Categorías de Get on Board: " + (", ".join(nombres) if nombres else "ninguna (revisa tus palabras)") + "\n\n"

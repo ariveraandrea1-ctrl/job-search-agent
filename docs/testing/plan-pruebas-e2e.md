@@ -78,7 +78,7 @@ Los mismos casos están en una hoja de cálculo, [`casos-de-prueba-proyecto1.xls
 | E2E-18 | `/nuevas` y `/mejores` | Escribir ambos | Listas con número, puntaje y link | DoD consulta | | Pasó | 2026-10-08 | [nuevas 1](evidencias/E2E-18_nuevas_1.jpg), [nuevas 2](evidencias/E2E-18_nuevas_2.jpg), [mejores 1](evidencias/E2E-18_mejores_1.jpg), [mejores 2](evidencias/E2E-18_mejores_2.jpg) |
 | E2E-19 | `/detalle`, `/guardar`, `/descartar` | Con un número de la lista | Detalle completo; guardada aparece en `/guardadas`; descartada sale de `/mejores` y no se puntúa | DoD guardado y descarte | BUG-29 | Pasó | 2026-10-08 | [detalle](evidencias/E2E-19_detalle.jpg), [guardar y guardadas](evidencias/E2E-19_guardar_guardadas.jpg), [descartar y nuevas](evidencias/E2E-19_descartar_nuevas.jpg) |
 | E2E-20 | `/buscar` | `/buscar bogota` (sin tilde) | Encuentra "Bogotá"; ordena por puntaje | Comandos spec | 2026-10-06 | Pasó | 2026-10-08 | [buscar 1](evidencias/E2E-20_buscar_1.jpg), [buscar 2](evidencias/E2E-20_buscar_2.jpg) |
-| E2E-21 | `/preferencias` | Ver y cambiar las palabras | Responde con las palabras nuevas; los próximos avisos las usan | | BUG-28 | Falló ([BUG-32](../bitacora-bugs.md)) | 2026-10-08 | [ver y reemplazar](evidencias/E2E-21_preferencias_1.jpg), [lista con 1 palabra](evidencias/E2E-21_preferencias_2.jpg), [16 palabras, guarda 15](evidencias/E2E-21_preferencias_3.jpg) |
+| E2E-21 | `/preferencias` | Ver y cambiar las palabras | Responde con las palabras nuevas; los próximos avisos las usan | | BUG-28 | Pasó en el re-test (falló el 8 oct por [BUG-32](../bitacora-bugs.md)) | 2026-10-10 | [ver y reemplazar](evidencias/E2E-21_preferencias_1.jpg), [lista con 1 palabra](evidencias/E2E-21_preferencias_2.jpg), [16 palabras, guarda 15](evidencias/E2E-21_preferencias_3.jpg). Re-test: [avisa que no guardó tester](evidencias/E2E-21_retest_bug32_aviso.jpg), [con 15 no avisa](evidencias/E2E-21_retest_bug32_regresion.jpg) |
 | E2E-22 | Comando mal escrito / sticker | `/ayudaa` y un sticker | Responde la lista de comandos; nunca se queda callado | | 2026-10-06 | Pasó | 2026-10-08 | [/ayudaa](evidencias/E2E-22_ayudaa.jpg), [sticker](evidencias/E2E-22_sticker.jpg) |
 | E2E-23 | `/pausar` y `/reanudar` | Pausar, esperar el resumen y reanudar | En pausa no llegan avisos ni resumen; al reanudar vuelven | | multiusuario | Falló ([BUG-34](../bitacora-bugs.md)) | 2026-10-10 | [en pausa siguen llegando avisos de correo](evidencias/E2E-23_pausado_llegan_avisos.jpg). El resumen sí respeta la pausa: [corrió el 10 oct sin incluirme](evidencias/E2E-23_resumen_10oct.png). [Reanudar responde bien](evidencias/E2E-23_reanudar.jpg). Mientras hacía este caso apareció el BUG-36 |
 
@@ -171,7 +171,7 @@ Los corrijo cuando termine de ejecutar todo el plan. Después de cada correcció
 
 | Bug u observación | Caso | Re-test | Estado |
 |---|---|---|---|
-| BUG-32: `/preferencias` descarta en silencio la palabra 16 | E2E-21 | E2E-21 | Abierto |
+| BUG-32: `/preferencias` descarta en silencio la palabra 16 | E2E-21 | E2E-21 | Corregido y probado (2026-10-10) |
 | BUG-33: `/vacante` no muestra el número de la vacante | E2E-14 | E2E-14 y E2E-15 | Abierto |
 | BUG-34: con el radar en pausa siguen llegando avisos por correo | E2E-23 | E2E-23 | Abierto |
 | BUG-35: el filtro de ubicación deja pasar "MEX" y "CMX" | E2E-17 | E2E-17 y un test con los dos casos reales | Abierto |

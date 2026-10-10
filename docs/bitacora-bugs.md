@@ -41,7 +41,7 @@ En cada uno anoto también cómo lo detecté: probando en Telegram, con curl, re
 | BUG-29 | 2026-10-06 | Bug | La IA seguía puntuando 111 vacantes viejas sin relación (anteriores a BUG-28) y también las descartadas | Corregido, con limpieza |
 | BUG-30 | 2026-10-06 | Bug | /completar_perfil fallaba: Telegram rechazaba mensajes con "_" ("can't parse entities") | Corregido, con tests |
 | BUG-31 | 2026-10-07 | Bug | El sistema no se podía reconstruir desde el repo sin pasos ocultos (prueba de reconstrucción) | Corregido y probado desde cero |
-| BUG-32 | 2026-10-08 | Bug | /preferencias descarta en silencio las palabras después de la 15 | Abierto |
+| BUG-32 | 2026-10-08 | Bug | /preferencias descarta en silencio las palabras después de la 15 | Corregido, con tests |
 | BUG-33 | 2026-10-08 | Bug | /vacante no muestra el número (#) de la vacante guardada o repetida | Abierto |
 | BUG-34 | 2026-10-09 | Bug | Con el radar en pausa siguen llegando avisos de vacantes por correo (LinkedIn/Indeed) | Abierto |
 | BUG-35 | 2026-10-09 | Bug | El filtro de ubicación deja pasar vacantes de México escritas como "MEX" o "CMX" (regresión de BUG-18) | Abierto |
@@ -436,9 +436,11 @@ Causa: `leer_palabras()` en `services/profile-api/app/busqueda.py` recorta la li
 
 Severidad baja y prioridad media. En este caso no afectó el radar ("test" ya atrapa "tester" por prefijo), pero cualquier usuario puede perder una palabra importante sin saberlo, y el "Listo" le hace creer que quedó guardada.
 
-Corrección propuesta: si llegan más de 15 palabras, responder con un aviso ("El máximo es 15; no guardé: tester") o no guardar y pedir que quite algunas. Agregar un test unitario con 16 palabras.
+Cómo lo corregí: dejé el máximo en 15, porque más palabras traen más ruido en el radar, pero el bot ya no se calla. Guarda las primeras 15 y responde "Ojo: el máximo es 15 palabras y enviaste 16. No guardé: tester. Si alguna es más importante, quita otra de la lista y vuelve a enviarla." En `busqueda.py` agregué `palabras_que_sobran()` y el aviso en `texto_preferencias()`. Agregué 4 tests en `test_busqueda.py`: con 16 palabras sobra "tester", con 15 o menos no sobra nada, el mensaje nombra la que no se guardó y sin sobrantes el mensaje no menciona el máximo. La suite pasó de 147 a 151.
 
-Estado: abierto.
+Re-test (10 oct): mandé las 15 palabras más `tester` y salió el aviso con "No guardé: tester" (`E2E-21_retest_bug32_aviso.jpg`). Regresión: con las 15 de siempre respondió "Listo" sin aviso y mi búsqueda quedó igual que antes (`E2E-21_retest_bug32_regresion.jpg`).
+
+Estado: corregido y probado el 10 oct.
 
 ### BUG-33. /vacante no muestra el número de la vacante
 
