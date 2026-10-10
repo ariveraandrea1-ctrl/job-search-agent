@@ -158,7 +158,12 @@ def texto_antiguedad(v: dict, ahora: datetime | None = None) -> str:
 
 
 def _linea_vacante(v: dict) -> str:
-    puntos = f"{v['score']} pts" if v.get("score") is not None else "sin puntaje aún"
+    if v.get("score") is not None:
+        puntos = f"{v['score']} pts"
+    elif (v.get("analysis") or {}).get("sin_datos"):
+        puntos = "sin datos"
+    else:
+        puntos = "sin puntaje aún"
     detalle = " — ".join(x for x in [v.get("company"), v.get("location")] if x)
     linea = f"#{v['numero']} · {puntos} · {v['title']}"
     if detalle:
@@ -192,7 +197,10 @@ def texto_detalle(v: dict) -> str:
         lineas.append(edad[0].upper() + edad[1:])
     lineas.append(f"Estado: {NOMBRES_ESTADO.get(v.get('status'), v.get('status'))}")
     a = v.get("analysis") or {}
-    if v.get("score") is None:
+    if a.get("sin_datos"):
+        lineas += ["", "Puntaje: sin datos. La vacante no tiene título ni descripción, así que la IA "
+                       "no la puntúa. Ábrela con el link para revisarla."]
+    elif v.get("score") is None:
         lineas += ["", "Puntaje: todavía no la ha revisado la IA (las va puntuando cada hora)."]
     else:
         lineas += ["", f"Puntaje: {v['score']}/100"]

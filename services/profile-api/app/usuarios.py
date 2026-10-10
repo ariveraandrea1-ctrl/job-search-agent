@@ -86,3 +86,58 @@ def avisa_radar(estado: str | None, creadas: int) -> bool:
     vacantes se guardan igual; lo único que se frena es el aviso (BUG-34).
     """
     return creadas > 0 and estado != "pausado"
+
+
+# Rangos para revisar la aspiración salarial (observación E2E-06). No uso el
+# salario mínimo exacto porque cambia cada año; 1,5 millones COP queda por
+# debajo del mínimo de 2025 y 2026. Son mensuales.
+SALARIO_COP_BAJO = 1_500_000
+SALARIO_COP_ALTO = 50_000_000
+SALARIO_USD_BAJO = 300
+SALARIO_USD_ALTO = 8_000
+
+
+def leer_salario(texto: str | None) -> tuple[float, str] | None:
+    """'3.000.000' → (3000000, 'COP'). '4 millones' → (4000000, 'COP').
+    '10000 USD' → (10000, 'USD'). Si no hay un número claro, None."""
+    import unicodedata
+    t = unicodedata.normalize("NFD", (texto or "").lower())
+    t = "".join(c for c in t if unicodedata.category(c) != "Mn")
+    m = re.search(r"\d[\d.,]*", t)
+    if not m:
+        return None
+    numero = m.group(0).rstrip(".,")
+    if re.fullmatch(r"\d{1,3}([.,]\d{3})+", numero):
+        valor = float(re.sub(r"[.,]", "", numero))  # 3.000.000 o 3,000,000
+    else:
+        valor = float(numero.replace(",", "."))  # 3,5 o 3.5
+    resto = t[m.end():m.end() + 12]
+    if re.match(r"\s*(millones|millon|mill\b|m\b|mm\b)", resto):
+        valor *= 1_000_000
+    elif re.match(r"\s*(k\b|mil\b)", resto):
+        valor *= 1_000
+    elif valor < 1_000 and "millon" in t:
+        valor *= 1_000_000  # "entre 3,5 y 4 millones": la palabra va al final
+    moneda = "USD" if re.search(r"usd|dolar|us\$|u\$s", t) else "COP"
+    if moneda == "COP" and valor < 1_000:
+        return None  # "3.5" o "4" solos: no se sabe si son millones
+    return valor, moneda
+
+
+def revisar_salario(respuesta: str | None) -> str | None:
+    """Aviso si la aspiración salarial parece un error de digitación. None si se ve bien."""
+    leido = leer_salario(respuesta)
+    if leido is None:
+        return None
+    valor, moneda = leido
+    bajo, alto = ((SALARIO_USD_BAJO, SALARIO_USD_ALTO) if moneda == "USD"
+                  else (SALARIO_COP_BAJO, SALARIO_COP_ALTO))
+    if valor < bajo:
+        motivo = ("Parece muy baja, por debajo del salario mínimo." if moneda == "COP"
+                  else "Parece muy baja para un salario mensual.")
+    elif valor > alto:
+        motivo = "Parece muy alta para un salario mensual."
+    else:
+        return None
+    return (f"Anoté tu aspiración salarial: {respuesta.strip()}. {motivo} "
+            "Si fue un error, escribe /corregir salario.")
