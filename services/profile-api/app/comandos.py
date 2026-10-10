@@ -251,3 +251,19 @@ def texto_correo(texto_telegram: str) -> str:
             + "\n\n—\nEste resumen también te llegó por Telegram. "
               "Escríbele al bot /detalle y el número para ver una vacante, "
               "o /pausar para dejar de recibir resúmenes.")
+
+
+def texto_vacante_guardada(creada: bool, fuente: str, titulo: str, url: str, numero: int,
+                           sin_titulo: bool = False) -> str:
+    """Respuesta de /vacante. Incluye el número (#N) para poder usar /detalle,
+    /guardar o /descartar enseguida (BUG-33)."""
+    if creada:
+        texto = (f"✅ Guardé la vacante #{numero} ({fuente}).\n"
+                 f"• {titulo}\n   {url}\n\n"
+                 f"/detalle {numero}   /guardar {numero}   /descartar {numero}")
+        if sin_titulo:
+            texto += "\n\nTip: puedes agregar un título después del link."
+        return texto
+    return (f"👌 Esa vacante ya la tenías guardada (#{numero}, {fuente}).\n"
+            f"• {titulo}\n   {url}\n\n"
+            f"/detalle {numero}")

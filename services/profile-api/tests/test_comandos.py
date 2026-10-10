@@ -198,3 +198,25 @@ def test_escapar_textos_telegram_solo_ese_campo_y_en_listas():
 def test_ayuda_escapada_no_deja_guiones_bajos_sueltos():
     import re
     assert not re.search(r"(?<!\\)_", comandos.escapar_md(comandos.AYUDA))
+
+
+
+# BUG-33: /vacante no mostraba el número, así que no se podía usar /detalle enseguida.
+def test_vacante_nueva_muestra_el_numero_y_los_comandos():
+    texto = comandos.texto_vacante_guardada(True, "LinkedIn", "QA Analyst", "https://x.co/1", 310)
+    assert "#310" in texto
+    assert "/detalle 310" in texto
+    assert "/guardar 310" in texto
+
+
+def test_vacante_repetida_muestra_el_mismo_numero():
+    texto = comandos.texto_vacante_guardada(False, "LinkedIn", "QA Analyst", "https://x.co/1", 303)
+    assert "ya la tenías guardada (#303" in texto
+    assert "/detalle 303" in texto
+
+
+def test_tip_de_titulo_solo_si_no_mando_titulo():
+    con = comandos.texto_vacante_guardada(True, "LinkedIn", "QA", "https://x.co/1", 1, sin_titulo=True)
+    sin = comandos.texto_vacante_guardada(True, "LinkedIn", "QA", "https://x.co/1", 1)
+    assert "Tip:" in con
+    assert "Tip:" not in sin
