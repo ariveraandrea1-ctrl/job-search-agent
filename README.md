@@ -53,7 +53,7 @@ job-search-agent/
    El script levanta los contenedores, crea un túnel nuevo de Cloudflare (la URL cambia cada vez que se reinicia) y la guarda en el `.env`.
 3. n8n queda en `http://localhost:5678` y Mailpit, donde caen los correos de prueba, en `http://localhost:8025`.
 
-Si después de arrancar el bot no responde en Telegram, revisa que Telegram tenga registrada la URL nueva (está explicado en [`docs/runbooks/entorno-local.md`](docs/runbooks/entorno-local.md)). Es un problema conocido (BUG-36 en la bitácora).
+Si después de arrancar el bot no responde en Telegram, revisa que Telegram tenga registrada la URL nueva (está explicado en [`docs/runbooks/entorno-local.md`](docs/runbooks/entorno-local.md)). Desde la corrección del BUG-36 el script lo revisa al arrancar y avisa si Telegram no quedó con la URL nueva.
 
 Para levantar los contenedores sin tocar el túnel:
 ```

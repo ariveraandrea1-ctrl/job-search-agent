@@ -45,7 +45,7 @@ En cada uno anoto también cómo lo detecté: probando en Telegram, con curl, re
 | BUG-33 | 2026-10-08 | Bug | /vacante no muestra el número (#) de la vacante guardada o repetida | Abierto |
 | BUG-34 | 2026-10-09 | Bug | Con el radar en pausa siguen llegando avisos de vacantes por correo (LinkedIn/Indeed) | Abierto |
 | BUG-35 | 2026-10-09 | Bug | El filtro de ubicación deja pasar vacantes de México escritas como "MEX" o "CMX" (regresión de BUG-18) | Abierto |
-| BUG-36 | 2026-10-10 | Configuración | El bot no recibe mensajes tras reiniciar: Telegram queda sin webhook y `start-local.sh` dice "Listo" igual | Abierto |
+| BUG-36 | 2026-10-10 | Configuración | El bot no recibe mensajes tras reiniciar: Telegram queda sin webhook y `start-local.sh` dice "Listo" igual | Corregido y probado |
 
 ## Detalle de cada bug
 
@@ -529,16 +529,18 @@ Lo que hice para arreglarlo: desactivar y activar el flujo `telegram-invitacion`
 
 Severidad media y prioridad alta. El sistema queda "medio caído" sin ninguna alerta: los flujos no fallan, simplemente no les llega nada.
 
-Corrección propuesta: al final de `start-local.sh`, esperar a que el túnel responda (`/healthz` = 200), reactivar el flujo de Telegram y verificar con `getWebhookInfo` que `url` coincide con la nueva; si no, avisar en rojo en vez de decir "Listo". Opcional: un chequeo periódico que alerte si el webhook queda vacío.
+Cómo lo corregí: cambié `start-local.sh` para que, antes de reiniciar n8n, espere a que la URL nueva del túnel responda desde internet (`/healthz` con 200). Después de reiniciar n8n le pregunta a Telegram con `getWebhookInfo` si ya tiene la URL nueva. Si no la tiene, reinicia n8n una vez más; si sigue sin tenerla, ya no dice "Listo": muestra un aviso de que el bot no va a recibir mensajes, lo que respondió Telegram y cómo arreglarlo a mano.
+
+Re-test (10 oct): borré el webhook a propósito con `deleteWebhook` (quedó `url` vacía, igual que en el fallo), corrí el script y terminó con "Telegram ya tiene la URL nueva". El bot respondió a `hola`. Queda pendiente para más adelante un chequeo periódico que avise si el webhook se vacía con el sistema ya andando.
 
 Lo que aprendí: un mensaje de "Listo" que no verifica nada es un falso positivo. Ya estaba en riesgos ("el túnel cambia de URL"), pero sin forma de detectarlo.
 
-Estado: abierto (solucionado a mano el 10 oct; falta la corrección en el script).
+Estado: corregido y probado el 10 oct.
 
 ## Riesgos y limitaciones que siguen abiertos
 
 - Todo depende de que el Mac esté prendido. Si está dormido a la hora del resumen (11 a. m.), el resumen no sale a tiempo y n8n no lo recupera después (BUG-21). Mientras tanto dejo el Mac conectado, con Docker abierto y sin suspensión automática. La solución de fondo es pasar a un servidor.
-- El túnel de Cloudflare cambia de URL cada vez que se reinicia. Si Telegram se queda con una URL vieja o vacía, el bot no recibe comandos, aunque los avisos que salen sí sigan funcionando (BUG-36).
+- El túnel de Cloudflare cambia de URL cada vez que se reinicia. Si Telegram se queda con una URL vieja o vacía, el bot no recibe comandos, aunque los avisos que salen sí sigan funcionando. Desde el BUG-36, `start-local.sh` lo revisa al arrancar, pero si pasa con el sistema ya andando nadie avisa.
 - Los correos de LinkedIn no traen descripción ni fecha de publicación, así que el puntaje de esas vacantes es menos preciso.
 - El campo `remote_local` de Get on Board puede estar limitado a un país, y hoy no leo `location_tenants`.
 - Hay un chat_id fijo (8553351572) en varios flujos. Hay que revisarlo para el paso a varios usuarios.

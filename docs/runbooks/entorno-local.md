@@ -22,6 +22,8 @@ Me pasó el 10 de octubre (BUG-36): el script terminó diciendo "Listo", los avi
 
 La razón es que Telegram manda los mensajes a la URL pública del túnel. Cada vez que el túnel se recrea, n8n tiene que avisarle a Telegram la URL nueva, y a veces ese aviso falla porque el túnel todavía no está listo.
 
+Desde esa fecha `start-local.sh` lo revisa solo: espera a que el túnel responda, reinicia n8n y confirma con Telegram que quedó la URL nueva. Si no lo logra, termina con un aviso de "ATENCIÓN: el bot NO va a recibir mensajes" en vez de "Listo". Si ves ese aviso, o si el bot deja de responder con el sistema ya andando, sigue estos pasos.
+
 Para revisarlo, le pregunto a Telegram qué URL tiene registrada (el comando lee el token del `.env` sin mostrarlo):
 
 ```
@@ -82,3 +84,4 @@ Así lo hago para no correr ese riesgo:
 
 - 2026-09-23: agregué `interview_answers` (migración `0002`) con este procedimiento. Antes un `--autogenerate` sin revisar había generado el borrado de todas las tablas de n8n; por suerte no llegué a aplicarlo.
 - 2026-10-10: agregué la sección "Si el bot no responde después de arrancar" (BUG-36).
+- 2026-10-10: `start-local.sh` ahora verifica el webhook de Telegram al arrancar (corrección del BUG-36).
