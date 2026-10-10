@@ -42,9 +42,9 @@ En cada uno anoto también cómo lo detecté: probando en Telegram, con curl, re
 | BUG-30 | 2026-10-06 | Bug | /completar_perfil fallaba: Telegram rechazaba mensajes con "_" ("can't parse entities") | Corregido, con tests |
 | BUG-31 | 2026-10-07 | Bug | El sistema no se podía reconstruir desde el repo sin pasos ocultos (prueba de reconstrucción) | Corregido y probado desde cero |
 | BUG-32 | 2026-10-08 | Bug | /preferencias descarta en silencio las palabras después de la 15 | Corregido, con tests |
-| BUG-33 | 2026-10-08 | Bug | /vacante no muestra el número (#) de la vacante guardada o repetida | Abierto |
-| BUG-34 | 2026-10-09 | Bug | Con el radar en pausa siguen llegando avisos de vacantes por correo (LinkedIn/Indeed) | Abierto |
-| BUG-35 | 2026-10-09 | Bug | El filtro de ubicación deja pasar vacantes de México escritas como "MEX" o "CMX" (regresión de BUG-18) | Abierto |
+| BUG-33 | 2026-10-08 | Bug | /vacante no muestra el número (#) de la vacante guardada o repetida | Corregido, con tests |
+| BUG-34 | 2026-10-09 | Bug | Con el radar en pausa siguen llegando avisos de vacantes por correo (LinkedIn/Indeed) | Corregido, falta re-test |
+| BUG-35 | 2026-10-09 | Bug | El filtro de ubicación deja pasar vacantes de México escritas como "MEX" o "CMX" (regresión de BUG-18) | Corregido, falta re-test |
 | BUG-36 | 2026-10-10 | Configuración | El bot no recibe mensajes tras reiniciar: Telegram queda sin webhook y `start-local.sh` dice "Listo" igual | Corregido y probado |
 
 ## Detalle de cada bug
@@ -460,9 +460,11 @@ Causa: `radar_url()` en `services/profile-api/app/main.py` arma el texto con `op
 
 Severidad baja y prioridad media. La vacante se guarda y la deduplicación funciona; el problema es de usabilidad y de verificación (no se puede comprobar "mismo número" en el duplicado).
 
-Corrección propuesta: incluir `#{numero}` en los dos mensajes y agregar un test que lo verifique.
+Cómo lo corregí: saqué el texto de la respuesta a una función nueva, `texto_vacante_guardada()` en `comandos.py`, que incluye el número en los dos casos. Si la vacante es nueva, también muestra `/detalle N`, `/guardar N` y `/descartar N` para usarlos de una vez. Si ya existía, muestra el número que ya tenía y `/detalle N`. `radar_url()` ahora usa esa función y además devuelve `numero` en la respuesta. Agregué 3 tests en `test_comandos.py`. La suite pasó de 151 a 154.
 
-Estado: abierto.
+Re-test (10 oct): mandé un link de búsqueda de LinkedIn y respondió "Guardé la vacante #400 (LinkedIn)" con los tres comandos (`E2E-14_retest_bug33_nueva.jpg`). Lo mandé otra vez y respondió "Esa vacante ya la tenías guardada (#400, LinkedIn)", con el mismo número (`E2E-15_retest_bug33_duplicado.jpg`). Regresión: en `/nuevas` la #400 aparece una sola vez (`E2E-15_retest_bug33_nuevas.jpg`). Después la descarté para no dejar la vacante de prueba en mi lista.
+
+Estado: corregido y probado el 10 oct.
 
 ### BUG-34. Con el radar en pausa siguen llegando avisos por correo
 
@@ -486,7 +488,9 @@ Corrección propuesta: si el dueño del buzón está pausado, guardar las vacant
 
 Lo que aprendí: cuando una regla (pausa) se aplica en varios caminos, hay que probarla en todos. El caso E2E-23 del plan solo mencionaba el resumen y los avisos en general; la fuente correo era el camino distinto.
 
-Estado: abierto.
+Cómo lo corregí: agregué `avisa_radar()` en `usuarios.py`, que devuelve verdadero solo si hay vacantes nuevas y el usuario no está en pausa. `/radar/email` ahora responde un campo `avisar` con ese resultado, y el If "¿Hay vacantes nuevas?" de `radar-correo` decide con ese campo. Las vacantes se guardan igual; lo que se frena es el aviso. Agregué 3 tests en `test_usuarios.py`. Entró a develop el 10 oct.
+
+Estado: corregido, falta re-test. Hay que esperar una alerta real de correo con el usuario en pausa y revisar en n8n que salga `avisar: false`; después reanudar y confirmar que la siguiente alerta sí avisa.
 
 ### BUG-35. El filtro de ubicación deja pasar México escrito como "MEX" o "CMX"
 
@@ -510,7 +514,9 @@ Corrección propuesta: a corto plazo, agregar `mex`, `cmx` y códigos de país d
 
 Lo que aprendí: un caso que pasó con una muestra pequeña (10 avisos) puede fallar con el siguiente dato real. Las listas negras siempre dejan huecos.
 
-Estado: abierto.
+Cómo lo corregí: hice lo de corto plazo. Agregué a `_UBICACION_OTRO_PAIS` en `parsers.py` los códigos `mex`, `cmx`, `arg`, `chl`, `per`, `ecu`, `bra`, `ven`, `ury`, `pry`, `bol` y `esp`, y estados y municipios de México que salieron en avisos reales (Jalisco, Nuevo León, Querétaro, Puebla, Zapopan, Tijuana, Huixquilucán, Polanco, Naucalpan, Tlalnepantla), todos como palabra completa. En `test_parsers.py` agregué los dos casos reales y otros tres que deben rechazarse, más tres ciudades colombianas que deben seguir pasando. La lista blanca queda para más adelante. Entró a develop el 10 oct.
+
+Estado: corregido con tests, falta re-test con la próxima alerta que traiga vacantes de México.
 
 ### BUG-36. Tras reiniciar, el bot no recibe mensajes y `start-local.sh` dice "Listo" igual
 

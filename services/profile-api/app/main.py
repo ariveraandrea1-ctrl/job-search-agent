@@ -739,18 +739,13 @@ def radar_url(payload: RadarUrlIn, db: Session = Depends(get_db)) -> dict:
     datos["raw"] = {"origen": "telegram", "mensaje": payload.text}
     creada, oportunidad = _guardar_oportunidad(db, payload.telegram_user_id, datos)
 
-    if creada:
-        texto = (f"✅ Guardé la vacante ({nombre}).\n"
-                 f"• {oportunidad.title}\n   {oportunidad.url}")
-        if not titulo:
-            texto += "\n\nTip: puedes agregar un título después del link."
-    else:
-        texto = (f"👌 Esa vacante ya la tenías guardada ({nombre}).\n"
-                 f"• {oportunidad.title}\n   {oportunidad.url}")
+    texto = comandos.texto_vacante_guardada(creada, nombre, oportunidad.title, oportunidad.url,
+                                            oportunidad.numero, sin_titulo=not titulo)
     return {
         "ok": True,
         "created": creada,
         "id": str(oportunidad.id),
+        "numero": oportunidad.numero,
         "source": datos["source"],
         "title": oportunidad.title,
         "url": oportunidad.url,
