@@ -11,6 +11,7 @@ from app.usuarios import (
     INVITACION_DIAS,
     generar_codigo,
     leer_codigo_start,
+    avisa_radar,
     revisar_invitacion,
     vence,
 )
@@ -71,3 +72,16 @@ def test_invitacion_usada_no_sirve_otra_vez():
 def test_invitacion_vencida():
     creada = AHORA - timedelta(days=INVITACION_DIAS)  # justo en el límite
     assert revisar_invitacion(_inv(expires_at=vence(creada)), AHORA) == "vencida"
+
+
+# BUG-34: con el radar en pausa no se avisa, aunque haya vacantes nuevas.
+def test_avisa_si_hay_nuevas_y_esta_activo():
+    assert avisa_radar("activo", 2) is True
+
+
+def test_no_avisa_si_esta_en_pausa():
+    assert avisa_radar("pausado", 2) is False
+
+
+def test_no_avisa_si_no_hay_nuevas():
+    assert avisa_radar("activo", 0) is False

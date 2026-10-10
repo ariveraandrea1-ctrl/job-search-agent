@@ -18,7 +18,7 @@ Quedan por fuera, porque se prueban en los proyectos siguientes: la postulación
 
 | Nivel | Qué prueba | Herramienta | Cantidad | Cómo se corre |
 |---|---|---|---|---|
-| Unitarias | Funciones sueltas: lectores de correo, filtros, deduplicación, comandos, puntaje, telemetría, idempotencia | pytest | 136 | `cd services/profile-api && pytest -q` |
+| Unitarias | Funciones sueltas: lectores de correo, filtros, deduplicación, comandos, puntaje, telemetría, idempotencia | pytest | 136 | `cd services/profile-api && python3 -m pytest tests -q` |
 | Integración | profile-api con Postgres y MinIO reales, sin Telegram | scripts en Python y Bash | 42, 15 y 8 | `scripts/probar-aislamiento.py`, `probar-idempotencia.py`, `probar-restauracion.sh` |
 | E2E | El recorrido completo: Telegram, n8n, profile-api, Postgres, MinIO, la IA y de vuelta a Telegram o al correo | manual, con el bot real | 30 casos | este documento |
 

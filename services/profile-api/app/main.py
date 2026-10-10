@@ -639,6 +639,9 @@ def radar_email(payload: RadarEmailIn, db: Session = Depends(get_db)) -> dict:
         "created": len(nuevas),
         "duplicates": duplicadas,
         "new_items": nuevas,
+        # BUG-34: si el dueño del buzón está en pausa, se guardan pero no se avisa.
+        # n8n decide si manda el Telegram mirando "avisar".
+        "avisar": usuarios.avisa_radar(dueno.estado if dueno is not None else None, len(nuevas)),
         "telegram_text": _texto_telegram_radar(fuente, nuevas),
     }
 
