@@ -17,7 +17,7 @@
     {
       "parameters": {
         "chatId": "8553351572",
-        "text": "=⚠️ Falló el flujo \"{{ $json.workflow.name }}\"\nNodo: {{ $json.execution?.lastNodeExecuted ?? 'el disparador (trigger)' }}\nError: {{ $json.execution?.error?.message ?? $json.trigger?.error?.cause?.message ?? $json.trigger?.error?.message }}\nHora: {{ $now.setZone('America/Bogota').toFormat('dd/MM HH:mm') }}\n\nRevisa la pestaña Executions de ese flujo en n8n.",
+        "text": "=⚠️ Falló el flujo \"{{ $json.workflow.name }}\"\nNodo: {{ $json.execution?.lastNodeExecuted ?? 'el disparador (trigger)' }}\nError: {{ $json.execution?.error?.message ?? $json.trigger?.error?.cause?.message ?? $json.trigger?.error?.message }}\nHora: {{ $now.setZone('America/Bogota').toFormat('dd/MM HH:mm') }}\nRevisa la pestaña Executions de ese flujo en n8n. {{ /incorrect host|ECONNREFUSED|ENOTFOUND|EAI_AGAIN|getaddrinfo/i.test(String($json.execution?.error?.message ?? '')) ? '\\n\\nPista: puede que profile-api esté apagado. Revísalo con: docker compose ps' : '' }}\n",
         "additionalFields": {
           "appendAttribution": false
         }
@@ -38,7 +38,7 @@
           "name": "Telegram account"
         }
       },
-      "notes": "Alertas: manda a Telegram qué flujo falló, en qué nodo, el error y la hora."
+      "notes": "Alertas: manda a Telegram qué flujo falló, en qué nodo, el error y la hora. Si el error es de conexión, agrega la pista de que profile-api puede estar apagado (observación E2E-27)."
     },
     {
       "parameters": {
@@ -107,7 +107,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "c276ea1b-fa54-4d77-9e4d-31713f941ed8",
+  "versionId": "2dc11e54-99f9-4fee-a29f-a60b675392c8",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"

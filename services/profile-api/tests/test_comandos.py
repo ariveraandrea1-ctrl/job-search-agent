@@ -247,3 +247,9 @@ def test_buscar_encuentra_por_ubicacion():
 # Observación E2E-24: el resumen decía "Buenos días" aunque saliera en la tarde.
 def test_resumen_no_saluda_segun_la_hora():
     assert "Buenos días" not in comandos.texto_resumen_diario([], 0)
+
+
+def test_vacante_sin_datos_se_muestra_asi_en_listas_y_detalle():
+    v = {**VACANTE, "score": None, "analysis": {"sin_datos": True}}
+    assert "sin datos" in comandos.texto_lista("Nuevas:", [v], "nada")
+    assert "Puntaje: sin datos" in texto_detalle(v)

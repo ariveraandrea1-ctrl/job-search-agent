@@ -86,3 +86,17 @@ def test_puntaje_fuera_de_rango_y_valores_raros_se_limpian():
 def test_respuestas_invalidas_se_rechazan(texto):
     with pytest.raises(RespuestaInvalida):
         leer_respuesta_puntaje(texto)
+
+
+# Observación E2E-27: la #367 (sin título ni descripción) recibió 15 pts.
+from app.puntaje import sin_datos
+
+
+def test_sin_titulo_ni_descripcion_es_sin_datos():
+    assert sin_datos("Vacante de LinkedIn (sin título)", None)
+    assert sin_datos("", "  ")
+
+
+def test_con_titulo_o_descripcion_si_se_puntua():
+    assert not sin_datos("QA Analyst", None)
+    assert not sin_datos("Vacante de LinkedIn (sin título)", "Buscamos QA con Selenium")

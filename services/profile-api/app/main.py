@@ -225,9 +225,12 @@ def save_interview_answer(
     db.commit()
     db.refresh(respuesta)
 
+    # Observación E2E-06: si el salario parece un error, n8n manda este aviso.
+    aviso = usuarios.revisar_salario(payload.answer) if payload.topic == "salario" else None
     return {
         "id": str(respuesta.id),
         "created_at": respuesta.created_at.isoformat(),
+        "aviso": comandos.escapar_md(aviso) if aviso else None,
     }
 
 
@@ -816,7 +819,13 @@ def pending_score(telegram_user_id: int | None = None, limit: int = 5,
         .limit(limit)
     ).all()
     items = []
+    marcadas = 0
     for v in vacantes:
+        if puntaje_ia.sin_datos(v.title, v.description):
+            v.scored_at = datetime.now(timezone.utc)
+            v.analysis = {"sin_datos": True}
+            marcadas += 1
+            continue
         perfil, preferencias, _ = perfiles[v.telegram_user_id]
         datos = {"title": v.title, "tipo": v.tipo, "company": v.company, "location": v.location,
                  "source": v.source, "description": v.description, "raw": v.raw}
@@ -828,7 +837,9 @@ def pending_score(telegram_user_id: int | None = None, limit: int = 5,
             "user_text": puntaje_ia.armar_pregunta(perfil.data, preferencias, datos),
             "prompt_version": puntaje_ia.PROMPT_VERSION,
         })
-    return {"count": len(items), "items": items}
+    if marcadas:
+        db.commit()
+    return {"count": len(items), "items": items, "sin_datos": marcadas}
 
 
 class ScoreIn(BaseModel):

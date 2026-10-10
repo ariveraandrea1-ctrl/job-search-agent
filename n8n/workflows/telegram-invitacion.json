@@ -1584,6 +1584,68 @@
       "name": "¿Es repetido?",
       "notesInFlow": true,
       "notes": "Idempotencia: si Telegram reenvía el mismo mensaje (mismo update_id), el portero responde repetido = true y aquí no se hace nada, porque ese mensaje ya se atendió. Si no es repetido, va a \"Responder: sin acceso\"."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3b8cd46f-b6ed-48cf-8b5c-c0e22f024c56",
+              "leftValue": "={{ $json.aviso }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1568,
+        496
+      ],
+      "id": "b0c0d709-85e8-4666-b3b0-99391e0d3579",
+      "name": "¿Salario raro?",
+      "notes": "Si profile-api devolvió un aviso (aspiración salarial muy baja o muy alta), lo manda. Si no, no hace nada (observación E2E-06).",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $('Guardar respuesta de entrevista').item.json.aviso }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1792,
+        400
+      ],
+      "id": "d6ba9c96-4db5-4557-82a9-ec6c63f9a6b9",
+      "name": "Avisar salario",
+      "webhookId": "b98e465a-9110-4983-adbe-17ea5833aed1",
+      "credentials": {
+        "telegramApi": {
+          "id": "aF0RvNa5kJZkarDY",
+          "name": "Telegram account"
+        }
+      },
+      "notes": "Manda el aviso de salario que armó profile-api: muestra lo que anotó y sugiere /corregir salario.",
+      "notesInFlow": true
     }
   ],
   "pinData": {},
@@ -1696,6 +1758,11 @@
         [
           {
             "node": "¿Era corrección?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "¿Salario raro?",
             "type": "main",
             "index": 0
           }
@@ -2070,6 +2137,17 @@
           }
         ]
       ]
+    },
+    "¿Salario raro?": {
+      "main": [
+        [
+          {
+            "node": "Avisar salario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -2081,7 +2159,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "87ee303f-7435-44fb-90ba-69f42fe4ab08",
+  "versionId": "200c9efe-c8f7-417d-95ea-661904affc35",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"

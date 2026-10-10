@@ -184,3 +184,12 @@ def leer_respuesta_puntaje(texto: str) -> dict:
         "resumen": " ".join(str(datos.get("resumen") or "").split())[:200],
         "reglas_aplicadas": reglas,
     }
+
+
+def sin_datos(titulo: str | None, descripcion: str | None) -> bool:
+    """Vacante sin título real ni descripción (ej. /vacante solo con el link).
+
+    La IA no tiene nada que evaluar: no se le manda y queda marcada "sin datos"
+    (observación E2E-27: la #367 recibió 15 pts sin saber nada de ella)."""
+    sin_titulo = not (titulo or "").strip() or (titulo or "").strip().endswith("(sin título)")
+    return sin_titulo and not (descripcion or "").strip()

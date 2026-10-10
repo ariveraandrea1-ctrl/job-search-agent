@@ -85,3 +85,37 @@ def test_no_avisa_si_esta_en_pausa():
 
 def test_no_avisa_si_no_hay_nuevas():
     assert avisa_radar("activo", 0) is False
+
+
+# Observación E2E-06: la entrevista aceptó "1000000" como aspiración salarial sin avisar.
+from app import usuarios as u
+
+
+@pytest.mark.parametrize("respuesta,esperado", [
+    ("3.000.000", (3_000_000, "COP")),
+    ("3,000,000", (3_000_000, "COP")),
+    ("4 millones", (4_000_000, "COP")),
+    ("entre 3,5 y 4 millones", (3_500_000, "COP")),
+    ("10000 USD", (10_000, "USD")),
+    ("2k dólares", (2_000, "USD")),
+    ("a convenir", None),
+    ("4", None),
+])
+def test_leer_salario(respuesta, esperado):
+    assert u.leer_salario(respuesta) == esperado
+
+
+@pytest.mark.parametrize("respuesta", ["1000000", "1.000.000", "200 USD"])
+def test_avisa_si_el_salario_es_muy_bajo(respuesta):
+    aviso = u.revisar_salario(respuesta)
+    assert aviso is not None and "muy baja" in aviso and "/corregir salario" in aviso
+
+
+@pytest.mark.parametrize("respuesta", ["10000 USD", "80.000.000"])
+def test_avisa_si_el_salario_es_muy_alto(respuesta):
+    assert "muy alta" in u.revisar_salario(respuesta)
+
+
+@pytest.mark.parametrize("respuesta", ["3.000.000", "4 millones", "2500 USD", "a convenir", "4"])
+def test_no_avisa_si_el_salario_se_ve_bien(respuesta):
+    assert u.revisar_salario(respuesta) is None
