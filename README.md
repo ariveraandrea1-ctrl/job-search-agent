@@ -69,6 +69,7 @@ Docker Compose, n8n autoalojado, Python 3.12 con FastAPI, Pydantic 2, SQLAlchemy
 
 - Pruebas unitarias y de integración con Pytest en `services/profile-api/tests`.
 - Plan de pruebas de punta a punta, con los resultados de cada caso y su evidencia: [`docs/testing/plan-pruebas-e2e.md`](docs/testing/plan-pruebas-e2e.md).
+- Los mismos casos en Excel, con resumen de resultados y lista de defectos: [`docs/testing/casos-de-prueba-proyecto1.xlsx`](docs/testing/casos-de-prueba-proyecto1.xlsx).
 - Todo lo que he encontrado y corregido está en [`docs/bitacora-bugs.md`](docs/bitacora-bugs.md).
 
 ## Cómo trabajo con Git

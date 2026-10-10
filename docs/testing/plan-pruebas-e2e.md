@@ -39,6 +39,8 @@ La columna "Antecedente" dice dónde ya había probado esa funcionalidad mientra
 
 Las capturas con datos personales de otras personas no se publican; si hace falta, las recorto.
 
+Los mismos casos están en una hoja de cálculo, [`casos-de-prueba-proyecto1.xlsx`](casos-de-prueba-proyecto1.xlsx), con el formato que uso para mis casos de prueba: número, caso, datos de la prueba, pasos, resultado esperado, resultado obtenido, estatus y enlace al defecto. Tiene una hoja por grupo, una hoja de resumen con los totales y otra con los defectos.
+
 ## 6. Casos de prueba
 
 ### A. Registro y acceso
