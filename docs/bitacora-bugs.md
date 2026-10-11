@@ -30,7 +30,7 @@ En cada uno anoto también cómo lo detecté: probando en Telegram, con curl, re
 | BUG-18 | 2026-10-03 | Hallazgo | Llegaban vacantes de México por LinkedIn: no hay filtro de ubicación para fuentes de correo | Corregido, con tests |
 | BUG-19 | 2026-10-05 | Configuración | Alertas de radar-correo cada ~30 min con "Nodo" y "Error" vacíos | Corregido y probado |
 | BUG-20 | 2026-10-05 | Configuración | Alerta salió vacía (hasta el nombre del flujo) y Gmail cortaba con otro texto de error | Corregido y probado |
-| BUG-21 | 2026-10-05 | Hallazgo | El resumen de las 7 am nunca corrió: el Mac estaba en reposo | Causa confirmada (pendiente servidor) |
+| BUG-21 | 2026-10-05 | Hallazgo | El resumen de las 7 am nunca corrió: el Mac estaba en reposo | Riesgo aceptado (comprobado el 11 oct; pendiente servidor) |
 | BUG-22 | 2026-10-05 | Hallazgo | Datos de prueba (usuario 123) mezclados con datos reales | Limpiado (proceso) |
 | BUG-23 | 2026-10-05 | Bug | /start de alguien ya registrado respondía su apellido (o texto vacío: error) | Corregido |
 | BUG-24 | 2026-10-05 | Bug | CV escaneado (0 caracteres) seguía el flujo y creaba un perfil vacío | Corregido |
@@ -43,8 +43,8 @@ En cada uno anoto también cómo lo detecté: probando en Telegram, con curl, re
 | BUG-31 | 2026-10-07 | Bug | El sistema no se podía reconstruir desde el repo sin pasos ocultos (prueba de reconstrucción) | Corregido y probado desde cero |
 | BUG-32 | 2026-10-08 | Bug | /preferencias descarta en silencio las palabras después de la 15 | Corregido, con tests |
 | BUG-33 | 2026-10-08 | Bug | /vacante no muestra el número (#) de la vacante guardada o repetida | Corregido, con tests |
-| BUG-34 | 2026-10-09 | Bug | Con el radar en pausa siguen llegando avisos de vacantes por correo (LinkedIn/Indeed) | Corregido, falta re-test |
-| BUG-35 | 2026-10-09 | Bug | El filtro de ubicación deja pasar vacantes de México escritas como "MEX" o "CMX" (regresión de BUG-18) | Corregido, falta re-test |
+| BUG-34 | 2026-10-09 | Bug | Con el radar en pausa siguen llegando avisos de vacantes por correo (LinkedIn/Indeed) | Corregido y probado |
+| BUG-35 | 2026-10-09 | Bug | El filtro de ubicación deja pasar vacantes de México escritas como "MEX" o "CMX" (regresión de BUG-18) | Corregido y probado |
 | BUG-36 | 2026-10-10 | Configuración | El bot no recibe mensajes tras reiniciar: Telegram queda sin webhook y `start-local.sh` dice "Listo" igual | Corregido y probado |
 
 ## Detalle de cada bug
@@ -289,6 +289,8 @@ Corrección temporal: hora de la mañana con el Mac prendido (la elijo yo). De f
 
 Cómo lo detecté: lo noté yo y lo confirmé en la pestaña Executions.
 
+Volvió a pasar el 11 de octubre, con el resumen ya a las 11 a. m. Esta vez lo comprobé con el registro de energía del Mac (`pmset -g log`): el Mac se durmió a las 10:52:55 y no despertó hasta las 11:08:22, así que el reloj de las 11:00 no se disparó. Los avisos de correo de ese día sí llegaron porque coinciden con despertares cortos del Mac (11:24, 11:44, 11:59), cuando n8n alcanza a leer Gmail. Decidí no dejar el Mac despierto con `caffeinate`, porque gasta batería; queda como riesgo aceptado hasta pasar a un servidor en el Proyecto 2.
+
 ### BUG-22. Datos de prueba mezclados con los reales
 
 Síntoma: al crear la tabla users (migración 0011) apareció un usuario "123" que no es una persona.
@@ -313,7 +315,7 @@ Cómo lo detecté: revisión del JSON exportado. (Al corregirlo, la nota de otro
 
 ### BUG-24. CV sin texto (PDF escaneado) creaba un perfil vacío
 
-Síntoma: el perfil de un usuario de prueba (Ludwing) mostraba nombre, experiencia y habilidades vacíos; solo las preferencias de la entrevista.
+Síntoma: el perfil de un usuario de prueba (ayudante 2) mostraba nombre, experiencia y habilidades vacíos; solo las preferencias de la entrevista.
 
 Causa: su PDF era una imagen: el extractor sacó 0 caracteres y el flujo siguió igual (guardó el documento, llamó a la IA con texto vacío y guardó un perfil vacío). Nunca se había probado con un archivo sin texto.
 
@@ -490,7 +492,11 @@ Lo que aprendí: cuando una regla (pausa) se aplica en varios caminos, hay que p
 
 Cómo lo corregí: agregué `avisa_radar()` en `usuarios.py`, que devuelve verdadero solo si hay vacantes nuevas y el usuario no está en pausa. `/radar/email` ahora responde un campo `avisar` con ese resultado, y el If "¿Hay vacantes nuevas?" de `radar-correo` decide con ese campo. Las vacantes se guardan igual; lo que se frena es el aviso. Agregué 3 tests en `test_usuarios.py`. Entró a develop el 10 oct.
 
-Estado: corregido, falta re-test. Hay que esperar una alerta real de correo con el usuario en pausa y revisar en n8n que salga `avisar: false`; después reanudar y confirmar que la siguiente alerta sí avisa.
+Re-test (10 oct): con el usuario en pausa llegó un correo de LinkedIn con una vacante nueva (EY). En n8n, "Leer vacantes del correo" respondió `created: 1` y `avisar: false`, el If se fue por la rama false y "Avisar vacantes nuevas" no se ejecutó. No llegó nada a Telegram. Evidencia: `E2E-23_retest_bug34_avisar_false.png` y `E2E-23_retest_bug34_flujo_sin_aviso.png`.
+
+Regresión (10 y 11 oct): después de `/reanudar` los avisos de correo volvieron a llegar a Telegram (Indeed y LinkedIn), con el nodo de aviso ejecutado.
+
+Estado: corregido y probado el 11 oct.
 
 ### BUG-35. El filtro de ubicación deja pasar México escrito como "MEX" o "CMX"
 
@@ -516,7 +522,11 @@ Lo que aprendí: un caso que pasó con una muestra pequeña (10 avisos) puede fa
 
 Cómo lo corregí: hice lo de corto plazo. Agregué a `_UBICACION_OTRO_PAIS` en `parsers.py` los códigos `mex`, `cmx`, `arg`, `chl`, `per`, `ecu`, `bra`, `ven`, `ury`, `pry`, `bol` y `esp`, y estados y municipios de México que salieron en avisos reales (Jalisco, Nuevo León, Querétaro, Puebla, Zapopan, Tijuana, Huixquilucán, Polanco, Naucalpan, Tlalnepantla), todos como palabra completa. En `test_parsers.py` agregué los dos casos reales y otros tres que deben rechazarse, más tres ciudades colombianas que deben seguir pasando. La lista blanca queda para más adelante. Entró a develop el 10 oct.
 
-Estado: corregido con tests, falta re-test con la próxima alerta que traiga vacantes de México.
+Re-test (11 oct): en dos días no llegó ningún correo real con vacantes de México, así que hice una prueba controlada. Mandé a `/radar/email` con curl un correo con el formato de LinkedIn y 3 vacantes de QA en "Huixquilucán, MEX", "Polanco, CMX" y "Zapopan, Jalisco". Los títulos tenían "QA" para que pasaran el filtro de palabras clave; así, si se descartaban, era por la ubicación. Respuesta: `found 3, skipped 3, created 0, avisar false`. No se guardó ninguna.
+
+Lo que aprendí: que no lleguen casos de México no prueba que el filtro funcione; puede que simplemente no haya llegado ninguno. Una prueba controlada con los datos que fallaron da la respuesta en minutos.
+
+Estado: corregido y probado el 11 oct.
 
 ### BUG-36. Tras reiniciar, el bot no recibe mensajes y `start-local.sh` dice "Listo" igual
 

@@ -6,11 +6,13 @@ Lo estoy construyendo en tres etapas. No son tres aplicaciones distintas: cada e
 
 ## Las tres etapas
 
-1. **Proyecto 1, perfil y radar.** El bot lee mi hoja de vida, me hace unas preguntas para completar el perfil y busca vacantes en varias fuentes. En esta etapa no postula a nada ni abre el navegador. Es la etapa en la que estoy ahora.
+1. **Proyecto 1, perfil y radar.** El bot lee mi hoja de vida, me hace unas preguntas para completar el perfil y busca vacantes en varias fuentes. En esta etapa no postula a nada ni abre el navegador. Terminado y probado en octubre de 2026.
 2. **Proyecto 2, copiloto de postulaciones.** Adaptar la hoja de vida a cada vacante, pedirme aprobación antes de enviar algo, ayudar a llenar formularios con Playwright y llevar el seguimiento de cada proceso.
 3. **Proyecto 3, agente para varios usuarios.** Que funcione de forma continua para más personas, con colas de trabajo y un despliegue real.
 
 Telegram es el canal principal. El correo lo uso para el resumen diario y algunas alertas.
+
+Lo construí con apoyo de IA (Claude) para escribir buena parte del código. El diseño y la ejecución de las pruebas, las decisiones del proyecto y los flujos de n8n son míos; los flujos los armé yo misma en el editor. El archivo `CLAUDE.md` es el registro de contexto que uso para trabajar con la IA entre sesiones.
 
 ## Reglas que sigo en el proyecto
 
@@ -66,6 +68,15 @@ El `--env-file .env` hace falta porque el `.env` está en la raíz y no junto al
 Docker Compose, n8n autoalojado, Python 3.12 con FastAPI, Pydantic 2, SQLAlchemy 2 y Alembic, PostgreSQL 17 con pgvector, MinIO para guardar los CV, PyMuPDF y python-docx para leerlos, Groq como IA principal y Gemini como respaldo, Telegram, IMAP y SMTP para el correo, Mailpit en local y Pytest para las pruebas.
 
 ## Pruebas
+
+Así quedó el Proyecto 1 al cerrar las pruebas, el 11 de octubre de 2026:
+
+- 30 casos de punta a punta y 2 pruebas exploratorias, ejecutados con el bot real en Telegram. Los 32 pasan. Cinco fallaron en la primera ejecución (BUG-32 a BUG-36); los corregí y volví a probar cada uno, con su regresión.
+- 182 pruebas unitarias y de integración, todas en verde.
+- 36 bugs y hallazgos anotados en la bitácora desde que empecé el proyecto, cada uno con su causa y cómo lo corregí.
+- 31 observaciones de la ejecución: 9 quedaron corregidas con 8 cambios, y las demás quedaron decididas para el Proyecto 2 o sin cambio.
+
+Dónde está cada cosa:
 
 - Pruebas unitarias y de integración con Pytest en `services/profile-api/tests`.
 - Plan de pruebas de punta a punta, con los resultados de cada caso y su evidencia: [`docs/testing/plan-pruebas-e2e.md`](docs/testing/plan-pruebas-e2e.md).
