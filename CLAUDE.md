@@ -112,7 +112,7 @@ Parte 2 HECHA 2026-10-05: verificar-acceso = "Preguntar al portero"
 (POST /usuarios/acceso) → "Mensaje + acceso" (Set raw: mensaje original +
 acceso). telegram-invitacion: If "¿Tiene acceso?" antes del Switch (false →
 "Responder: sin acceso"); regla 8 del Switch /invitar → "Crear invitación"
-→ "Enviar invitación". Probado con 2 personas reales (Carolina, Ludwing):
+→ "Enviar invitación". Probado con 2 personas reales (ayudante 1 y ayudante 2):
 sin código / con código / CV / entrevista / /mejores aislado. BUG-23
 (/start respondía apellido → "Saludo: ya registrado") y BUG-24 (CV
 escaneado 0 caracteres → If "¿Se pudo leer el CV?" >= 200). Renombres:
