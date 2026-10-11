@@ -1,0 +1,118 @@
+{
+  "name": "alertas-errores",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "156c5b9d-6c9f-47b5-9f55-872ab509ed48",
+      "name": "Cuando un flujo falla",
+      "notesInFlow": true,
+      "notes": "Alertas: se activa automáticamente cuando cualquier flujo que tenga este como \"Error workflow\" falla."
+    },
+    {
+      "parameters": {
+        "chatId": "8553351572",
+        "text": "=⚠️ Falló el flujo \"{{ $json.workflow.name }}\"\nNodo: {{ $json.execution?.lastNodeExecuted ?? 'el disparador (trigger)' }}\nError: {{ $json.execution?.error?.message ?? $json.trigger?.error?.cause?.message ?? $json.trigger?.error?.message }}\nHora: {{ $now.setZone('America/Bogota').toFormat('dd/MM HH:mm') }}\nRevisa la pestaña Executions de ese flujo en n8n. {{ /incorrect host|ECONNREFUSED|ENOTFOUND|EAI_AGAIN|getaddrinfo/i.test(String($json.execution?.error?.message ?? '')) ? '\\n\\nPista: puede que profile-api esté apagado. Revísalo con: docker compose ps' : '' }}\n",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "94ed0517-5f39-470d-aeb4-ba54182c4d26",
+      "name": "Avisar falla por Telegram",
+      "webhookId": "23773dce-dc17-41ef-9b7e-9a8ca2240500",
+      "notesInFlow": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "aF0RvNa5kJZkarDY",
+          "name": "Telegram account"
+        }
+      },
+      "notes": "Alertas: manda a Telegram qué flujo falló, en qué nodo, el error y la hora. Si el error es de conexión, agrega la pista de que profile-api puede estar apagado (observación E2E-27)."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c8916a94-a966-4f1c-8bcb-c67d0d14fe75",
+              "leftValue": "={{ ($json.trigger?.error?.description || '') + ' ' + ($json.trigger?.error?.cause?.message || '') }}",
+              "rightValue": "socket has been ended|closed unexpectedly|automatically retry",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        224,
+        0
+      ],
+      "id": "904e8603-9f3b-4381-ad87-728ada3a93b0",
+      "name": "¿Es corte normal de Gmail?",
+      "notesInFlow": true,
+      "notes": "Filtro: si es el corte normal de Gmail (IMAP cierra la conexión y n8n reactiva el flujo solo) → true, no avisa. Cualquier otro error → false, avisa por Telegram."
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Cuando un flujo falla": {
+      "main": [
+        [
+          {
+            "node": "¿Es corte normal de Gmail?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Es corte normal de Gmail?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Avisar falla por Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "2dc11e54-99f9-4fee-a29f-a60b675392c8",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"
+  },
+  "nodeGroups": [],
+  "id": "ZKLCX1SGXZuJLnhg",
+  "tags": []
+}

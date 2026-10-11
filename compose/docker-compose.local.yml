@@ -1,14 +1,7 @@
 # docker-compose.local.yml — Proyecto 1 (entorno local)
 #
-# Esqueleto inicial. Los servicios obligatorios del Proyecto 1 son:
-#   n8n, postgres, profile-api, minio, mailpit
-# Opcionales: ollama, cloudflared, pgadmin
-#
-# TODO (Semana 1 del plan): definir imagen/build, variables de entorno
-# (ver ../.env.example), healthchecks, volúmenes y red compartida para
-# cada uno de estos servicios.
-
-version: "3.9"
+# Servicios obligatorios del Proyecto 1: n8n, postgres, profile-api, minio, mailpit.
+# Requiere copiar ../.env.example a ../.env y completarlo antes de levantar.
 
 networks:
   job-search-agent:
@@ -20,27 +13,105 @@ volumes:
   n8n_data:
 
 services:
-  n8n:
-    image: n8nio/n8n:latest
-    # TODO: env_file, ports, volumes, healthcheck, depends_on: postgres
-    networks: [job-search-agent]
-
   postgres:
     image: pgvector/pgvector:pg17
-    # TODO: env_file, ports, volumes, healthcheck
-    networks: [job-search-agent]
-
-  profile-api:
-    build: ../services/profile-api
-    # TODO: env_file, ports, healthcheck, depends_on: postgres, minio
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks: [job-search-agent]
 
   minio:
-    image: minio/minio:latest
-    # TODO: comando server, env_file, ports, volumes, healthcheck
+    image: quay.io/minio/minio:latest
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
     networks: [job-search-agent]
 
   mailpit:
     image: axllent/mailpit:latest
-    # TODO: ports (SMTP/UI)
+    restart: unless-stopped
+    env_file: ../.env
+    ports:
+      - "${MAILPIT_SMTP_PORT}:1025"
+      - "${MAILPIT_UI_PORT}:8025"
+    networks: [job-search-agent]
+
+  profile-api:
+    build:
+      context: ../services/profile-api
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [job-search-agent]
+
+  n8n:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      N8N_HOST: ${N8N_HOST}
+      N8N_PORT: ${N8N_PORT}
+      N8N_PROTOCOL: ${N8N_PROTOCOL}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+      WEBHOOK_URL: ${WEBHOOK_URL}
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE}
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: ${POSTGRES_DB}
+      DB_POSTGRESDB_USER: ${POSTGRES_USER}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [job-search-agent]
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --url http://n8n:5678
+    depends_on:
+      - n8n
     networks: [job-search-agent]

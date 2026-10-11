@@ -1,0 +1,197 @@
+{
+  "name": "radar-resumen-diario",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "http://profile-api:8000/radar/resumenes?registrar=true",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "d2a5732b-1ee1-4cf7-8a17-e0eb899474a6",
+      "name": "Pedir resumen del día",
+      "notesInFlow": true,
+      "notes": "Resumen: pide a profile-api (GET /radar/resumenes?registrar=true) el resumen de las últimas 24 h de CADA usuario activo (los pausados no). registrar=true = idempotencia: un resumen por usuario y día; si el flujo se vuelve a correr el mismo día, no llega repetido."
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.telegram_user_id }}",
+        "text": "={{ $json.telegram_text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        672,
+        0
+      ],
+      "id": "d7a181a0-2367-4c2c-bda8-695388d60434",
+      "name": "Enviar resumen del día",
+      "webhookId": "af380682-9a7d-4c28-bdc2-9bd2e6422e2b",
+      "notesInFlow": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "aF0RvNa5kJZkarDY",
+          "name": "Telegram account"
+        }
+      },
+      "notes": "Resumen: manda a cada usuario su resumen de la mañana."
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 11
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "436b516b-78ea-4dcf-b8cb-ac9dda33fdf6",
+      "name": "Reloj: 11 am",
+      "notesInFlow": true,
+      "notes": "Resumen: todos los días a las 11 am (hora de Colombia) manda el resumen del radar a cada usuario activo (Telegram y, si tiene correo en su CV, también por correo)."
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "items",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        448,
+        0
+      ],
+      "id": "ac8caf2c-f881-48c7-9d53-ba5cf5028dfe",
+      "name": "Separar por usuario",
+      "notesInFlow": true,
+      "notes": "Resumen: separa la lista en un item por usuario, para mandarle a cada uno su propio resumen."
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "con_correo",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        416,
+        176
+      ],
+      "id": "5a78ce82-cd75-4726-a09e-322141435a07",
+      "name": "Separar los que tienen correo",
+      "notesInFlow": true,
+      "notes": "Resumen por correo: un item por usuario que tiene correo en su CV."
+    },
+    {
+      "parameters": {
+        "fromEmail": "radar@job-search-agent.local",
+        "toEmail": "={{ $json.email }}",
+        "subject": "={{ $json.asunto }}",
+        "emailFormat": "text",
+        "text": "={{ $json.texto_correo }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        640,
+        176
+      ],
+      "id": "04a0e140-730c-4b68-8db9-0c8bafa64094",
+      "name": "Enviar resumen por correo",
+      "webhookId": "cd91a153-b6bf-4807-9147-346eaa49aca1",
+      "notesInFlow": true,
+      "credentials": {
+        "smtp": {
+          "id": "Zk3jNVFRs48PWLvE",
+          "name": "Mailpit"
+        }
+      },
+      "notes": "Resumen por correo: manda el resumen al correo del CV. En local va a Mailpit (http://localhost:8025), que atrapa los correos sin enviarlos de verdad."
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Pedir resumen del día": {
+      "main": [
+        [
+          {
+            "node": "Separar por usuario",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Separar los que tienen correo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reloj: 11 am": {
+      "main": [
+        [
+          {
+            "node": "Pedir resumen del día",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Separar por usuario": {
+      "main": [
+        [
+          {
+            "node": "Enviar resumen del día",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Separar los que tienen correo": {
+      "main": [
+        [
+          {
+            "node": "Enviar resumen por correo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "ZKLCX1SGXZuJLnhg",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "e478825b-3c23-4554-b19a-e4789325f2ce",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"
+  },
+  "nodeGroups": [],
+  "id": "s2OV1tvTvpdW7oNW",
+  "tags": []
+}

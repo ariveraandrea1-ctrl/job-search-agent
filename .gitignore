@@ -7,6 +7,7 @@
 __pycache__/
 *.py[cod]
 *.egg-info/
+.pytest_cache/
 .venv/
 venv/
 
@@ -32,3 +33,6 @@ database/backups/*
 .vscode/
 .idea/
 *.log
+
+# Imágenes de ayuda generadas en sesiones con Claude
+Claude outputs/

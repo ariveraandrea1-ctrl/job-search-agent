@@ -1,0 +1,223 @@
+{
+  "name": "radar-getonbrd",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "=https://www.getonbrd.com/api/v0/categories/{{ $json.categoria }}/jobs?per_page=50&expand=%5B%22company%22%5D",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        672,
+        0
+      ],
+      "id": "e20bb0a1-b441-411e-842d-b53eaf190f18",
+      "name": "Consultar Get on Board",
+      "notesInFlow": true,
+      "notes": "Radar: pide a la API pública de Get on Board las 50 vacantes más recientes de la categoría (una llamada por categoría)."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://profile-api:8000/radar/getonbrd",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n     \"categoria\": {{ JSON.stringify($('Separar categorías').item.json.categoria) }},\n     \"response\": {{ JSON.stringify($json) }}\n   }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        896,
+        0
+      ],
+      "id": "0390041b-9794-4a59-b77c-d24a754be8f2",
+      "name": "Guardar vacantes de Get on Board",
+      "notesInFlow": true,
+      "notes": "Radar: manda la respuesta y la categoría a profile-api (POST /radar/getonbrd). Allí se filtra con las palabras clave de CADA usuario que tiene esa categoría (más: no inglés, remota o Colombia, hasta Semi Senior, ≤ 3 días). Responde avisos (uno por usuario con vacantes nuevas)."
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.telegram_user_id }}",
+        "text": "={{ $json.telegram_text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1344,
+        -96
+      ],
+      "id": "285e8d12-6d31-40fb-aee3-26e38cd7b3f8",
+      "name": "Avisar vacantes nuevas",
+      "webhookId": "cb7f1433-369b-4bf2-bf2f-c27d2f84bb3d",
+      "notesInFlow": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "aF0RvNa5kJZkarDY",
+          "name": "Telegram account"
+        }
+      },
+      "notes": "Radar: avisa a cada usuario sus vacantes nuevas de Get on Board."
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "9d01ad91-3469-4315-a2ce-d605f3929915",
+      "name": "Reloj: cada hora",
+      "notesInFlow": true,
+      "notes": "Radar: cada hora revisa las vacantes nuevas de Get on Board para todos los usuarios activos (solo las categorías que alguien necesita)."
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "avisos",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        0
+      ],
+      "id": "13955233-2470-454a-af70-6adb12c01276",
+      "name": "Separar avisos por usuario",
+      "notesInFlow": true,
+      "notes": "Radar: separa los avisos (uno por usuario que tiene vacantes nuevas). Si nadie tiene nuevas, la lista viene vacía y el flujo termina aquí solo."
+    },
+    {
+      "parameters": {
+        "url": "http://profile-api:8000/radar/getonbrd/categorias",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "38c819f2-2040-473c-8374-819e4b9f4101",
+      "name": "Pedir categorías",
+      "notesInFlow": true,
+      "notes": "Radar: pregunta a profile-api qué categorías de Get on Board necesitan los usuarios activos (según sus palabras clave)."
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "items",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        448,
+        0
+      ],
+      "id": "ebeec764-e8c9-42ed-9b1a-b01882ca0cae",
+      "name": "Separar categorías",
+      "notesInFlow": true,
+      "notes": "Radar: un item por categoría, para consultar cada una en Get on Board."
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Consultar Get on Board": {
+      "main": [
+        [
+          {
+            "node": "Guardar vacantes de Get on Board",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar vacantes de Get on Board": {
+      "main": [
+        [
+          {
+            "node": "Separar avisos por usuario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reloj: cada hora": {
+      "main": [
+        [
+          {
+            "node": "Pedir categorías",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Separar avisos por usuario": {
+      "main": [
+        [
+          {
+            "node": "Avisar vacantes nuevas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pedir categorías": {
+      "main": [
+        [
+          {
+            "node": "Separar categorías",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Separar categorías": {
+      "main": [
+        [
+          {
+            "node": "Consultar Get on Board",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "ZKLCX1SGXZuJLnhg",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "d3789271-e5b4-4018-b697-ce590fff12a9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"
+  },
+  "nodeGroups": [],
+  "id": "S2djma1tj7r20l3s",
+  "tags": []
+}

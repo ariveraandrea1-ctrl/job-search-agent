@@ -1,0 +1,96 @@
+{
+  "name": "verificar-acceso",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d34dee4e-e30e-4b4c-bd1f-71fb812282c5",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://profile-api:8000/usuarios/acceso",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"telegram_user_id\": {{ $json.message.from.id }},\n  \"text\": {{ JSON.stringify($json.message.text || '') }},\n  \"nombre\": {{ JSON.stringify($json.message.from.first_name || '') }},\n  \"update_id\": {{ $json.update_id }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "59d9e3c8-e7f9-4522-b29a-642d398acba0",
+      "name": "Preguntar al portero",
+      "notesInFlow": true,
+      "notes": "Portero: pregunta a profile-api (POST /usuarios/acceso) si quien escribe está registrado. Si trae /start CÓDIGO válido, lo registra. Responde permitido (true/false) y, si no tiene acceso, el texto para contestarle. Manda también update_id (idempotencia): si Telegram reenvía el mismo mensaje responde repetido = true y no se atiende otra vez."
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ { ...$('When Executed by Another Workflow').item.json, acceso: $json } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        448,
+        0
+      ],
+      "id": "0aee3ae2-a9b4-4b53-bfb0-00c1d78cc13f",
+      "name": "Mensaje + acceso",
+      "notesInFlow": true,
+      "notes": "Portero: devuelve al flujo principal el mensaje original de Telegram + \"acceso\" (la respuesta de profile-api)."
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Preguntar al portero",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preguntar al portero": {
+      "main": [
+        [
+          {
+            "node": "Mensaje + acceso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "ZKLCX1SGXZuJLnhg",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "21a17957-0076-4463-8aa2-b28d875824f9",
+  "meta": {
+    "instanceId": "2bb0acbaac5866d7e2e89be70905d8b150ab4db0c799b4e574f762ca5b035c4b"
+  },
+  "nodeGroups": [],
+  "id": "2VTiQPjwPUpTIY6c",
+  "tags": []
+}

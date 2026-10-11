@@ -1,0 +1,255 @@
+"""Pruebas de los comandos del radar en Telegram (app/comandos.py)."""
+import pytest
+
+from datetime import datetime, timedelta, timezone
+
+from app import comandos
+from app.comandos import (
+    AYUDA,
+    leer_comando,
+    texto_antiguedad,
+    texto_detalle,
+    texto_lista,
+    texto_resumen_diario,
+)
+
+
+@pytest.mark.parametrize("texto, esperado", [
+    ("/mejores", ("mejores", None)),
+    ("/detalle 12", ("detalle", 12)),
+    ("/detalle #12", ("detalle", 12)),
+    ("/guardar@mi_bot 7", ("guardar", 7)),
+    ("  /DESCARTAR 3", ("descartar", 3)),
+    ("/detalle", ("detalle", None)),
+    ("/perfil", (None, None)),
+    ("hola", (None, None)),
+    ("", (None, None)),
+])
+def test_leer_comando(texto, esperado):
+    assert leer_comando(texto) == esperado
+
+
+VACANTE = {"numero": 12, "title": "Analista QA Jr", "company": "Empresa Uno",
+           "location": "Medellín", "source": "getonbrd", "url": "https://ejemplo.com/12",
+           "status": "nueva", "score": 30,
+           "analysis": {"puntaje_ia": 80, "ingles": "avanzado", "nivel_vacante": "junior",
+                        "razones_a_favor": ["Pide pytest"], "razones_en_contra": ["Pide C1"],
+                        "senales_alerta": [], "resumen": "Buen rol, pero inglés alto.",
+                        "reglas_aplicadas": ["Tope 35 porque exige inglés avanzado"]}}
+
+
+def test_lista_muestra_numero_puntaje_y_ayuda():
+    texto = texto_lista("Mejores:", [VACANTE, {**VACANTE, "numero": 13, "score": None,
+                                               "company": None, "location": None}], "vacío")
+    assert "#12 · 30 pts · Analista QA Jr (Empresa Uno — Medellín)" in texto
+    assert "#13 · sin puntaje aún · Analista QA Jr" in texto
+    assert "\n   https://ejemplo.com/12" in texto  # cada vacante trae su link
+    assert "/detalle 12" in texto
+
+
+def test_lista_vacia_da_el_mensaje_de_vacio():
+    assert texto_lista("Mejores:", [], "No hay nada") == "No hay nada"
+
+
+def test_detalle_explica_puntaje_ingles_y_regla():
+    texto = texto_detalle(VACANTE)
+    assert "Puntaje: 30/100" in texto
+    assert "Inglés que piden: avanzado" in texto
+    assert "✅ Pide pytest" in texto and "➖ Pide C1" in texto
+    assert "(la IA le había dado 80)" in texto
+    assert "/guardar 12" in texto and "Señales de alerta" not in texto
+
+
+def test_detalle_sin_puntaje_lo_avisa():
+    texto = texto_detalle({**VACANTE, "score": None, "analysis": None})
+    assert "todavía no la ha revisado la IA" in texto
+
+
+def test_ayuda_lista_todos_los_comandos():
+    for c in ["/mejores", "/nuevas", "/guardadas", "/detalle", "/guardar", "/descartar"]:
+        assert c in AYUDA
+
+
+AHORA = datetime(2026, 10, 3, 12, 0, tzinfo=timezone.utc)
+
+
+def test_antiguedad_usa_la_fecha_de_publicacion_si_existe():
+    publicada = (AHORA - timedelta(days=2, hours=3)).timestamp()
+    assert texto_antiguedad({"published_at": publicada}, AHORA) == "publicada hace 2 días"
+
+
+def test_antiguedad_sin_fecha_de_publicacion_usa_cuando_llego():
+    assert texto_antiguedad({"created_at": AHORA - timedelta(hours=5)}, AHORA) == "llegó hace 5 h"
+    assert texto_antiguedad({"created_at": AHORA - timedelta(days=1)}, AHORA) == "llegó hace 1 día"
+    assert texto_antiguedad({"created_at": AHORA}, AHORA) == "llegó hace un momento"
+    assert texto_antiguedad({}, AHORA) == ""
+
+
+
+def _v(numero, score=None, source="linkedin", tipo="empleo", alertas=None):
+    return {"numero": numero, "title": f"Vacante {numero}", "company": None, "location": None,
+            "source": source, "tipo": tipo, "score": score,
+            "analysis": {"senales_alerta": alertas or []}}
+
+
+def test_resumen_sin_vacantes():
+    assert "no llegaron vacantes nuevas" in texto_resumen_diario([], 0)
+
+
+def test_resumen_cuenta_por_fuente_ordena_y_separa_alertas():
+    vacantes = [_v(1, 40), _v(2, 90, source="getonbrd"), _v(3, None),
+                _v(4, 95, alertas=["Pide abrir cuenta bancaria"]),
+                _v(5, 60, source="workana", tipo="freelance")]
+    texto = texto_resumen_diario(vacantes, pendientes=1,
+                                 nombres_fuentes={"linkedin": "LinkedIn", "getonbrd": "Get on Board",
+                                                  "workana": "Workana"})
+    assert "Llegaron 5 vacante(s): LinkedIn 3, Get on Board 1, Workana 1." in texto
+    assert "⚡ 1 proyecto(s) freelance" in texto
+    assert "La IA aún no puntúa 1" in texto
+    mejores = texto.split("🏆 Las mejores de hoy:")[1].split("⚠️")[0]
+    # La #4 tiene alerta: NO va en las mejores aunque tenga 95.
+    assert mejores.index("#2 ·") < mejores.index("#5 ·") < mejores.index("#1 ·")
+    assert "#4" not in mejores
+    assert "⚠️ Con señales de alerta (cuidado):\n#4 · Vacante 4" in texto
+    assert "/detalle 2" in texto
+
+
+# ---------------------------------------------- /pausar y /reanudar (multiusuario)
+
+def test_pausar_y_reanudar_son_comandos_sin_numero():
+    assert comandos.leer_comando("/pausar") == ("pausar", None)
+    assert comandos.leer_comando("/reanudar") == ("reanudar", None)
+    assert comandos.leer_comando("/PAUSAR") == ("pausar", None)
+
+
+def test_ayuda_menciona_pausar_y_reanudar():
+    assert "/pausar" in comandos.AYUDA and "/reanudar" in comandos.AYUDA
+
+
+def test_textos_de_estado_explican_como_volver():
+    assert "/reanudar" in comandos.TEXTOS_ESTADO_USUARIO["pausado"]
+    assert set(comandos.TEXTOS_ESTADO_USUARIO) == {"pausado", "activo"}
+
+
+# ------------------------------------------------ resumen por correo
+
+@pytest.mark.parametrize("entrada, esperado", [
+    ("andrea@gmail.com", "andrea@gmail.com"),
+    ("  Andrea.Rivera@Gmail.COM ", "andrea.rivera@gmail.com"),
+    ("<andrea@correo.co>", "andrea@correo.co"),
+    ("andrea arroba gmail", None),
+    ("", None),
+    (None, None),
+])
+def test_email_valido(entrada, esperado):
+    assert comandos.email_valido(entrada) == esperado
+
+
+def test_texto_correo_trae_el_resumen_y_como_pausar():
+    texto = comandos.texto_correo("☀️ Buenos días. Resumen…")
+    assert texto.startswith("☀️ Buenos días") and "/pausar" in texto
+
+
+# --- /buscar, /resumen, /subir_cv (comandos de la especificación) ---
+
+def test_leer_comando_nuevos():
+    assert comandos.leer_comando("/buscar qa")[0] == "buscar"
+    assert comandos.leer_comando("/resumen")[0] == "resumen"
+    assert comandos.leer_comando("/subir_cv")[0] == "subir_cv"
+
+
+def test_leer_busqueda():
+    assert comandos.leer_busqueda("/buscar QA Automatización") == "qa automatizacion"
+    assert comandos.leer_busqueda("/buscar@MiBot  remoto ") == "remoto"
+    assert comandos.leer_busqueda("/buscar") == ""
+
+
+def test_coincide_busqueda_todas_las_palabras_sin_tildes():
+    assert comandos.coincide_busqueda("qa remoto", "QA Engineer Remoto", "Acme")
+    assert comandos.coincide_busqueda("automatizacion", "Analista de Automatización", None)
+    assert comandos.coincide_busqueda("bancolombia", "Analista QA", "Bancolombia S.A.")
+    assert not comandos.coincide_busqueda("qa senior", "QA Engineer Junior", "Acme")
+    assert not comandos.coincide_busqueda("", "QA", "Acme")
+
+
+def test_ayuda_menciona_comandos_de_la_especificacion():
+    for cmd in ("/subir_cv", "/completar_perfil", "/buscar", "/resumen", "/perfil"):
+        assert cmd in comandos.AYUDA
+
+
+# --- BUG-30: Markdown de Telegram ---
+
+def test_escapar_md():
+    assert comandos.escapar_md("/subir_cv") == "/subir\\_cv"
+    assert comandos.escapar_md("Bogotá_9740 *ya* [x] `y`") == "Bogotá\\_9740 \\*ya\\* \\[x] \\`y\\`"
+    assert comandos.escapar_md("QA Engineer — Remoto") == "QA Engineer — Remoto"
+
+
+def test_escapar_textos_telegram_solo_ese_campo_y_en_listas():
+    datos = {"telegram_text": "a_b", "texto_correo": "a_b",
+             "items": [{"telegram_text": "c*d", "email": "x_y@z.co"}]}
+    r = comandos.escapar_textos_telegram(datos)
+    assert r["telegram_text"] == "a\\_b"
+    assert r["texto_correo"] == "a_b"  # el correo no se toca
+    assert r["items"][0]["telegram_text"] == "c\\*d"
+    assert r["items"][0]["email"] == "x_y@z.co"
+
+
+def test_ayuda_escapada_no_deja_guiones_bajos_sueltos():
+    import re
+    assert not re.search(r"(?<!\\)_", comandos.escapar_md(comandos.AYUDA))
+
+
+
+# BUG-33: /vacante no mostraba el número, así que no se podía usar /detalle enseguida.
+def test_vacante_nueva_muestra_el_numero_y_los_comandos():
+    texto = comandos.texto_vacante_guardada(True, "LinkedIn", "QA Analyst", "https://x.co/1", 310)
+    assert "#310" in texto
+    assert "/detalle 310" in texto
+    assert "/guardar 310" in texto
+
+
+def test_vacante_repetida_muestra_el_mismo_numero():
+    texto = comandos.texto_vacante_guardada(False, "LinkedIn", "QA Analyst", "https://x.co/1", 303)
+    assert "ya la tenías guardada (#303" in texto
+    assert "/detalle 303" in texto
+
+
+def test_tip_de_titulo_solo_si_no_mando_titulo():
+    con = comandos.texto_vacante_guardada(True, "LinkedIn", "QA", "https://x.co/1", 1, sin_titulo=True)
+    sin = comandos.texto_vacante_guardada(True, "LinkedIn", "QA", "https://x.co/1", 1)
+    assert "Tip:" in con
+    assert "Tip:" not in sin
+
+
+
+# Observación E2E-22: ante un comando mal escrito el bot no decía qué no entendió,
+# y la ayuda no mencionaba /vacante ni /corregir.
+def test_comando_desconocido_dice_cual_no_entendio():
+    texto = comandos.texto_comando_desconocido("/ayudaa")
+    assert texto.startswith("No conozco el comando /ayudaa")
+    assert comandos.AYUDA in texto
+
+
+def test_pedir_ayuda_no_dice_que_no_lo_conoce():
+    assert comandos.texto_comando_desconocido("/ayuda") == comandos.AYUDA
+
+
+def test_ayuda_incluye_vacante_y_corregir():
+    assert "/vacante" in comandos.AYUDA and "/corregir" in comandos.AYUDA
+
+
+# Observación E2E-20: /buscar bogota no traía vacantes que solo dicen Bogotá en la ubicación.
+def test_buscar_encuentra_por_ubicacion():
+    assert comandos.coincide_busqueda("bogota", "QA Engineer", "BairesDev", "Bogotá, D.C.")
+
+
+# Observación E2E-24: el resumen decía "Buenos días" aunque saliera en la tarde.
+def test_resumen_no_saluda_segun_la_hora():
+    assert "Buenos días" not in comandos.texto_resumen_diario([], 0)
+
+
+def test_vacante_sin_datos_se_muestra_asi_en_listas_y_detalle():
+    v = {**VACANTE, "score": None, "analysis": {"sin_datos": True}}
+    assert "sin datos" in comandos.texto_lista("Nuevas:", [v], "nada")
+    assert "Puntaje: sin datos" in texto_detalle(v)
