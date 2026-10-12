@@ -4,6 +4,10 @@ Este es un agente que me ayuda a buscar trabajo. Revisa varias fuentes de vacant
 
 Lo estoy construyendo en tres etapas. No son tres aplicaciones distintas: cada etapa amplía la anterior.
 
+## Video demo
+
+Un recorrido de 3 minutos por el bot funcionando y por cómo lo probé: [ver en YouTube](https://youtu.be/1OXVT5XA_Fo).
+
 ## Las tres etapas
 
 1. **Proyecto 1, perfil y radar.** El bot lee mi hoja de vida, me hace unas preguntas para completar el perfil y busca vacantes en varias fuentes. En esta etapa no postula a nada ni abre el navegador. Terminado y probado en octubre de 2026.
