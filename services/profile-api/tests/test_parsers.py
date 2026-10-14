@@ -8,6 +8,7 @@ import pytest
 
 from app.parsers import (
     elegir_lector,
+    es_recomendacion_linkedin,
     identificar_url,
     leer_mensaje_vacante,
     parse_getonbrd,
@@ -377,3 +378,42 @@ def test_ubicacion_sirve_colombia_remoto_o_desconocida(ubicacion):
 )
 def test_ubicacion_no_sirve_otro_pais(ubicacion):
     assert ubicacion_sirve(ubicacion) is False
+
+
+# BUG-37: correo "Amplía tu búsqueda" de LinkedIn (recomendaciones de hasta
+# 30 días, sin fecha de publicación). Estructura del correo real del 14 oct,
+# con datos inventados y links recortados.
+LINKEDIN_RECOMENDACIONES = """Amplía tu búsqueda
+
+Recomendaciones basadas en tu actividad.
+
+Empleos de «En remoto»
+https://www.linkedin.com/comm/jobs/search-results/?keywords=QA&f_TPR=r2592000&lipi=urn%3Ali%3Apage%3Aemail_email_jobs_facet_suggestions
+
+QA Tester con IA
+Empresa Inventada
+Colombia
+Ver anuncio de empleo: https://www.linkedin.com/comm/jobs/view/5555555555/?trk=eml-email_jobs_facet_suggestions-JOBS_POSTING_SECTION-0-view_job
+
+---------------------------------------------------------
+
+Analista de Pruebas
+Otra Empresa
+Colombia
+Ver anuncio de empleo: https://www.linkedin.com/comm/jobs/view/6666666666/?trk=eml-email_jobs_facet_suggestions-JOBS_POSTING_SECTION-0-view_job
+"""
+
+
+def test_linkedin_ignora_correo_de_recomendaciones():
+    assert es_recomendacion_linkedin(LINKEDIN_RECOMENDACIONES)
+    assert parse_linkedin(LINKEDIN_RECOMENDACIONES) == []
+
+
+def test_linkedin_recomendaciones_sin_links_tambien_se_ignora():
+    sin_links = "Amplía tu búsqueda\n\nQA Tester\nEmpresa\nColombia\n"
+    assert es_recomendacion_linkedin(sin_links)
+
+
+def test_linkedin_alerta_normal_sigue_funcionando():
+    assert not es_recomendacion_linkedin(LINKEDIN)
+    assert len(parse_linkedin(LINKEDIN)) == 4

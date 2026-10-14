@@ -555,6 +555,28 @@ Lo que aprendí: un mensaje de "Listo" que no verifica nada es un falso positivo
 
 Estado: corregido y probado el 10 oct.
 
+### BUG-37. Llegan como nuevas vacantes publicadas hace semanas
+
+Cómo lo detecté: revisando las notificaciones del 14 oct. Varias eran de la semana pasada y una del resumen diario era de hace dos días. La vacante #433 ("Automatizador/a de pruebas con enfoque en IA", Periferia IT Group) llegó ese día, pero al abrir el link en LinkedIn decía que se publicó hace dos semanas.
+
+Pasos para reproducir:
+1. Que llegue a la etiqueta Radar un correo de `jobs-noreply@linkedin.com` que empiece con "Amplía tu búsqueda – Recomendaciones basadas en tu actividad".
+2. El radar lo lee con `parse_linkedin()` y guarda sus vacantes como nuevas.
+
+Resultado esperado: solo se avisan vacantes recientes de mis alertas.
+
+Resultado real: se guardaron y avisaron las 4 vacantes del correo, entre ellas la #433, con dos semanas de publicada.
+
+Causa: ese correo no es una de mis alertas sino recomendaciones de LinkedIn. El link "Ver todos los empleos" trae `f_TPR=r2592000`, que es "publicadas en los últimos 30 días", y el texto del correo no trae la fecha de publicación de ninguna vacante. El lector no distinguía este tipo de correo de una alerta normal, y para los correos de LinkedIn no hay ningún filtro por antigüedad (el de 3 días solo existe para Get on Board).
+
+Severidad baja y prioridad media. No se pierde nada, pero llegan vacantes viejas como si fueran nuevas y eso le quita confianza al radar.
+
+Cómo lo corregí: `parse_linkedin()` ahora devuelve una lista vacía si el correo es de recomendaciones. Lo reconoce con `es_recomendacion_linkedin()`, que busca la marca `jobs_facet_suggestions` que LinkedIn pone en todos los links de ese correo, o el encabezado "Amplía tu búsqueda" por si el texto llega sin links. Revisé una alerta real del mismo día: usa otra marca (`email_job_alert_digest`) y el filtro `f_TPR=a…` (desde la última alerta), así que no la afecta. Agregué tres tests: el correo de recomendaciones con la estructura del real, el mismo sin links y que la alerta normal siga sacando sus 4 vacantes. 185 tests en verde.
+
+Lo que aprendí: un correo que llega hoy no significa vacante de hoy. Antes de confiar en una fuente hay que mirar qué filtro de fecha usa por dentro, y los links de LinkedIn lo dicen.
+
+Estado: corregido. Falta el re-test con un correo real de recomendaciones después de reconstruir profile-api.
+
 ## Riesgos y limitaciones que siguen abiertos
 
 - Todo depende de que el Mac esté prendido. Si está dormido a la hora del resumen (11 a. m.), el resumen no sale a tiempo y n8n no lo recupera después (BUG-21). Mientras tanto dejo el Mac conectado, con Docker abierto y sin suspensión automática. La solución de fondo es pasar a un servidor.

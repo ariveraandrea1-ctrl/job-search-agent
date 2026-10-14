@@ -8,6 +8,7 @@ así se pueden probar con pytest sin levantar nada.
 Formatos soportados (vistos en correos reales, 2026-09-30):
 - LinkedIn (jobalerts-noreply@ y jobs-noreply@): bloques
   "Título / Empresa / Ubicación / ... / Ver anuncio de empleo: URL".
+  Los correos "Amplía tu búsqueda" (recomendaciones) se ignoran: BUG-37.
 - Workana (notification@notifications.workana.com): bloques
   "Título / ----- / descripción / Leer más: URL".
 - Computrabajo (empleos_co@): los correos de "resumen" NO traen vacantes
@@ -104,8 +105,28 @@ def _es_ruido_linkedin(linea: str) -> bool:
     return any(baja.startswith(r) for r in _LINKEDIN_RUIDO)
 
 
+# Correos "Amplía tu búsqueda / Recomendaciones basadas en tu actividad"
+# (BUG-37): no son alertas de la usuaria. LinkedIn mete vacantes de hasta 30
+# días (f_TPR=r2592000) y el correo no trae la fecha de publicación, así que
+# llegaban como nuevas vacantes de hace semanas. Se reconocen por la marca
+# "jobs_facet_suggestions" que LinkedIn pone en todos sus links, o por el
+# encabezado si el texto viene sin links.
+_LINKEDIN_RECOMENDACIONES = (
+    "jobs_facet_suggestions",
+    "amplía tu búsqueda",
+    "expand your search",
+)
+
+
+def es_recomendacion_linkedin(texto: str) -> bool:
+    baja = (texto or "").lower()
+    return any(marca in baja for marca in _LINKEDIN_RECOMENDACIONES)
+
+
 def parse_linkedin(texto: str) -> list[dict]:
     """Saca las vacantes de un correo de alertas / empleos de LinkedIn."""
+    if es_recomendacion_linkedin(texto):
+        return []
     resultados = []
     vistos = set()
     inicio_bloque = 0
