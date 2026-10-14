@@ -575,7 +575,9 @@ Cómo lo corregí: `parse_linkedin()` ahora devuelve una lista vacía si el corr
 
 Lo que aprendí: un correo que llega hoy no significa vacante de hoy. Antes de confiar en una fuente hay que mirar qué filtro de fecha usa por dentro, y los links de LinkedIn lo dicen.
 
-Estado: corregido. Falta el re-test con un correo real de recomendaciones después de reconstruir profile-api.
+Limpieza de lo que ya había entrado: busqué en Gmail los 7 correos de recomendaciones que llegaron entre el 28 sep y el 14 oct (30 vacantes) y crucé sus ids con `opportunities`. 12 estaban guardadas como `nueva`. Descarté 11 con un UPDATE filtrado por `status = 'nueva'` y conservé la #433, que sí me interesa.
+
+Estado: corregido; profile-api reconstruido el 14 oct. Falta el re-test con el próximo correo real de recomendaciones (LinkedIn los manda más o menos dos veces por semana): debe dar `found 0` y no avisar.
 
 ## Riesgos y limitaciones que siguen abiertos
 
